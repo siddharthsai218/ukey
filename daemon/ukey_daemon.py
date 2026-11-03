@@ -857,6 +857,19 @@ def find_hidraw_for_name(name: str) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 
+def get_primary_ip() -> str:
+    """Determine the primary local LAN IP address of this machine."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+    return ip
+
+
 def detect_host_biometric() -> Optional[str]:
     """Check if the Linux host has a local hardware fingerprint sensor via fprintd."""
     try:
@@ -884,6 +897,8 @@ def detect_host_biometric() -> Optional[str]:
 
 class UKeyDaemon:
     def __init__(self, args: argparse.Namespace) -> None:
+        if getattr(args, "wireless", False):
+            args.listen_host = "0.0.0.0"
         self.args = args
         self.device = UhidDevice(path=args.uhid, name=args.device_name)
         on_disconnect = self._on_signer_disconnect if getattr(args, "auto_lock", False) else None
@@ -908,6 +923,13 @@ class UKeyDaemon:
 
     def run(self) -> int:
         LOG.info("uKey Linux Biometric Subsystem initializing...")
+        if getattr(self.args, "wireless", False):
+            lan_ip = get_primary_ip()
+            LOG.info("=" * 60)
+            LOG.info("📶 uKey Wireless LAN Mode Enabled")
+            LOG.info("   Connect your Android app to:")
+            LOG.info("   Host: %s   Port: %d", lan_ip, self.args.port)
+            LOG.info("=" * 60)
         local_bio = detect_host_biometric()
         if local_bio:
             LOG.info("Host hardware fingerprint sensor detected: %s", local_bio)
@@ -1201,6 +1223,11 @@ def build_parser() -> argparse.ArgumentParser:
             "and works with fido2-cred(1); 'none' is the strict CTAP2 empty "
             "attestation (default: self)"
         ),
+    )
+    parser.add_argument(
+        "--wireless",
+        action="store_true",
+        help="Wireless Mode: bind to 0.0.0.0 and print host LAN IP for direct phone connection without USB cable",
     )
     parser.add_argument(
         "--auto-lock",
