@@ -1240,7 +1240,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = build_parser().parse_args(argv)
-    handlers: list[logging.Handler] = [logging.StreamHandler(), logging.FileHandler("/tmp/ukey.log", mode="a")]
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    try:
+        handlers.append(logging.FileHandler(f"/tmp/ukey_{os.getuid()}.log", mode="a"))
+    except OSError:
+        pass
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
