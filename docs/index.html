@@ -883,13 +883,13 @@ footer a { color: var(--white); }
       </div>
     </div>
 
-    <!-- Tri-Modal Auth Selector -->
+    <!-- Biometric Input & Instant Skip Selector -->
     <div class="auth-method-row">
-      <span class="auth-method-label">BIOMETRIC INPUT:</span>
+      <span class="auth-method-label">AUTH METHOD:</span>
       <div class="auth-method-pills">
-        <button class="method-pill" data-method="laptop-fp">🖐️ 1. Laptop Fingerprint</button>
-        <button class="method-pill" data-method="laptop-face">👁️ 2. Laptop Camera (Face ID)</button>
-        <button class="method-pill active" data-method="phone-bio">📱 3. Phone StrongBox</button>
+        <button class="method-pill active" data-method="phone-bio">📱 1. Phone StrongBox</button>
+        <button class="method-pill" data-method="laptop-fp">🖐️ 2. Laptop Fingerprint</button>
+        <button class="method-pill" data-method="instant-skip">⚡ 3. Instant Password Skip (0s)</button>
       </div>
     </div>
 
@@ -915,18 +915,6 @@ footer a { color: var(--white); }
 
               <!-- Desktop Workspace Windows (Terminal & Browser) -->
               <div class="desktop-workspace">
-                <!-- Face Scanner Overlay for Laptop Camera Mode -->
-                <div class="laptop-face-overlay" id="laptopFaceOverlay">
-                  <div class="face-reticle" id="faceReticle">
-                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" id="faceIcon">
-                      <path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M9.5 15a3.5 3.5 0 0 0 5 0"/>
-                      <path d="M4 3h4M20 3h-4M4 21h4M20 21h-4M3 8v8M21 8v8"/>
-                    </svg>
-                  </div>
-                  <div style="font-size:12px; font-weight:700; color:#FFF;" id="faceStatusTitle">Linux Hello (Webcam /dev/video0)</div>
-                  <div style="font-size:10px; color:var(--accent-cyan); font-family:var(--mono); margin-top:2px;" id="faceStatusSub">Click reticle to scan face & verify...</div>
-                </div>
-
                 <!-- Linux Terminal Window (for sudo and ssh) -->
                 <div class="screen-terminal" id="screenTerminal" style="display:none;">
                   <div class="sterm-bar">
@@ -1209,45 +1197,45 @@ footer a { color: var(--white); }
     </p>
 
     <div class="hierarchy-flow">
-      <div class="hierarchy-card">
+      <div class="hierarchy-card primary">
         <div>
-          <span class="hierarchy-badge tier1">OPTION 01 • LAPTOP BUILT-IN SENSOR</span>
-          <h3 class="hierarchy-title">Laptop Palm-Rest Fingerprint</h3>
+          <span class="hierarchy-badge tier2">PRIMARY • PHONE STRONGBOX</span>
+          <h3 class="hierarchy-title">Mobile Biometric Enclave</h3>
           <p class="hierarchy-desc">
-            If your ThinkPad, Dell, or Framework has a working fingerprint sensor, authenticate in 0.4s right on the keyboard palm-rest via <code>pam_fprintd.so</code>. Zero need to reach for your phone.
+            Your phone acts as an out-of-band hardware security key. Signs <b>FIDO2 WebAuthn, OpenSSH keys, and sudo</b> inside Android StrongBox silicon with per-use biometric verification.
           </p>
         </div>
         <div class="hierarchy-code">
-          <span style="color:var(--gray-1)"># Input: Laptop Hardware Fingerprint</span><br>
+          <span style="color:var(--gray-1)"># Priority 1: Hardware StrongBox</span><br>
+          <span style="color:var(--accent-green)">auth sufficient pam_u2f.so ...</span>
+        </div>
+      </div>
+
+      <div class="hierarchy-card">
+        <div>
+          <span class="hierarchy-badge tier1">CO-EXIST • LAPTOP SENSOR</span>
+          <h3 class="hierarchy-title">Laptop Palm-Rest Sensor</h3>
+          <p class="hierarchy-desc">
+            Have a ThinkPad or Dell with a working fingerprint reader? Linux PAM invokes <code>pam_fprintd.so</code>. Authenticate in 0.4s right on the laptop without reaching into your pocket.
+          </p>
+        </div>
+        <div class="hierarchy-code">
+          <span style="color:var(--gray-1)"># Co-exist: Laptop Hardware Sensor</span><br>
           <span style="color:var(--accent-cyan)">auth sufficient pam_fprintd.so</span>
         </div>
       </div>
 
       <div class="hierarchy-card">
         <div>
-          <span class="hierarchy-badge tier1">OPTION 02 • LAPTOP WEBCAM</span>
-          <h3 class="hierarchy-title">Laptop Face Scanner</h3>
+          <span class="hierarchy-badge tier3">ZERO DELAY • INSTANT BYPASS</span>
+          <h3 class="hierarchy-title">Instant Password Skip (0.0s)</h3>
           <p class="hierarchy-desc">
-            No fingerprint reader on your laptop? The built-in webcam (<code>/dev/video0</code>) verifies your face locally in 0.5s (Linux Hello). 100% offline processing; no images ever leave RAM.
+            Phone in another room or battery depleted? Never wait for a timeout. Simply hit <b>Enter</b> in the terminal or tap <b>Cancel</b> to drop instantly to standard password entry in 0.0 seconds.
           </p>
         </div>
         <div class="hierarchy-code">
-          <span style="color:var(--gray-1)"># Input: Laptop Webcam (/dev/video0)</span><br>
-          <span style="color:var(--accent-cyan)">auth sufficient pam_howdy.so</span>
-        </div>
-      </div>
-
-      <div class="hierarchy-card primary">
-        <div>
-          <span class="hierarchy-badge tier2">OPTION 03 • PHONE STRONGBOX</span>
-          <h3 class="hierarchy-title">Mobile Biometric Enclave</h3>
-          <p class="hierarchy-desc">
-            Need maximum hardware isolation or signing <b>FIDO2 WebAuthn & OpenSSH keys</b>? The request tunnels to your phone's Android StrongBox chip. Authenticate with your phone's biometric sensor.
-          </p>
-        </div>
-        <div class="hierarchy-code">
-          <span style="color:var(--gray-1)"># Input: Android Hardware StrongBox</span><br>
-          <span style="color:var(--accent-green)">auth sufficient pam_u2f.so ...</span>
+          <span style="color:var(--gray-1)"># Instant Skip: Enter key -> Password</span><br>
+          <span style="color:var(--accent-amber)">auth required pam_unix.so try_first_pass</span>
         </div>
       </div>
     </div>
@@ -1262,10 +1250,10 @@ footer a { color: var(--white); }
         </div>
       </div>
       <p style="font-size:13.5px; color:var(--gray-1); line-height:1.6; margin:0;">
-        Whichever method you choose on your laptop (laptop fingerprint, webcam face scanner, or mobile biometric), uKey transmits a cryptographically signed verification receipt over the local USB/Wi-Fi socket directly to your phone app.<br><br>
+        Whenever an authentication event occurs on your laptop—whether verified via phone fingerprint, laptop sensor, or bypassed via password—uKey securely transmits a cryptographic receipt over the local USB/Wi-Fi socket directly to your phone app.<br><br>
         <b>Why this is a breakthrough for privacy and security:</b><br>
-        • <b>Tamper-Proof Audit Trail:</b> If an attacker sits at your laptop or a rogue script runs <code>sudo</code>, your phone immediately vibrates and logs the command out-of-band.<br>
-        • <b>Zero Biometrics Transferred:</b> Your face scans and fingerprint templates <b>never</b> leave local silicon. Only the signed cryptographic assertion and timestamp are synced.<br>
+        • <b>Tamper-Proof Audit Trail:</b> If an unauthorized person attempts to run <code>sudo</code> or access your laptop while you're away, your phone vibrates and logs the event out-of-band.<br>
+        • <b>Zero Biometrics Transferred:</b> Fingerprint templates <b>never</b> leave local silicon. Only the signed cryptographic assertion and timestamp are synced.<br>
         • <b>100% Local / Zero Cloud:</b> No servers, no telemetry, no tracking. Everything runs point-to-point on your local machine.
       </p>
     </div>
@@ -1617,10 +1605,6 @@ function resetStage() {
 
 let currentMethod = "phone-bio";
 const methodPills = document.querySelectorAll(".method-pill");
-const laptopFaceOverlay = document.getElementById("laptopFaceOverlay");
-const faceReticle = document.getElementById("faceReticle");
-const faceStatusTitle = document.getElementById("faceStatusTitle");
-const faceStatusSub = document.getElementById("faceStatusSub");
 
 methodPills.forEach(pill => {
   pill.addEventListener("click", () => {
@@ -1632,33 +1616,36 @@ methodPills.forEach(pill => {
 });
 
 function applyMethodView() {
-  if (currentMethod === "laptop-face") {
-    laptopFaceOverlay.style.display = "flex";
-    faceReticle.classList.remove("verified");
-    faceStatusTitle.textContent = "Linux Hello (Webcam /dev/video0)";
-    faceStatusSub.textContent = "Click reticle to scan face & verify...";
-  } else {
-    laptopFaceOverlay.style.display = "none";
-  }
-
   if (currentMethod === "laptop-fp") {
     termPromptText.textContent = "Please touch laptop palm-rest sensor...";
-  } else if (currentMethod === "laptop-face") {
-    termPromptText.textContent = "Align face with laptop webcam (/dev/video0)...";
+    if (browserWaitingText) {
+      browserWaitingText.innerHTML = `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent-cyan);"></span><span>Waiting for laptop palm-rest sensor touch...</span>`;
+    }
+  } else if (currentMethod === "instant-skip") {
+    // Instant skip simulates hitting Enter key: drops directly to password in 0s!
+    termWaitingLine.style.display = "none";
+    termDoneOutput.style.display = "block";
+    termSuccessHead.textContent = "⚡ Biometric Bypassed (0.0s delay)";
+    termSuccessDetail.textContent = "[sudo] password for siddharth: •••••••• (Authenticated via PAM UNIX)";
+
+    if (browserWaitingText && browserDoneText) {
+      browserWaitingText.style.display = "none";
+      browserDoneText.style.display = "block";
+      browserDoneText.innerHTML = `⚡ Biometric Bypassed<div style="font-size:10.5px; color:var(--gray-1); margin-top:3px;">Password fallback authenticated in 0.0s.</div>`;
+    }
+
+    appLogLiveDone.style.display = "block";
+    appLogLiveDone.innerHTML = `<span class="log-time">[18:45:12]</span> <span class="log-req">BYPASS: User hit Enter key</span><br><span class="log-time">[18:45:12]</span> <span class="log-ok">AUTH: UNIX password verified in 0s</span>`;
+
+    setTimeout(() => {
+      resetStage();
+    }, 4000);
   } else {
     termPromptText.textContent = "Touch phone fingerprint sensor...";
+    if (browserWaitingText) {
+      browserWaitingText.innerHTML = `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent-cyan);"></span><span>Touch your physical security key for <b>user@gmail.com</b>...</span>`;
+    }
   }
-}
-
-// Face Scanner Reticle Click Event
-if (faceReticle) {
-  faceReticle.addEventListener("click", () => {
-    faceReticle.classList.add("verified");
-    faceStatusTitle.textContent = "✓ Face Recognized (Linux Hello)";
-    faceStatusSub.textContent = "Cryptographic proof sent to /dev/uhid & phone ledger";
-
-    executeAuthSuccess("Laptop Camera (Face ID)");
-  });
 }
 
 function executeAuthSuccess(methodName) {
@@ -1692,7 +1679,8 @@ fingerprintBtn.addEventListener("click", () => {
   fingerprintBtn.classList.add("verified");
 
   setTimeout(() => {
-    executeAuthSuccess("Phone StrongBox Biometric");
+    const methodLabel = currentMethod === "laptop-fp" ? "Laptop Palm-Rest Sensor" : "Phone StrongBox Biometric";
+    executeAuthSuccess(methodLabel);
   }, 350);
 });
 
