@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#F3F6FA</color>
+    <color name="card">#FFFFFF</color>
+    <color name="ink">#0F172A</color>
+    <color name="ink_secondary">#64748B</color>
+    <color name="ink_muted">#94A3B8</color>
+    <color name="accent">#0F766E</color>
+    <color name="accent_dark">#115E59</color>
+    <color name="border">#E2E8F0</color>
+    <color name="input_bg">#F8FAFC</color>
+    <color name="success">#15803D</color>
+    <color name="warning">#B45309</color>
+    <color name="warning_bg">#FEF3C7</color>
+    <color name="log_bg">#0F172A</color>
+    <color name="log_text">#D1FAE5</color>
+    <color name="log_muted">#94A3B8</color>
+    <color name="white">#FFFFFF</color>
+</resources>

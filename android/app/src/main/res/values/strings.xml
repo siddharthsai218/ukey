@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">uKey</string>
+    <string name="app_tagline">Hardware-backed FIDO2 signer</string>
+
+    <string name="connection_section">Connection</string>
+    <string name="host_label">Host</string>
+    <string name="port_label">Port</string>
+    <string name="host_hint">127.0.0.1</string>
+    <string name="port_hint">8443</string>
+    <string name="start_reconnect">Start / Reconnect</string>
+    <string name="stop_bridge">Stop</string>
+    <string name="usb_hint">USB: adb reverse tcp:8443 tcp:8443   ·   Wi-Fi: use the Linux host\'s LAN IP</string>
+
+    <string name="security_warning_title">Device security required</string>
+    <string name="security_warning_no_lock">Set a PIN, pattern or password before using uKey.</string>
+    <string name="security_warning_no_biometric">Enroll a strong biometric (for example a fingerprint) in system settings.</string>
+
+    <string name="log_section">Authorization log</string>
+    <string name="log_empty">No authorizations yet. Waiting for the Linux daemon…</string>
+    <string name="clear_log">Clear</string>
+
+    <string name="notification_channel_status">Bridge status</string>
+    <string name="notification_channel_status_description">Persistent uKey bridge connection status</string>
+    <string name="notification_channel_auth">Authorization requests</string>
+    <string name="notification_channel_auth_description">Prompts when the Linux host needs a signature</string>
+    <string name="notification_stop">Stop bridge</string>
+    <string name="notification_auth_title">Authorization required</string>
+    <string name="notification_auth_text">Tap to authorize %1$s</string>
+
+    <string name="biometric_title">uKey Authenticator</string>
+    <string name="biometric_subtitle">Authorize: %1$s</string>
+    <string name="biometric_description">Touch fingerprint sensor to authorize login</string>
+    <string name="biometric_cancel">Cancel</string>
+
+    <string name="error_no_biometric">biometric_unavailable: no strong biometric is enrolled</string>
+    <string name="error_device_not_secure">device_not_secure: set a PIN, pattern or password</string>
+    <string name="error_bridge_not_running">Bridge service is not running</string>
+    <string name="logs_cleared">Log cleared</string>
+    <string name="notification_permission_denied">Notifications are disabled; authorization requests may only appear while the app is open.</string>
+</resources>
