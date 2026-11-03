@@ -16,22 +16,26 @@ Authenticate Linux `sudo`, OpenSSH hardware keys (`ecdsa-sk`), and browser WebAu
 
 Unlike traditional hardware keys or cloud passkeys, uKey introduces three breakthrough paradigms for Linux security:
 
-### 1. "See What You Sign" — Out-of-Band Hardware Inspection
+### 1. Tri-Modal Biometrics: 3 Ways to Sign In, 1 Central Audit Ledger
+You are never stranded if your phone is in another room or your laptop lacks a fingerprint reader:
+- **Option 1 (Laptop Fingerprint):** If your laptop has a built-in sensor, authenticate in 0.4s right on the keyboard palm rest (`pam_fprintd.so`).
+- **Option 2 (Laptop Webcam Face Scanner):** Built-in camera (`/dev/video0`) scans your face locally (Linux Hello).
+- **Option 3 (Phone StrongBox):** Route cryptographic assertions directly to your Android hardware enclave.
+
+**The Mobile Security Audit Ledger:** Whichever method you choose on your laptop, uKey transmits an authenticated transaction receipt to your phone app. Your phone maintains a real-time, tamper-resistant audit trail of every `sudo` escalation, SSH session, and WebAuthn login across your Linux machine.
+
+### 2. Zero-Cloud Privacy Guarantee
+- **Biometric vectors never leave local silicon:** Face embeddings and fingerprint minutiae are processed purely in local RAM/silicon and destroyed immediately.
+- **Audit receipts only:** The phone receives only cryptographically signed receipts (`timestamp`, `service`, `status`), never raw biometric data.
+- **100% Offline / Local Socket:** Operates strictly over USB (`adb reverse`) or local Wi-Fi. Zero external telemetry, zero cloud relays, zero tracking.
+
+### 3. "See What You Sign" — Out-of-Band Hardware Inspection
 - **The Physical YubiKey Flaw:** Commercial hardware keys (YubiKey, Nitrokey) are "blind". When a background script triggers a sudo prompt, you tap the gold disc with zero context of what process or command you just authorized.
 - **The uKey Solution:** Your phone has a high-resolution touchscreen. uKey sends the exact relying party, command, and process context out-of-band to your phone. You visually verify what you are signing before touching the biometric sensor.
 
-### 2. Proximity Walk-Away Screen Lock (`--auto-lock`)
+### 4. Proximity Walk-Away Screen Lock (`--auto-lock`)
 - Ever walked away from your laptop at a college lab, office, or coffee shop?
 - Run `ukey_daemon.py --auto-lock`. The second your phone unplugs or leaves local connectivity, Linux instantly triggers `loginctl lock-session`. When you return and touch your fingerprint, your session unlocks.
-
-### 3. Adaptive Biometric Hierarchy (Laptop-First, Phone-Fallback)
-- **Have a laptop with a working fingerprint sensor?** Linux PAM invokes local `pam_fprintd.so` first (0.4s local touch).
-- **No laptop sensor, proprietary driver broken, or laptop closed in a dock?** uKey seamlessly routes auth to your phone StrongBox.
-- **Performing FIDO2 WebAuthn or OpenSSH signing?** Laptop sensors are cryptographically incapable of this (no enclave, no P-256 key generation). uKey provides the missing hardware token via `/dev/uhid`.
-
-### 4. Zero Cloud Relay / $0 Hardware Waste
-- Commercial keys cost ₹5,500 – ₹8,000 INR ($60–$95) each.
-- uKey operates 100% locally over USB (`adb reverse`) or local Wi-Fi sockets. Zero external servers, zero Bluetooth caBLE rendezvous, zero proprietary tracking.
 
 ---
 

@@ -617,6 +617,48 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid rgba(120, 217, 236, 0.15); border-radius: 6px; padding: 10px 12px;
 }
 
+/* Tri-Modal Method Selector Row */
+.auth-method-row {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  margin-top: 14px; flex-wrap: wrap;
+}
+.auth-method-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  color: var(--gray-1); letter-spacing: .08em;
+}
+.auth-method-pills { display: flex; gap: 8px; }
+.method-pill {
+  font-family: var(--mono); font-size: 11px; padding: 5px 12px;
+  border-radius: 99px; background: var(--gray-3); border: 1px solid var(--gray-2);
+  color: var(--gray-1); cursor: pointer; transition: all .2s;
+}
+.method-pill:hover { border-color: var(--white); color: var(--white); }
+.method-pill.active {
+  background: rgba(120, 217, 236, 0.15); border-color: var(--accent-cyan);
+  color: var(--accent-cyan); font-weight: 600;
+}
+
+/* Laptop Face Scanner Overlay */
+.laptop-face-overlay {
+  display: none; position: absolute; inset: 0; background: rgba(10, 12, 16, 0.92);
+  border-radius: 6px; z-index: 15; flex-direction: column; align-items: center; justify-content: center;
+  padding: 14px; text-align: center;
+}
+.face-reticle {
+  width: 70px; height: 70px; border: 2px dashed var(--accent-cyan);
+  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px; position: relative; animation: pulseReticle 2s infinite ease-in-out;
+}
+@keyframes pulseReticle {
+  0% { transform: scale(0.96); border-color: var(--accent-cyan); }
+  50% { transform: scale(1.04); border-color: var(--accent-green); }
+  100% { transform: scale(0.96); border-color: var(--accent-cyan); }
+}
+.face-reticle.verified {
+  border: 2px solid var(--accent-green);
+  background: rgba(129, 201, 149, 0.15);
+}
+
 /* Adaptive Hierarchy Section (Laptop-First, Phone-Fallback) */
 .hierarchy-section {
   padding: clamp(70px, 9vw, 120px) var(--gutter);
@@ -841,6 +883,16 @@ footer a { color: var(--white); }
       </div>
     </div>
 
+    <!-- Tri-Modal Auth Selector -->
+    <div class="auth-method-row">
+      <span class="auth-method-label">BIOMETRIC INPUT:</span>
+      <div class="auth-method-pills">
+        <button class="method-pill" data-method="laptop-fp">🖐️ 1. Laptop Fingerprint</button>
+        <button class="method-pill" data-method="laptop-face">👁️ 2. Laptop Camera (Face ID)</button>
+        <button class="method-pill active" data-method="phone-bio">📱 3. Phone StrongBox</button>
+      </div>
+    </div>
+
     <div class="stage-viewport">
       <div class="hardware-duo">
 
@@ -863,6 +915,18 @@ footer a { color: var(--white); }
 
               <!-- Desktop Workspace Windows (Terminal & Browser) -->
               <div class="desktop-workspace">
+                <!-- Face Scanner Overlay for Laptop Camera Mode -->
+                <div class="laptop-face-overlay" id="laptopFaceOverlay">
+                  <div class="face-reticle" id="faceReticle">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" id="faceIcon">
+                      <path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M9.5 15a3.5 3.5 0 0 0 5 0"/>
+                      <path d="M4 3h4M20 3h-4M4 21h4M20 21h-4M3 8v8M21 8v8"/>
+                    </svg>
+                  </div>
+                  <div style="font-size:12px; font-weight:700; color:#FFF;" id="faceStatusTitle">Linux Hello (Webcam /dev/video0)</div>
+                  <div style="font-size:10px; color:var(--accent-cyan); font-family:var(--mono); margin-top:2px;" id="faceStatusSub">Click reticle to scan face & verify...</div>
+                </div>
+
                 <!-- Linux Terminal Window (for sudo and ssh) -->
                 <div class="screen-terminal" id="screenTerminal" style="display:none;">
                   <div class="sterm-bar">
@@ -1136,56 +1200,74 @@ footer a { color: var(--white); }
     </div>
   </section>
 
-  <!-- Adaptive Biometric Hierarchy: Laptop-First, Phone-Fallback -->
+  <!-- Tri-Modal Biometric Hierarchy & Mobile Audit Ledger -->
   <section class="hierarchy-section" id="hierarchy">
-    <div class="websites-badge">UNIFIED ARCHITECTURE • INDIAFOSS ROADMAP</div>
-    <h2 class="h2">Laptop-First, Phone-Fallback.</h2>
+    <div class="websites-badge">UNIFIED TRI-MODAL ARCHITECTURE • ZERO CLOUD PRIVACY</div>
+    <h2 class="h2">3 Ways to Sign In. 1 Real-Time Audit Ledger.</h2>
     <p class="lede">
-      What if your laptop already has a built-in fingerprint sensor? uKey doesn't force you to pull out your phone. It implements an <b>adaptive hardware cascade</b>: use your laptop's local sensor when available, and seamlessly fall back to your phone's StrongBox when it's not.
+      Whether your phone is in your pocket, across the room, or on your desk: uKey gives you <b>three flexible biometric options</b> to authenticate on Linux—and mirrors every single verification to your phone's tamper-proof audit log.
     </p>
 
     <div class="hierarchy-flow">
       <div class="hierarchy-card">
         <div>
-          <span class="hierarchy-badge tier1">TIER 01 • LAPTOP BUILT-IN SENSOR</span>
-          <h3 class="hierarchy-title">Local fprintd Sensor</h3>
+          <span class="hierarchy-badge tier1">OPTION 01 • LAPTOP BUILT-IN SENSOR</span>
+          <h3 class="hierarchy-title">Laptop Palm-Rest Fingerprint</h3>
           <p class="hierarchy-desc">
-            If your ThinkPad, Dell, or Framework laptop has a working fingerprint reader, Linux PAM invokes <code>pam_fprintd.so</code> first. Authenticate <code>sudo</code> or screen unlock in 0.4s without reaching for your phone.
+            If your ThinkPad, Dell, or Framework has a working fingerprint sensor, authenticate in 0.4s right on the keyboard palm-rest via <code>pam_fprintd.so</code>. Zero need to reach for your phone.
           </p>
         </div>
         <div class="hierarchy-code">
-          <span style="color:var(--gray-1)"># PAM Priority 1 (Local sensor)</span><br>
+          <span style="color:var(--gray-1)"># Input: Laptop Hardware Fingerprint</span><br>
           <span style="color:var(--accent-cyan)">auth sufficient pam_fprintd.so</span>
-        </div>
-      </div>
-
-      <div class="hierarchy-card primary">
-        <div>
-          <span class="hierarchy-badge tier2">TIER 02 • UKEY PHONE ENCLAVE</span>
-          <h3 class="hierarchy-title">Phone StrongBox Bridge</h3>
-          <p class="hierarchy-desc">
-            No laptop sensor? Proprietary Goodix driver broken? Laptop closed in a desktop dock? Or performing <b>FIDO2 WebAuthn / OpenSSH signing</b> that <code>libfprint</code> cannot do? uKey prompts your phone's biometric hardware enclave via <code>/dev/uhid</code>.
-          </p>
-        </div>
-        <div class="hierarchy-code">
-          <span style="color:var(--gray-1)"># PAM Priority 2 & WebAuthn / SSH</span><br>
-          <span style="color:var(--accent-green)">auth sufficient pam_u2f.so ...</span>
         </div>
       </div>
 
       <div class="hierarchy-card">
         <div>
-          <span class="hierarchy-badge tier3">TIER 03 • SYSTEM FALLBACK</span>
-          <h3 class="hierarchy-title">Passphrase Auth</h3>
+          <span class="hierarchy-badge tier1">OPTION 02 • LAPTOP WEBCAM</span>
+          <h3 class="hierarchy-title">Laptop Face Scanner</h3>
           <p class="hierarchy-desc">
-            Phone battery depleted, device untethered, or biometric sensor soiled? Linux drops cleanly to standard UNIX password authentication. Zero lock-out risk, zero system lockups.
+            No fingerprint reader on your laptop? The built-in webcam (<code>/dev/video0</code>) verifies your face locally in 0.5s (Linux Hello). 100% offline processing; no images ever leave RAM.
           </p>
         </div>
         <div class="hierarchy-code">
-          <span style="color:var(--gray-1)"># PAM Priority 3</span><br>
-          <span style="color:var(--accent-amber)">auth required pam_unix.so try_first_pass</span>
+          <span style="color:var(--gray-1)"># Input: Laptop Webcam (/dev/video0)</span><br>
+          <span style="color:var(--accent-cyan)">auth sufficient pam_howdy.so</span>
         </div>
       </div>
+
+      <div class="hierarchy-card primary">
+        <div>
+          <span class="hierarchy-badge tier2">OPTION 03 • PHONE STRONGBOX</span>
+          <h3 class="hierarchy-title">Mobile Biometric Enclave</h3>
+          <p class="hierarchy-desc">
+            Need maximum hardware isolation or signing <b>FIDO2 WebAuthn & OpenSSH keys</b>? The request tunnels to your phone's Android StrongBox chip. Authenticate with your phone's biometric sensor.
+          </p>
+        </div>
+        <div class="hierarchy-code">
+          <span style="color:var(--gray-1)"># Input: Android Hardware StrongBox</span><br>
+          <span style="color:var(--accent-green)">auth sufficient pam_u2f.so ...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- The Mobile Security Audit Ledger Box -->
+    <div style="margin-top:32px; background:var(--gray-3); border:1px solid var(--gray-2); border-radius:12px; padding:28px; display:flex; flex-direction:column; gap:16px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-size:24px;">📱</span>
+        <div>
+          <h3 style="font-size:18px; font-weight:700; color:var(--white);">The Mobile Security Audit Ledger: Zero-Cloud Privacy Guarantee</h3>
+          <span style="font-family:var(--mono); font-size:11px; color:var(--accent-green);">Every laptop login tracked in real-time on your phone</span>
+        </div>
+      </div>
+      <p style="font-size:13.5px; color:var(--gray-1); line-height:1.6; margin:0;">
+        Whichever method you choose on your laptop (laptop fingerprint, webcam face scanner, or mobile biometric), uKey transmits a cryptographically signed verification receipt over the local USB/Wi-Fi socket directly to your phone app.<br><br>
+        <b>Why this is a breakthrough for privacy and security:</b><br>
+        • <b>Tamper-Proof Audit Trail:</b> If an attacker sits at your laptop or a rogue script runs <code>sudo</code>, your phone immediately vibrates and logs the command out-of-band.<br>
+        • <b>Zero Biometrics Transferred:</b> Your face scans and fingerprint templates <b>never</b> leave local silicon. Only the signed cryptographic assertion and timestamp are synced.<br>
+        • <b>100% Local / Zero Cloud:</b> No servers, no telemetry, no tracking. Everything runs point-to-point on your local machine.
+      </p>
     </div>
   </section>
 
@@ -1533,34 +1615,84 @@ function resetStage() {
   dialogIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
 }
 
+let currentMethod = "phone-bio";
+const methodPills = document.querySelectorAll(".method-pill");
+const laptopFaceOverlay = document.getElementById("laptopFaceOverlay");
+const faceReticle = document.getElementById("faceReticle");
+const faceStatusTitle = document.getElementById("faceStatusTitle");
+const faceStatusSub = document.getElementById("faceStatusSub");
+
+methodPills.forEach(pill => {
+  pill.addEventListener("click", () => {
+    methodPills.forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    currentMethod = pill.dataset.method;
+    applyMethodView();
+  });
+});
+
+function applyMethodView() {
+  if (currentMethod === "laptop-face") {
+    laptopFaceOverlay.style.display = "flex";
+    faceReticle.classList.remove("verified");
+    faceStatusTitle.textContent = "Linux Hello (Webcam /dev/video0)";
+    faceStatusSub.textContent = "Click reticle to scan face & verify...";
+  } else {
+    laptopFaceOverlay.style.display = "none";
+  }
+
+  if (currentMethod === "laptop-fp") {
+    termPromptText.textContent = "Please touch laptop palm-rest sensor...";
+  } else if (currentMethod === "laptop-face") {
+    termPromptText.textContent = "Align face with laptop webcam (/dev/video0)...";
+  } else {
+    termPromptText.textContent = "Touch phone fingerprint sensor...";
+  }
+}
+
+// Face Scanner Reticle Click Event
+if (faceReticle) {
+  faceReticle.addEventListener("click", () => {
+    faceReticle.classList.add("verified");
+    faceStatusTitle.textContent = "✓ Face Recognized (Linux Hello)";
+    faceStatusSub.textContent = "Cryptographic proof sent to /dev/uhid & phone ledger";
+
+    executeAuthSuccess("Laptop Camera (Face ID)");
+  });
+}
+
+function executeAuthSuccess(methodName) {
+  const sc = scenarios[currentScenario];
+  phoneDialog.classList.add("success");
+  dialogIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+  fpStatusText.textContent = `✓ Verified via ${methodName}`;
+
+  appLogLiveDone.style.display = "block";
+  appLogLiveDone.innerHTML = `<span class="log-time">[18:45:12]</span> <span class="log-ok">AUTH: ${methodName}</span><br><span class="log-time">[18:45:12]</span> <span class="log-conn">AUDIT: Mirrored to phone ledger</span>`;
+
+  if (sc.type === "terminal") {
+    termWaitingLine.style.display = "none";
+    termDoneOutput.style.display = "block";
+    termSuccessHead.textContent = sc.successMsg;
+    termSuccessDetail.textContent = sc.detailMsg;
+  } else {
+    browserWaitingText.style.display = "none";
+    browserDoneText.style.display = "block";
+    browserDoneText.innerHTML = `${sc.successMsg}<div style="font-size:10.5px; color:var(--gray-1); margin-top:3px; font-weight:normal;">${sc.detailMsg}</div>`;
+  }
+
+  setTimeout(() => {
+    resetStage();
+  }, 4500);
+}
+
 // Fingerprint Touch Animation & Execution
 fingerprintBtn.addEventListener("click", () => {
   fpStatusText.textContent = "Signing P-256 in StrongBox...";
   fingerprintBtn.classList.add("verified");
 
   setTimeout(() => {
-    const sc = scenarios[currentScenario];
-    phoneDialog.classList.add("success");
-    dialogIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
-    fpStatusText.textContent = "✓ Verified (StrongBox P-256)";
-
-    appLogLiveDone.style.display = "block";
-    appLogLiveDone.innerHTML = `<span class="log-time">[18:45:12]</span> <span class="log-ok">${sc.logOk}</span>`;
-
-    if (sc.type === "terminal") {
-      termWaitingLine.style.display = "none";
-      termDoneOutput.style.display = "block";
-      termSuccessHead.textContent = sc.successMsg;
-      termSuccessDetail.textContent = sc.detailMsg;
-    } else {
-      browserWaitingText.style.display = "none";
-      browserDoneText.style.display = "block";
-      browserDoneText.innerHTML = `${sc.successMsg}<div style="font-size:10.5px; color:var(--gray-1); margin-top:3px; font-weight:normal;">${sc.detailMsg}</div>`;
-    }
-
-    setTimeout(() => {
-      resetStage();
-    }, 4500);
+    executeAuthSuccess("Phone StrongBox Biometric");
   }, 350);
 });
 
