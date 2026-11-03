@@ -479,6 +479,46 @@ class Ctap2Engine:
         self.credentials: dict[bytes, Credential] = {}
         self._sign_count = 0
         self._engine_lock = threading.Lock()
+        self._cred_file = os.path.expanduser("~/.config/ukey/credentials.json")
+        self._load_credentials()
+
+    def _load_credentials(self) -> None:
+        if not os.path.exists(self._cred_file):
+            return
+        try:
+            with open(self._cred_file, "r") as f:
+                data = json.load(f)
+            for item in data:
+                cid = bytes.fromhex(item["cred_id"])
+                self.credentials[cid] = Credential(
+                    cred_id=cid,
+                    rp_id=item["rp_id"],
+                    x=bytes.fromhex(item.get("x", "")),
+                    y=bytes.fromhex(item.get("y", "")),
+                    created_at=item.get("created_at", 0.0),
+                )
+            LOG.info("Loaded %d credentials from %s", len(self.credentials), self._cred_file)
+        except Exception as exc:
+            LOG.warning("Failed to load credentials from %s: %s", self._cred_file, exc)
+
+    def _save_credentials(self) -> None:
+        try:
+            os.makedirs(os.path.dirname(self._cred_file), exist_ok=True)
+            data = []
+            for c in self.credentials.values():
+                data.append(
+                    {
+                        "cred_id": c.cred_id.hex(),
+                        "rp_id": c.rp_id,
+                        "x": c.x.hex() if c.x else "",
+                        "y": c.y.hex() if c.y else "",
+                        "created_at": c.created_at,
+                    }
+                )
+            with open(self._cred_file, "w") as f:
+                json.dump(data, f, indent=2)
+        except Exception as exc:
+            LOG.warning("Failed to save credentials to %s: %s", self._cred_file, exc)
 
     def _next_sign_count(self) -> int:
         with self._engine_lock:
@@ -642,6 +682,7 @@ class Ctap2Engine:
             y=y,
             created_at=time.time(),
         )
+        self._save_credentials()
         LOG.info("registered credential %s for %s", cred_id.hex()[:16], rp_id)
 
         if self.attestation == "none":
@@ -719,6 +760,8 @@ class Ctap2Engine:
         if allow_list is not None and not isinstance(allow_list, list):
             raise CtapError(CTAP2_ERR_INVALID_PARAMETER, "allowList must be an array")
 
+        rp_prefix = hashlib.sha256(rp_id.encode("utf-8")).digest()[:16]
+
         if isinstance(allow_list, list) and allow_list:
             for entry in allow_list:
                 if not isinstance(entry, dict) or entry.get("type") != "public-key":
@@ -729,6 +772,20 @@ class Ctap2Engine:
                 credential = self.credentials.get(cred_id)
                 if credential is not None and credential.rp_id == rp_id:
                     return credential
+                # Stateless uKey credential fallback:
+                # If cred_id was created by Android Keystore for this RP, its first 16 bytes match SHA256(rp_id)[:16]
+                if len(cred_id) == 32 and cred_id[:16] == rp_prefix:
+                    cred = Credential(
+                        cred_id=cred_id,
+                        rp_id=rp_id,
+                        x=b"",
+                        y=b"",
+                        created_at=time.time(),
+                    )
+                    self.credentials[cred_id] = cred
+                    self._save_credentials()
+                    LOG.info("re-associated stateless credential %s with %s", cred_id.hex()[:16], rp_id)
+                    return cred
             return None
 
         # No allowList: non-resident authenticators technically require one,
