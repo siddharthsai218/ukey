@@ -101,8 +101,16 @@ PAM_LINE="auth       sufficient   pam_u2f.so authfile=$U2F_KEYS_FILE cue prompt=
 if grep -q "pam_u2f.so" "$PAM_FILE"; then
     echo -e "${YELLOW}pam_u2f.so is already configured in $PAM_FILE.${NC}"
 else
-    # Insert after initial auth lines or at top of auth stack
-    sed -i "1s/^/# Added by uKey installer\n$PAM_LINE\n\n/" "$PAM_FILE"
+    # Prepend PAM_LINE safely using a temporary file
+    TMP_PAM=$(mktemp)
+    {
+        echo "# Added by uKey installer"
+        echo "$PAM_LINE"
+        echo ""
+        cat "$PAM_FILE"
+    } > "$TMP_PAM"
+    cp "$TMP_PAM" "$PAM_FILE"
+    rm -f "$TMP_PAM"
     echo -e "${GREEN}✓ Added pam_u2f module to $PAM_FILE with 'sufficient' priority.${NC}"
 fi
 
