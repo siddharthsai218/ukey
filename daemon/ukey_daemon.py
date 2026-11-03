@@ -907,6 +907,14 @@ class UKeyDaemon:
     # -- lifecycle ---------------------------------------------------------
 
     def run(self) -> int:
+        LOG.info("uKey Linux Biometric Subsystem initializing...")
+        local_bio = detect_host_biometric()
+        if local_bio:
+            LOG.info("Host hardware fingerprint sensor detected: %s", local_bio)
+            LOG.info("Adaptive Hierarchy: PAM local sensor primary; uKey StrongBox ready for FIDO2/CTAP2 & fallback")
+        else:
+            LOG.info("Host has no built-in fingerprint sensor; uKey Android StrongBox bridge is primary authenticator")
+
         self.signer.start()
         try:
             self.device.open()
