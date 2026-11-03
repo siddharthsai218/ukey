@@ -48,6 +48,9 @@ MISSING_PKGS=()
 if ! rpm -q pam-u2f &>/dev/null; then
     MISSING_PKGS+=("pam-u2f")
 fi
+if ! rpm -q pamu2fcfg &>/dev/null; then
+    MISSING_PKGS+=("pamu2fcfg")
+fi
 if ! rpm -q fido2-tools &>/dev/null; then
     MISSING_PKGS+=("fido2-tools")
 fi
