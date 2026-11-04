@@ -1,41 +1,41 @@
-# uKey: Context-Aware Hardware Security Key for Linux
+# uKey: a virtual FIDO2 authenticator for Linux
 
 [![Linux Kernel /dev/uhid](https://img.shields.io/badge/Kernel-/dev/uhid-blue.svg)](https://docs.kernel.org/hid/uhid.html)
 [![FIDO2 / CTAP2](https://img.shields.io/badge/Protocol-FIDO2%20%2F%20CTAP2-green.svg)](https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html)
 [![Android StrongBox](https://img.shields.io/badge/Hardware-Android%20StrongBox%20%2F%20TEE-orange.svg)](https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setIsStrongBoxBacked(boolean))
-[![Zero Cloud](https://img.shields.io/badge/Privacy-100%25%20Local%20%2F%20Zero%20Cloud-emerald.svg)](#)
+[![Status: Prototype](https://img.shields.io/badge/Status-Prototype-orange.svg)](#status)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-**uKey** turns any standard Android phone into an **out-of-band, hardware-backed FIDO2 / CTAP2 security key** for Linux via `/dev/uhid`.
+**uKey makes Linux believe an Android phone is a USB FIDO2 security key.** The host sees a real `/dev/hidraw` HID device. A Python daemon implements UHID, CTAPHID, and CTAP2. The private key lives in AndroidKeyStore — StrongBox preferred, TEE fallback — and every assertion requires a per-use biometric prompt on the phone.
 
-Authenticate Linux `sudo`, OpenSSH hardware keys (`ecdsa-sk`), and browser WebAuthn logins (Google, GitHub, AWS) using your phone's tamper-resistant biometric hardware enclave.
+This is a prototype and a reference implementation, not a product. The interesting part is the implementation: a virtual device, a readable protocol engine, and a remote signer. The website in [`docs/index.html`](docs/index.html) tells that story, including the gaps.
 
----
+## Status
 
-## Why uKey is Truly Unique
+| Area | State | Evidence / limit |
+|---|---|---|
+| Virtual FIDO2 device | Working | UHID creates a HID device; libfido2 enumerates a hidraw node. Verified with `fido2-token -L` / `-I`. |
+| CTAPHID + CTAP2 | Working | `INIT`, `PING`, `CBOR`, `CANCEL`, `KEEPALIVE`; `getInfo`, `makeCredential`, `getAssertion`. 8/8 Python tests. |
+| Mock signer | Working | Deterministic P-256 signer for tests and demos. Ephemeral keys, not a security boundary. |
+| Android signer | Implemented, not audited | StrongBox preferred, TEE fallback, software-backed keys rejected; per-use biometric prompt; Kotlin unit tests. |
+| Browser WebAuthn | Not claimed | No browser end-to-end test is included. |
+| SSH `ecdsa-sk` | Not claimed | No end-to-end test is included. |
+| PAM / `sudo` | Not yet | `CTAPHID_MSG` is not implemented; `fido2-token -I` reports `nomsg`. The credential path is unfinished. |
+| Resident credentials | Unsupported | `rk=true` is rejected; no `getNextAssertion`. |
+| Transport security | Missing | The signer socket is unauthenticated and unencrypted. Keep it on loopback via `adb reverse`. |
+| Context approval | Design | The phone mockup and context schema exist; no protocol field or PAM hook is wired up. |
 
-Unlike traditional hardware keys or cloud passkeys, uKey introduces three breakthrough paradigms for Linux security:
+If you need a daily-driver security key or a passkey manager, use a YubiKey, a platform passkey, or a more complete project such as [`mahirsn/passkey`](https://github.com/mahirsn/passkey). uKey is not trying to win that comparison.
 
-### 1. Tri-Modal Biometrics: 3 Ways to Sign In, 1 Central Audit Ledger
-You are never stranded if your phone is in another room or your laptop lacks a fingerprint reader:
-- **Option 1 (Laptop Fingerprint):** If your laptop has a built-in sensor, authenticate in 0.4s right on the keyboard palm rest (`pam_fprintd.so`).
-- **Option 2 (Laptop Webcam Face Scanner):** Built-in camera (`/dev/video0`) scans your face locally (Linux Hello).
-- **Option 3 (Phone StrongBox):** Route cryptographic assertions directly to your Android hardware enclave.
+## The experiment: see what you sign
 
-**The Mobile Security Audit Ledger:** Whichever method you choose on your laptop, uKey transmits an authenticated transaction receipt to your phone app. Your phone maintains a real-time, tamper-resistant audit trail of every `sudo` escalation, SSH session, and WebAuthn login across your Linux machine.
+FIDO2 signs a digest, not a command. The second act of this project is an experiment: capture the `sudo` command context, show it on the phone, and bind the approval signature to that exact context.
 
-### 2. Zero-Cloud Privacy Guarantee
-- **Biometric vectors never leave local silicon:** Face embeddings and fingerprint minutiae are processed purely in local RAM/silicon and destroyed immediately.
-- **Audit receipts only:** The phone receives only cryptographically signed receipts (`timestamp`, `service`, `status`), never raw biometric data.
-- **100% Offline / Local Socket:** Operates strictly over USB (`adb reverse`) or local Wi-Fi. Zero external telemetry, zero cloud relays, zero tracking.
+The obvious local case is weak — if you are at the laptop, you can already see the terminal. The case worth exploring is when the terminal is not the trust channel: remote sessions, unattended scripts, shared machines, or a host you do not fully trust. That work is not implemented yet. See [`docs/CONTEXT_DISPLAY.md`](docs/CONTEXT_DISPLAY.md) for the design notes.
 
-### 3. "See What You Sign" — Out-of-Band Hardware Inspection
-- **The Physical YubiKey Flaw:** Commercial hardware keys (YubiKey, Nitrokey) are "blind". When a background script triggers a sudo prompt, you tap the gold disc with zero context of what process or command you just authorized.
-- **The uKey Solution:** Your phone has a high-resolution touchscreen. uKey sends the exact relying party, command, and process context out-of-band to your phone. You visually verify what you are signing before touching the biometric sensor.
+## Safety
 
-### 4. Proximity Walk-Away Screen Lock (`--auto-lock`)
-- Ever walked away from your laptop at a college lab, office, or coffee shop?
-- Run `ukey_daemon.py --auto-lock`. The second your phone unplugs or leaves local connectivity, Linux instantly triggers `loginctl lock-session`. When you return and touch your fingerprint, your session unlocks.
+Do not use uKey for production credentials or anything you cannot afford to lose. The prototype has no CTAP2 PIN protocol, no resident credentials, no attestation certificate chain, no encrypted credential store, and no protection against a hostile local process attaching to the signer socket. Credential metadata is stored unencrypted in `~/.config/ukey/credentials.json`. The Android app improves the key boundary, but the wire protocol is still unauthenticated and unencrypted.
 
 ---
 
@@ -144,8 +144,11 @@ The daemon creates the HID device immediately; the signer can connect before or
 after. The daemon log prints the hidraw node it finds, for example:
 
 ```
-hidraw node: /dev/hidraw3
+hidraw node: /dev/hidraw6
 ```
+
+Node numbers vary by machine. Use the one printed by the daemon in the
+validation commands below.
 
 Do not run the mock signer and the Android app at the same time; the daemon
 accepts one signer connection.
@@ -193,6 +196,13 @@ host firewall permits TCP 8443 from the phone. Only do this on a trusted
 network: the signer protocol has no transport encryption or peer
 authentication. USB with `adb reverse` is the safer default.
 
+`--wireless` is a shortcut for binding `0.0.0.0` and printing the host's LAN
+address; it does not add transport security. `--auto-lock` is experimental and
+calls `loginctl lock-session` when the signer disconnects. It is off by default
+and is not a security boundary. The checked-in `systemd/ukey.service` currently
+enables both flags; review it before installing or running it on a shared
+machine.
+
 ### What the app enforces
 
 - The device must have a PIN/pattern/password and an enrolled strong biometric.
@@ -237,8 +247,10 @@ for responses:
 
 It implements the required `make_credential` and `get_assertion` actions and
 also `attest`, which the Phase 1 daemon uses by default for packed
-self-attestation. Credential state remains in the daemon's memory, so
-restarting the daemon discards credentials and new ones must be registered.
+self-attestation. The daemon persists credential metadata (credential ID, RP
+ID, and public key) to `~/.config/ukey/credentials.json` and reloads it on
+startup. The private key remains with the signer: Android Keystore keys survive,
+while restarting the mock signer discards its ephemeral key.
 
 ## Validation
 
@@ -246,7 +258,7 @@ restarting the daemon discards credentials and new ones must be registered.
 
 ```bash
 fido2-token -L
-fido2-token -I /dev/hidraw3
+fido2-token -I /dev/hidraw6   # use the uKey node printed above
 ```
 
 Expected `fido2-token -I` fields include:
@@ -256,19 +268,24 @@ proto: 0x02
 major: 0x01
 minor: 0x00
 build: 0x00
-caps: 0x04 (nowink, cbor, msg)
+caps: 0x0c (nowink, cbor, nomsg)
 version strings: FIDO_2_0
 transport strings: usb
+algorithms: es256 (public-key)
 aaguid: fa83a1a960d94daabc6c092271928a11
-options: nork, up, uv, noclientPin
+options: nork, up, uv
+fwversion: 0x0
 maxmsgsiz: 1024
 maxcredcntlst: 8
 maxcredlen: 255
+maxcredblob: 0
+maxlargeblob: 0
 ```
 
-The product string in `fido2-token -L` is blank because UHID exposes only a HID
-device name, not a USB product-string descriptor. The device is still fully
-usable.
+`nowink` means no wink command; `nomsg` means CTAP1/U2F messages are not
+implemented. That is why the PAM/`sudo` path is unfinished. The product string
+in `fido2-token -L` comes from the virtual HID device name, for example
+`( uKey FIDO2 Authenticator)`.
 
 ### MakeCredential
 
@@ -279,7 +296,7 @@ echo example.com >> cred_in
 echo testuser >> cred_in
 head -c 32 /dev/urandom | base64 >> cred_in
 
-fido2-cred -M -i cred_in -o cred_out /dev/hidraw3
+fido2-cred -M -i cred_in -o cred_out /dev/hidraw6
 ```
 
 `cred_out` contains the client data hash, RP ID, format, authData, credential
@@ -298,7 +315,7 @@ printf 'assertion-challenge\n' | openssl dgst -sha256 -binary | base64 > assert_
 sed -n '2p' cred_out >> assert_in   # RP ID
 sed -n '5p' cred_out >> assert_in   # credential ID
 
-fido2-assert -G -i assert_in -o assert_out /dev/hidraw3
+fido2-assert -G -i assert_in -o assert_out /dev/hidraw6
 fido2-assert -V -i assert_out cred_pub.pem
 ```
 
@@ -400,16 +417,17 @@ root.
 ## Security and scope
 
 The mock signer is a test double, not a security boundary. Its private keys are
-ephemeral and live only in process memory. Phase 1 has no PIN/UV protocol, no
-resident credentials, no attestation certificate chain, no persistent storage,
-and no protection against a hostile local process attaching to the signer
-socket.
+ephemeral and live only in process memory. Phase 1 has no CTAP2 PIN protocol, no
+resident credentials, no attestation certificate chain, no encrypted credential
+store, and no protection against a hostile local process attaching to the signer
+socket. Credential metadata is stored unencrypted in
+`~/.config/ukey/credentials.json`; private keys are not written there.
 
 The Android app improves the key boundary: private keys are non-exportable
 AndroidKeyStore keys, StrongBox is preferred, software-backed keys are rejected,
 and each assertion requires a strong-biometric prompt that displays the RP ID.
 The wire protocol itself is still unauthenticated and unencrypted, so keep it on
-loopback via `adb reverse` unless the network is trusted. The app returns packed
-self-attestation, not a vendor-certified attestation chain. As with Phase 1,
-credentials are remembered by the daemon process only; restarting it discards
-them. Do not use the current protocol for production credentials.
+loopback via `adb reverse` unless the network is trusted. The daemon returns
+packed self-attestation, not a vendor-certified attestation chain. Credential
+metadata is persisted unencrypted; private keys stay in the signer. Do not use
+the current protocol for production credentials.
