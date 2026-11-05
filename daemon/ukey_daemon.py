@@ -36,6 +36,8 @@ from typing import Any, Callable, Optional
 
 import cbor2
 
+import ukey_config
+
 LOG = logging.getLogger("ukey")
 
 # ---------------------------------------------------------------------------
@@ -241,11 +243,13 @@ class SignerBridge:
         port: int,
         connect_timeout: float = 8.0,
         on_disconnect: Optional[Callable[[], None]] = None,
+        on_connect: Optional[Callable[[], None]] = None,
     ) -> None:
         self.host = host
         self.port = port
         self.connect_timeout = connect_timeout
         self.on_disconnect = on_disconnect
+        self.on_connect = on_connect
         self._server: Optional[socket.socket] = None
         self._conn: Optional[socket.socket] = None
         self._conn_cond = threading.Condition()
@@ -253,6 +257,11 @@ class SignerBridge:
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._request_id = 0
+
+    @property
+    def connected(self) -> bool:
+        with self._conn_cond:
+            return self._conn is not None
 
     def start(self) -> None:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -284,7 +293,43 @@ class SignerBridge:
                     old.close()
                 except OSError:
                     pass
+            monitor = threading.Thread(
+                target=self._watch_conn,
+                args=(conn,),
+                name="signer-monitor",
+                daemon=True,
+            )
+            monitor.start()
             LOG.info("signer connected from %s:%d", *addr)
+            if self.on_connect is not None:
+                try:
+                    self.on_connect()
+                except Exception as exc:
+                    LOG.error("on_connect callback failed: %s", exc)
+
+    def _watch_conn(self, conn: socket.socket) -> None:
+        """Detect an idle peer disconnect without consuming request data."""
+        while not self._stop.is_set():
+            with self._conn_cond:
+                if self._conn is not conn:
+                    return
+            try:
+                readable, _, _ = select.select([conn], [], [], 0.25)
+            except (OSError, ValueError):
+                self._drop_conn(conn)
+                return
+            if not readable:
+                continue
+            try:
+                data = conn.recv(1, socket.MSG_PEEK | socket.MSG_DONTWAIT)
+            except BlockingIOError:
+                continue
+            except OSError:
+                self._drop_conn(conn)
+                return
+            if not data:
+                self._drop_conn(conn)
+                return
 
     def _drop_conn(self, conn: Optional[socket.socket] = None) -> None:
         with self._conn_cond:
@@ -954,12 +999,16 @@ def detect_host_biometric() -> Optional[str]:
 
 class UKeyDaemon:
     def __init__(self, args: argparse.Namespace) -> None:
-        if getattr(args, "wireless", False):
-            args.listen_host = "0.0.0.0"
         self.args = args
+        self.auto_lock = bool(getattr(args, "auto_lock", False))
+        self.auto_lock_grace_seconds = int(getattr(args, "auto_lock_grace_seconds", 5))
         self.device = UhidDevice(path=args.uhid, name=args.device_name)
-        on_disconnect = self._on_signer_disconnect if getattr(args, "auto_lock", False) else None
-        self.signer = SignerBridge(args.listen_host, args.port, on_disconnect=on_disconnect)
+        self.signer = SignerBridge(
+            args.listen_host,
+            args.port,
+            on_disconnect=self._on_signer_disconnect,
+            on_connect=self._on_signer_connect,
+        )
         self.ctap = Ctap2Engine(self.signer, attestation=args.attestation)
         self.channels: set[int] = set()
         self.pending: dict[int, dict[str, Any]] = {}
@@ -969,21 +1018,127 @@ class UKeyDaemon:
         self._active_cid: Optional[int] = None
         self._cancel: Optional[threading.Event] = None
 
+        self._auto_lock_cond = threading.Condition()
+        self._auto_lock_timer: Optional[threading.Timer] = None
+        self._auto_lock_episode = 0
+        self._auto_lock_done = False
+        self._signer_seen = False
+        self._shutting_down = False
+
+    def _on_signer_connect(self) -> None:
+        with self._auto_lock_cond:
+            self._signer_seen = True
+            self._auto_lock_episode += 1
+            self._auto_lock_done = False
+            timer = self._auto_lock_timer
+            self._auto_lock_timer = None
+        if timer is not None:
+            timer.cancel()
+            LOG.info("signer reconnected; cancelled pending auto-lock")
+        else:
+            LOG.info("signer connected")
+
     def _on_signer_disconnect(self) -> None:
-        LOG.warning("Phone bridge disconnected — triggering Proximity Walk-Away Screen Lock")
+        with self._auto_lock_cond:
+            if self._shutting_down:
+                LOG.debug("signer disconnected during shutdown; auto-lock skipped")
+                return
+            if not self.auto_lock:
+                LOG.info("signer disconnected; auto-lock disabled, session left unlocked")
+                return
+            if not self._signer_seen:
+                LOG.debug("signer disconnected before its first connection; auto-lock skipped")
+                return
+            if self._auto_lock_done:
+                LOG.debug("auto-lock already handled for this disconnect episode")
+                return
+            if self._auto_lock_timer is not None:
+                LOG.debug("duplicate signer disconnect; auto-lock already pending")
+                return
+            self._auto_lock_episode += 1
+            episode = self._auto_lock_episode
+            timer = threading.Timer(
+                self.auto_lock_grace_seconds,
+                self._auto_lock_after_grace,
+                args=(episode,),
+            )
+            timer.daemon = True
+            self._auto_lock_timer = timer
+        timer.start()
+        LOG.info(
+            "signer disconnected; auto-lock scheduled in %ds",
+            self.auto_lock_grace_seconds,
+        )
+
+    def _auto_lock_after_grace(self, episode: int) -> None:
+        with self._auto_lock_cond:
+            if self._shutting_down or episode != self._auto_lock_episode:
+                return
+            self._auto_lock_timer = None
+            if self.signer.connected:
+                LOG.info("signer reconnected during grace period; auto-lock cancelled")
+                return
+            self._auto_lock_done = True
+
+        if self._session_already_locked():
+            LOG.info("session is already locked; auto-lock skipped")
+            return
+
+        LOG.warning(
+            "auto-lock: signer stayed disconnected for %ds, locking session",
+            self.auto_lock_grace_seconds,
+        )
         try:
-            subprocess.run(["loginctl", "lock-session"], check=False)
+            subprocess.run(["loginctl", "lock-session"], check=False, timeout=5)
         except Exception as exc:
-            LOG.error("Failed to execute loginctl lock-session: %s", exc)
+            LOG.error("failed to execute loginctl lock-session: %s", exc)
+
+    @staticmethod
+    def _session_already_locked() -> bool:
+        session_id = os.environ.get("XDG_SESSION_ID")
+        if not session_id:
+            return False
+        try:
+            proc = subprocess.run(
+                ["loginctl", "show-session", session_id, "-p", "LockedHint", "--value"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+        except Exception:
+            return False
+        if proc.returncode != 0:
+            return False
+        value = proc.stdout.strip().lower()
+        return value == "yes" or value.endswith("lockedhint=yes")
+
+    def _cancel_auto_lock(self) -> None:
+        with self._auto_lock_cond:
+            self._auto_lock_episode += 1
+            timer = self._auto_lock_timer
+            self._auto_lock_timer = None
+        if timer is not None:
+            timer.cancel()
 
     # -- lifecycle ---------------------------------------------------------
 
     def run(self) -> int:
-        LOG.info("uKey Linux Biometric Subsystem initializing...")
+        LOG.info("uKey virtual FIDO2 authenticator initializing")
+        LOG.info(
+            "effective config: listen=%s:%d wireless=%s auto_lock=%s "
+            "auto_lock_grace=%ds device=%r",
+            self.args.listen_host,
+            self.args.port,
+            bool(getattr(self.args, "wireless", False)),
+            self.auto_lock,
+            self.auto_lock_grace_seconds,
+            self.args.device_name,
+        )
         if getattr(self.args, "wireless", False):
             lan_ip = get_primary_ip()
             LOG.info("=" * 60)
-            LOG.info("📶 uKey Wireless LAN Mode Enabled")
+            LOG.info("uKey wireless LAN mode enabled")
             LOG.info("   Connect your Android app to:")
             LOG.info("   Host: %s   Port: %d", lan_ip, self.args.port)
             LOG.info("=" * 60)
@@ -1033,6 +1188,9 @@ class UKeyDaemon:
                     break
                 self._handle_uhid_event(event_type, event)
         finally:
+            with self._auto_lock_cond:
+                self._shutting_down = True
+            self._cancel_auto_lock()
             self.device.close()
             self.signer.stop()
             LOG.info("uKey daemon stopped")
@@ -1040,6 +1198,8 @@ class UKeyDaemon:
 
     def request_stop(self, signum: int, _frame: Any) -> None:
         LOG.info("received signal %d, stopping", signum)
+        with self._auto_lock_cond:
+            self._shutting_down = True
         self.stop_event.set()
 
     # -- UHID events -------------------------------------------------------
@@ -1265,12 +1425,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="uKey Phase 1 virtual FIDO2 authenticator")
     parser.add_argument("--uhid", default="/dev/uhid", help="UHID device path")
     parser.add_argument(
-        "--device-name",
-        default="uKey FIDO2 Authenticator",
-        help="HID device name (must match the udev rule)",
+        "--config",
+        default=None,
+        help="configuration file (default: ~/.config/ukey/config.json; UKEY_CONFIG overrides)",
     )
-    parser.add_argument("--listen-host", default="127.0.0.1", help="signer bridge bind address")
-    parser.add_argument("--port", type=int, default=8443, help="signer bridge port")
+    parser.add_argument(
+        "--device-name",
+        default=None,
+        help="HID device name (default: uKey FIDO2 Authenticator)",
+    )
+    parser.add_argument(
+        "--listen-host",
+        default=None,
+        help="signer bridge bind address (default: 127.0.0.1)",
+    )
+    parser.add_argument("--port", type=int, default=None, help="signer bridge port (default: 8443)")
     parser.add_argument(
         "--attestation",
         choices=("self", "none"),
@@ -1283,13 +1452,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--wireless",
+        dest="wireless",
         action="store_true",
-        help="Wireless Mode: bind to 0.0.0.0 and print host LAN IP for direct phone connection without USB cable",
+        default=None,
+        help="bind the signer bridge to 0.0.0.0 and print the host LAN IP",
+    )
+    parser.add_argument(
+        "--no-wireless",
+        dest="wireless",
+        action="store_false",
+        help="force loopback even if the config file enables wireless",
     )
     parser.add_argument(
         "--auto-lock",
+        dest="auto_lock",
         action="store_true",
-        help="Proximity Walk-Away Lock: automatically lock the Linux screen via loginctl when the phone disconnects",
+        default=None,
+        help="lock the session via loginctl after the phone disconnects",
+    )
+    parser.add_argument(
+        "--no-auto-lock",
+        dest="auto_lock",
+        action="store_false",
+        help="never lock the session on phone disconnect",
+    )
+    parser.add_argument(
+        "--auto-lock-grace",
+        dest="auto_lock_grace_seconds",
+        type=int,
+        default=None,
+        metavar="SECONDS",
+        help="wait this long after disconnect before locking (default: 5)",
     )
     parser.add_argument("--verbose", action="store_true")
     return parser
@@ -1297,6 +1490,23 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = build_parser().parse_args(argv)
+    try:
+        config = ukey_config.resolve_config(
+            args,
+            path=args.config,
+            create=True,
+        )
+    except ukey_config.ConfigError as exc:
+        print(f"ukey: configuration error: {exc}", file=sys.stderr)
+        return 2
+
+    args.wireless = config.wireless
+    args.auto_lock = config.auto_lock
+    args.auto_lock_grace_seconds = config.auto_lock_grace_seconds
+    args.listen_host = config.listen_host
+    args.port = config.port
+    args.device_name = config.device_name
+
     handlers: list[logging.Handler] = [logging.StreamHandler()]
     try:
         handlers.append(logging.FileHandler(f"/tmp/ukey_{os.getuid()}.log", mode="a"))

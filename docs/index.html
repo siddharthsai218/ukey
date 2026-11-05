@@ -1088,16 +1088,18 @@ maxcredlen: 255
             <thead><tr><th scope="col">Area</th><th scope="col">State</th><th scope="col">Evidence / limit</th></tr></thead>
             <tbody>
               <tr><td>Virtual FIDO2 device</td><td><span class="badge works">Working</span></td><td>UHID creates a HID device; libfido2 enumerates a hidraw node.<span class="evidence">verified with fido2-token -L / -I</span></td></tr>
-              <tr><td>CTAPHID + CTAP2</td><td><span class="badge works">Working</span></td><td>INIT, PING, CBOR, CANCEL, KEEPALIVE; GetInfo, MakeCredential, GetAssertion.<span class="evidence">8/8 Python tests; fragmentation + ECDSA verification</span></td></tr>
-              <tr><td>Android signer</td><td><span class="badge impl">Implemented</span></td><td>StrongBox preferred, TEE fallback, software keys rejected; per-use biometric prompt. Not independently audited.<span class="evidence">Kotlin source + unit tests in repo</span></td></tr>
+              <tr><td>CTAPHID + CTAP2</td><td><span class="badge works">Working</span></td><td>INIT, PING, CBOR, CANCEL, KEEPALIVE; GetInfo, MakeCredential, GetAssertion.<span class="evidence">8/8 protocol tests, 24 total; fragmentation + ECDSA verification</span></td></tr>
+              <tr><td>Android signer</td><td><span class="badge partial">Partial</span></td><td>StrongBox preferred, TEE fallback, software keys rejected; per-use biometric prompt. Not independently audited, and no phone-to-libfido2 run in CI.<span class="evidence">Kotlin source + unit tests in repo</span></td></tr>
+              <tr><td>Credential storage</td><td><span class="badge partial">Metadata only</span></td><td>Credential ID, RP ID, and public key persist under <code>~/.config/ukey</code>, unencrypted. Private keys stay in AndroidKeyStore.<span class="evidence">daemon/ukey_daemon.py, credentials.json</span></td></tr>
               <tr><td>Browser WebAuthn</td><td><span class="badge claim">Not claimed</span></td><td>No browser end-to-end test is included. Do not treat this as a daily passkey yet.</td></tr>
               <tr><td>SSH <code>ecdsa-sk</code></td><td><span class="badge claim">Not claimed</span></td><td>No end-to-end test. The protocol may support it; this site does not.</td></tr>
               <tr><td>PAM / <code>sudo</code></td><td><span class="badge no">Not yet</span></td><td><code>CTAPHID_MSG</code> is not implemented; <code>caps</code> says <code>nomsg</code>. The PAM script exists but the credential path is not finished.</td></tr>
               <tr><td>Resident credentials</td><td><span class="badge no">Unsupported</span></td><td><code>rk=true</code> is rejected; there is no <code>getNextAssertion</code>.</td></tr>
               <tr><td>Context approval</td><td><span class="badge design">Design</span></td><td>Screen mockup and schema exist. No protocol field or PAM hook is wired up.</td></tr>
               <tr><td>Transport security</td><td><span class="badge no">Missing</span></td><td>The signer socket is unauthenticated and unencrypted. Keep it on loopback via <code>adb reverse</code>.</td></tr>
-              <tr><td>Auto-lock</td><td><span class="badge partial">Experimental</span></td><td><code>--auto-lock</code> calls <code>loginctl</code> when the signer disconnects. No config option; not a security boundary.</td></tr>
-              <tr><td>Installer</td><td><span class="badge partial">Fedora-only</span></td><td><code>install.sh</code> uses <code>dnf</code> and a service hardcoded to <code>--wireless --auto-lock</code>. The manual path is the reliable one.</td></tr>
+              <tr><td>Auto-lock</td><td><span class="badge impl">Opt-in</span></td><td>Off by default. When enabled: grace period, reconnect cancellation, duplicate-disconnect debounce, and a shutdown guard. Not a security boundary.<span class="evidence">tests/test_auto_lock.py</span></td></tr>
+              <tr><td>Configuration</td><td><span class="badge impl">Implemented</span></td><td>Shared JSON config at <code>~/.config/ukey/config.json</code>, written <code>0600</code>, with loopback and auto-lock-off defaults. CLI flags override for one run.<span class="evidence">tests/test_config.py; scripts/ukeyctl</span></td></tr>
+              <tr><td>Installer</td><td><span class="badge partial">Fedora-only</span></td><td><code>install.sh</code> installs a user service with safe defaults. It no longer forces <code>--wireless --auto-lock</code>. The manual path is the portable one.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1258,9 +1260,9 @@ maxcredlen: 255
       <div class="roadmap">
         <div class="phase current reveal">
           <span class="when">Now</span>
-          <h3>Make the prototype honest</h3>
-          <p>Remove overclaims, align the README with the site, turn off wireless and auto-lock by default, and add a config surface that can be tested.</p>
-          <ul><li>truth audit + tests</li><li>safe defaults, CI</li><li>60-second demo script</li></ul>
+          <h3>Safe defaults, then the demo</h3>
+          <p>Overclaims are removed, the config surface is tested, and auto-lock is opt-in. What remains for this phase is a repeatable 60-second demo and a final docs alignment pass.</p>
+          <ul><li>truth audit + 24 tests</li><li>safe defaults, CI</li><li>60-second demo script</li></ul>
         </div>
         <div class="phase reveal d1">
           <span class="when">Next</span>

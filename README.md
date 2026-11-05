@@ -15,14 +15,18 @@ This is a prototype and a reference implementation, not a product. The interesti
 | Area | State | Evidence / limit |
 |---|---|---|
 | Virtual FIDO2 device | Working | UHID creates a HID device; libfido2 enumerates a hidraw node. Verified with `fido2-token -L` / `-I`. |
-| CTAPHID + CTAP2 | Working | `INIT`, `PING`, `CBOR`, `CANCEL`, `KEEPALIVE`; `getInfo`, `makeCredential`, `getAssertion`. 8/8 Python tests. |
+| CTAPHID + CTAP2 | Working | `INIT`, `PING`, `CBOR`, `CANCEL`, `KEEPALIVE`; `getInfo`, `makeCredential`, `getAssertion`. 8/8 protocol tests, 24 total. |
 | Mock signer | Working | Deterministic P-256 signer for tests and demos. Ephemeral keys, not a security boundary. |
-| Android signer | Implemented, not audited | StrongBox preferred, TEE fallback, software-backed keys rejected; per-use biometric prompt; Kotlin unit tests. |
+| Android signer | Partial, not audited | StrongBox preferred, TEE fallback, software-backed keys rejected; per-use biometric prompt; Kotlin unit tests. No phone-to-libfido2 run in CI. |
+| Credential storage | Metadata only | Credential ID, RP ID, and public key persist in `~/.config/ukey/credentials.json`, unencrypted. Private keys stay in AndroidKeyStore. |
 | Browser WebAuthn | Not claimed | No browser end-to-end test is included. |
 | SSH `ecdsa-sk` | Not claimed | No end-to-end test is included. |
 | PAM / `sudo` | Not yet | `CTAPHID_MSG` is not implemented; `fido2-token -I` reports `nomsg`. The credential path is unfinished. |
 | Resident credentials | Unsupported | `rk=true` is rejected; no `getNextAssertion`. |
 | Transport security | Missing | The signer socket is unauthenticated and unencrypted. Keep it on loopback via `adb reverse`. |
+| Auto-lock | Implemented, opt-in | Grace period, reconnect cancellation, debounce, and shutdown guard. Off by default; not a security boundary. |
+| Configuration | Implemented | Shared JSON config at `~/.config/ukey/config.json`, written `0600`, with loopback and auto-lock-off defaults. CLI flags override for one run. |
+| Installer | Fedora-only | Installs a safe loopback service with auto-lock off. Manual setup is the portable path. |
 | Context approval | Design | The phone mockup and context schema exist; no protocol field or PAM hook is wired up. |
 
 If you need a daily-driver security key or a passkey manager, use a YubiKey, a platform passkey, or a more complete project such as [`mahirsn/passkey`](https://github.com/mahirsn/passkey). uKey is not trying to win that comparison.
@@ -63,6 +67,7 @@ Do not use uKey for production credentials or anything you cannot afford to lose
 ukey/
 ├── daemon/
 │   ├── ukey_daemon.py     # UHID, CTAPHID, CTAP2 engine
+│   ├── ukey_config.py     # config loading, validation, safe defaults
 │   └── mock_signer.py     # software P-256 signer
 ├── android/               # Phase 2 hardware-backed signer
 │   ├── app/src/main/java/org/ukey/
@@ -76,7 +81,12 @@ ukey/
 │   ├── build.gradle.kts
 │   └── settings.gradle.kts
 ├── tests/
-│   └── test_phase1.py     # in-process CTAPHID/CTAP2/ECDSA tests
+│   ├── test_phase1.py     # in-process CTAPHID/CTAP2/ECDSA tests
+│   ├── test_config.py     # config validation and CLI precedence
+│   └── test_auto_lock.py  # opt-in auto-lock behavior
+├── scripts/
+│   └── ukeyctl           # status/config/doctor/logs helper
+├── systemd/ukey.service  # portable user-service template
 ├── setup_udev.sh          # installs /etc/udev/rules.d/70-ukey.rules
 ├── requirements.txt       # cbor2
 └── README.md
@@ -94,6 +104,21 @@ python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+## Install (Fedora)
+
+```bash
+./install.sh
+```
+
+The installer configures `/dev/uhid` permissions, creates the project virtual
+environment when needed, installs `fido2-tools` if missing, and enables a
+`systemd --user` service. It writes a safe default configuration: the signer
+bridge stays on loopback and auto-lock is off.
+
+It does not enable `--wireless` or `--auto-lock`. Opt in later with
+`./scripts/ukeyctl config set …` and restart the service. On other
+distributions, follow the manual steps below.
 
 ## Device permissions
 
@@ -153,6 +178,78 @@ validation commands below.
 Do not run the mock signer and the Android app at the same time; the daemon
 accepts one signer connection.
 
+## Configuration
+
+The daemon and `ukeyctl` share a small JSON configuration file:
+
+```
+~/.config/ukey/config.json
+```
+
+The file is created with mode `0600` on first run. Set `UKEY_CONFIG` to use a
+different path.
+
+Safe defaults:
+
+```json
+{
+  "wireless": false,
+  "auto_lock": false,
+  "auto_lock_grace_seconds": 5,
+  "listen_host": "127.0.0.1",
+  "port": 8443,
+  "device_name": "uKey FIDO2 Authenticator"
+}
+```
+
+Use `ukeyctl` to inspect or change it without editing JSON by hand:
+
+```bash
+./scripts/ukeyctl status
+./scripts/ukeyctl config get
+./scripts/ukeyctl config set wireless true
+./scripts/ukeyctl config set auto_lock true
+./scripts/ukeyctl config set auto_lock_grace_seconds 10
+./scripts/ukeyctl doctor
+./scripts/ukeyctl logs
+```
+
+CLI flags override the file for one run:
+
+```bash
+# Keep everything on loopback even if the config enables wireless
+./daemon/ukey_daemon.py --no-wireless
+
+# Auto-lock is opt-in; this enables it for this run
+./daemon/ukey_daemon.py --auto-lock --auto-lock-grace 5
+
+# Explicit bind address still wins
+./daemon/ukey_daemon.py --listen-host 192.0.2.10
+```
+
+If the daemon is installed as a user service, change the config and restart it:
+
+```bash
+./scripts/ukeyctl config set wireless true
+systemctl --user restart ukey
+```
+
+The checked-in `systemd/ukey.service` starts the daemon with no
+`--wireless`/`--auto-lock` flags, so the config file is authoritative. The
+installer substitutes the actual project directory into the unit before
+installing it.
+
+### Auto-lock behavior
+
+`auto_lock` is off by default. When enabled, the daemon locks the session only
+after a signer has connected at least once, then disconnected, and stayed
+disconnected for `auto_lock_grace_seconds`. Reconnecting within the grace
+period cancels the pending lock. Duplicate disconnect events are debounced, and
+shutdown never locks the session.
+
+This is a convenience feature, not a security boundary. A crashed daemon cannot
+lock the session, and a hostile local process can already control the session.
+
 ## Android signer (Phase 2)
 
 ### Build and test
@@ -197,11 +294,8 @@ network: the signer protocol has no transport encryption or peer
 authentication. USB with `adb reverse` is the safer default.
 
 `--wireless` is a shortcut for binding `0.0.0.0` and printing the host's LAN
-address; it does not add transport security. `--auto-lock` is experimental and
-calls `loginctl lock-session` when the signer disconnects. It is off by default
-and is not a security boundary. The checked-in `systemd/ukey.service` currently
-enables both flags; review it before installing or running it on a shared
-machine.
+address; it does not add transport security. The equivalent persistent setting
+is `ukeyctl config set wireless true`, followed by a service restart.
 
 ### What the app enforces
 
@@ -372,16 +466,18 @@ specification correctly:
 
 ## Tests
 
-Phase 1:
+Python:
 
 ```bash
 . .venv/bin/activate
 python -m unittest discover -s tests -v
 ```
 
-The tests exercise CTAPHID INIT/PING fragmentation, GetInfo, MakeCredential,
-GetAssertion, exclude lists, both attestation modes, and independent ECDSA
-verification.
+The 24 tests exercise CTAPHID INIT/PING fragmentation, GetInfo,
+MakeCredential, GetAssertion, exclude lists, both attestation modes,
+independent ECDSA verification, config validation and precedence, and the
+auto-lock episode/grace/cancellation logic. The auto-lock tests use a fake
+`loginctl` and never touch the real session.
 
 Phase 2:
 

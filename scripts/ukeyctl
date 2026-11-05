@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+"""Small user-facing control tool for the uKey daemon.
+
+Read-only commands do not require root. The tool never installs packages and
+never edits PAM files.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+VENV_PYTHON = ROOT / ".venv" / "bin" / "python"
+
+# Use the project environment when the caller's interpreter lacks cbor2. This
+# keeps `./scripts/ukeyctl` consistent with the daemon without requiring the
+# user to activate the virtual environment first.
+if VENV_PYTHON.exists() and Path(sys.executable) != VENV_PYTHON:
+    try:
+        import cbor2  # noqa: F401
+    except ImportError:
+        os.execv(str(VENV_PYTHON), [str(VENV_PYTHON), *sys.argv])
+
+sys.path.insert(0, str(ROOT / "daemon"))
+
+import ukey_config  # noqa: E402
+
+VERSION = "0.1.0"
+
+
+def _run(command: list[str], timeout: float = 5.0) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+    )
+
+
+def find_hidraw(device_name: str) -> str | None:
+    root = Path("/sys/class/hidraw")
+    if not root.exists():
+        return None
+    for entry in sorted(root.glob("hidraw*")):
+        try:
+            uevent = (entry / "device" / "uevent").read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for line in uevent.splitlines():
+            if line.startswith("HID_NAME=") and line.split("=", 1)[1] == device_name:
+                return f"/dev/{entry.name}"
+    return None
+
+
+def _service_state() -> str:
+    if shutil.which("systemctl") is None:
+        return "unavailable"
+    try:
+        result = _run(["systemctl", "--user", "is-active", "ukey"])
+    except Exception as exc:
+        return f"unknown ({exc})"
+    output = result.stdout.strip()
+    return output or result.stderr.strip() or "unknown"
+
+
+def _config_or_error() -> ukey_config.UKeyConfig:
+    return ukey_config.load_config()
+
+
+def cmd_status(_args: argparse.Namespace) -> int:
+    try:
+        config = _config_or_error()
+    except ukey_config.ConfigError as exc:
+        print(f"ukeyctl: {exc}", file=sys.stderr)
+        return 2
+    print(f"service: {_service_state()}")
+    print(f"hidraw:  {find_hidraw(config.device_name) or 'not found'}")
+    print("config:")
+    print(json.dumps(config.to_dict(), indent=2, sort_keys=True))
+    return 0
+
+
+def cmd_config_get(_args: argparse.Namespace) -> int:
+    try:
+        config = _config_or_error()
+    except ukey_config.ConfigError as exc:
+        print(f"ukeyctl: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(config.to_dict(), indent=2, sort_keys=True))
+    return 0
+
+
+def _parse_value(key: str, raw: str, current: object) -> object:
+    if isinstance(current, bool):
+        lowered = raw.strip().lower()
+        if lowered in {"true", "1", "yes", "on", "enabled"}:
+            return True
+        if lowered in {"false", "0", "no", "off", "disabled"}:
+            return False
+        raise ukey_config.ConfigError(f"{key} must be true or false")
+    if isinstance(current, int):
+        try:
+            return int(raw, 10)
+        except ValueError as exc:
+            raise ukey_config.ConfigError(f"{key} must be an integer") from exc
+    return raw
+
+
+def cmd_config_set(args: argparse.Namespace) -> int:
+    try:
+        config = _config_or_error()
+        data = config.to_dict()
+        if args.key not in data:
+            known = ", ".join(sorted(data))
+            raise ukey_config.ConfigError(f"unknown key {args.key!r}; known keys: {known}")
+        data[args.key] = _parse_value(args.key, args.value, data[args.key])
+        target = ukey_config.save_config(data)
+    except ukey_config.ConfigError as exc:
+        print(f"ukeyctl: {exc}", file=sys.stderr)
+        return 2
+    print(f"{args.key} = {data[args.key]}")
+    print(f"wrote {target}")
+    return 0
+
+
+def cmd_doctor(_args: argparse.Namespace) -> int:
+    failures = 0
+
+    def check(label: str, ok: bool, detail: str = "", required: bool = True) -> None:
+        nonlocal failures
+        if ok:
+            print(f"[ok]   {label}{': ' + detail if detail else ''}")
+        elif required:
+            failures += 1
+            print(f"[fail] {label}{': ' + detail if detail else ''}")
+        else:
+            print(f"[warn] {label}{': ' + detail if detail else ''}")
+
+    check("Python 3.10+", sys.version_info >= (3, 10), sys.version.split()[0])
+    try:
+        import cbor2  # noqa: F401
+
+        check("cbor2 import", True)
+    except Exception as exc:
+        check("cbor2 import", False, str(exc))
+
+    uhid = Path("/dev/uhid")
+    check("/dev/uhid exists", uhid.exists(), str(uhid))
+    if uhid.exists():
+        check("/dev/uhid readable and writable", os.access(uhid, os.R_OK | os.W_OK))
+
+    for binary in ("fido2-token", "fido2-cred", "fido2-assert", "pamu2fcfg", "loginctl", "systemctl"):
+        path = shutil.which(binary)
+        check(binary, path is not None, path or "not found", required=False)
+
+    try:
+        config = ukey_config.load_config()
+        target = ukey_config.config_path()
+        parent = target.parent
+        existing = parent
+        while not existing.exists() and existing != existing.parent:
+            existing = existing.parent
+        check("config directory writable", os.access(existing, os.W_OK), str(parent))
+        check("config file valid", True, str(target))
+        print(f"[info] effective config: {json.dumps(config.to_dict(), sort_keys=True)}")
+    except ukey_config.ConfigError as exc:
+        check("config file valid", False, str(exc))
+
+    return 1 if failures else 0
+
+
+def cmd_logs(_args: argparse.Namespace) -> int:
+    if shutil.which("journalctl") is not None:
+        try:
+            result = _run(
+                ["journalctl", "--user", "-u", "ukey", "-n", "50", "--no-pager"],
+                timeout=10.0,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                print(result.stdout.rstrip())
+                return 0
+        except Exception:
+            pass
+
+    fallback = Path(f"/tmp/ukey_{os.getuid()}.log")
+    if fallback.exists():
+        lines = fallback.read_text(encoding="utf-8", errors="replace").splitlines()
+        print("\n".join(lines[-50:]))
+        return 0
+    print("ukeyctl: no journal entry or daemon log found", file=sys.stderr)
+    return 1
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="ukeyctl", description="Inspect and configure uKey")
+    parser.add_argument("--version", action="version", version=f"ukeyctl {VERSION}")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    status = subparsers.add_parser("status", help="show service, hidraw node, and effective config")
+    status.set_defaults(func=cmd_status)
+
+    config = subparsers.add_parser("config", help="read or change configuration")
+    config_sub = config.add_subparsers(dest="config_action", required=True)
+    get = config_sub.add_parser("get", help="print the effective config")
+    get.set_defaults(func=cmd_config_get)
+    set_value = config_sub.add_parser("set", help="set one key")
+    set_value.add_argument("key")
+    set_value.add_argument("value")
+    set_value.set_defaults(func=cmd_config_set)
+
+    doctor = subparsers.add_parser("doctor", help="check local prerequisites without installing anything")
+    doctor.set_defaults(func=cmd_doctor)
+
+    logs = subparsers.add_parser("logs", help="show recent service logs")
+    logs.set_defaults(func=cmd_logs)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

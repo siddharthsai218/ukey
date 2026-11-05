@@ -1,0 +1,57 @@
+name: tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  python:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip cbor2
+      - name: Compile
+        run: python -m py_compile daemon/ukey_daemon.py daemon/ukey_config.py daemon/mock_signer.py scripts/ukeyctl
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+  shell-and-unit:
+    name: Shell and systemd checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax
+        run: |
+          bash -n install.sh
+          bash -n setup_udev.sh
+          for script in scripts/*.sh; do bash -n "$script"; done
+      - name: ShellCheck
+        run: |
+          if command -v shellcheck >/dev/null 2>&1; then
+            shellcheck install.sh setup_udev.sh scripts/*.sh
+          else
+            echo "shellcheck not available; skipping"
+          fi
+      - name: Validate systemd unit syntax
+        run: |
+          if command -v systemd-analyze >/dev/null 2>&1; then
+            cp systemd/ukey.service /tmp/ukey.service
+            sed -i 's|%h/.local/share/ukey|/tmp/ukey-ci|g' /tmp/ukey.service
+            mkdir -p /tmp/ukey-ci/.venv/bin /tmp/ukey-ci/daemon
+            printf '#!/bin/sh\nexit 0\n' > /tmp/ukey-ci/.venv/bin/python
+            chmod +x /tmp/ukey-ci/.venv/bin/python
+            touch /tmp/ukey-ci/daemon/ukey_daemon.py
+            systemd-analyze verify /tmp/ukey.service
+          else
+            echo "systemd-analyze not available; skipping"
+          fi

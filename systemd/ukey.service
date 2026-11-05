@@ -1,13 +1,14 @@
 [Unit]
-Description=uKey Virtual FIDO2 Hardware Security Key Service
+Description=uKey virtual FIDO2 authenticator
 Documentation=https://github.com/siddharthsai218/ukey
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/Desktop/ukey
-ExecStart=%h/Desktop/ukey/.venv/bin/python %h/Desktop/ukey/daemon/ukey_daemon.py --wireless --auto-lock
-Restart=always
+WorkingDirectory=%h/.local/share/ukey
+ExecStart=%h/.local/share/ukey/.venv/bin/python %h/.local/share/ukey/daemon/ukey_daemon.py
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
 RestartSec=3
 StandardOutput=journal
 StandardError=journal
