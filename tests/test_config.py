@@ -20,6 +20,7 @@ import ukey_config  # noqa: E402
 
 def _args(**overrides):
     values = {
+        "enabled": None,
         "wireless": None,
         "auto_lock": None,
         "auto_lock_grace_seconds": None,
@@ -39,6 +40,7 @@ class ConfigTests(unittest.TestCase):
 
     def test_defaults_are_safe(self) -> None:
         config = ukey_config.load_config(self.path)
+        self.assertTrue(config.enabled)
         self.assertFalse(config.wireless)
         self.assertFalse(config.auto_lock)
         self.assertEqual(config.auto_lock_grace_seconds, 5)

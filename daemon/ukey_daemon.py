@@ -37,6 +37,8 @@ from typing import Any, Callable, Optional
 import cbor2
 
 import ukey_config
+from ukey_pairing import PairingManager
+from ukey_web import UKeyWebServer
 
 LOG = logging.getLogger("ukey")
 
@@ -242,14 +244,18 @@ class SignerBridge:
         host: str,
         port: int,
         connect_timeout: float = 8.0,
+        pairing_manager: Optional[PairingManager] = None,
         on_disconnect: Optional[Callable[[], None]] = None,
         on_connect: Optional[Callable[[], None]] = None,
     ) -> None:
         self.host = host
         self.port = port
         self.connect_timeout = connect_timeout
+        self.pairing_manager = pairing_manager
         self.on_disconnect = on_disconnect
         self.on_connect = on_connect
+        self.peer_ip: str = ""
+        self.peer_device_name: str = ""
         self._server: Optional[socket.socket] = None
         self._conn: Optional[socket.socket] = None
         self._conn_cond = threading.Condition()
@@ -274,6 +280,103 @@ class SignerBridge:
         self._thread.start()
         LOG.info("signer socket listening on %s:%d", self.host, self.port)
 
+    def _perform_handshake(self, conn: socket.socket, addr: tuple[str, int]) -> bool:
+        peer_ip, peer_port = addr
+        is_local = peer_ip in ("127.0.0.1", "::1", "localhost")
+        if self.pairing_manager is None:
+            self.peer_ip = peer_ip
+            self.peer_device_name = "Local / Unrestricted"
+            return True
+
+        if is_local:
+            try:
+                readable, _, _ = select.select([conn], [], [], 0.15)
+            except (OSError, ValueError):
+                return False
+            if not readable:
+                self.peer_ip = peer_ip
+                self.peer_device_name = "Localhost Mock"
+                return True
+
+        buffer = b""
+        start_t = time.monotonic()
+        while b"\n" not in buffer and (time.monotonic() - start_t) < 3.0:
+            try:
+                readable, _, _ = select.select([conn], [], [], 0.5)
+            except (OSError, ValueError):
+                return False
+            if not readable:
+                continue
+            try:
+                chunk = conn.recv(1024)
+            except OSError:
+                return False
+            if not chunk:
+                break
+            buffer += chunk
+            if len(buffer) > 4096:
+                break
+
+        line = buffer.split(b"\n", 1)[0].decode("utf-8", errors="replace").strip()
+        if not line:
+            LOG.warning("Unauthorized connection from %s:%d dropped: empty handshake", *addr)
+            return False
+
+        try:
+            msg = json.loads(line)
+        except Exception:
+            LOG.warning("Unauthorized connection from %s:%d dropped: malformed handshake payload", *addr)
+            return False
+
+        action = msg.get("action")
+        device_name = str(msg.get("device_name", "Android Phone"))[:64]
+
+        if action == "pair":
+            pin = str(msg.get("pin", "")).strip()
+            token = self.pairing_manager.pair_with_pin(pin, device_name=device_name)
+            if token:
+                self.peer_ip = peer_ip
+                self.peer_device_name = device_name
+                reply = {"status": "ok", "token": token, "message": "paired_successfully"}
+                try:
+                    conn.sendall(json.dumps(reply).encode() + b"\n")
+                except OSError:
+                    return False
+                LOG.info("Pairing successful for '%s' from %s:%d", device_name, *addr)
+                return True
+            else:
+                reply = {"status": "error", "error": "invalid_pin"}
+                try:
+                    conn.sendall(json.dumps(reply).encode() + b"\n")
+                except OSError:
+                    pass
+                LOG.warning("Pairing rejected for '%s' from %s:%d: invalid/expired PIN", device_name, *addr)
+                return False
+
+        elif action == "auth":
+            token = str(msg.get("token", "")).strip()
+            if self.pairing_manager.verify_token(token):
+                self.peer_ip = peer_ip
+                self.peer_device_name = device_name
+                reply = {"status": "ok", "message": "authenticated"}
+                try:
+                    conn.sendall(json.dumps(reply).encode() + b"\n")
+                except OSError:
+                    return False
+                LOG.info("Authorized connection accepted for '%s' from %s:%d", device_name, *addr)
+                return True
+            else:
+                reply = {"status": "error", "error": "unauthorized"}
+                try:
+                    conn.sendall(json.dumps(reply).encode() + b"\n")
+                except OSError:
+                    pass
+                LOG.warning("Unauthorized connection from %s:%d rejected: invalid device token", *addr)
+                return False
+
+        LOG.warning("Unauthorized connection from %s:%d rejected: unexpected action '%s'", *addr, action)
+        return False
+
     def _accept_loop(self) -> None:
         assert self._server is not None
         while not self._stop.is_set():
@@ -284,6 +387,14 @@ class SignerBridge:
             except OSError:
                 return
             conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+            if not self._perform_handshake(conn, addr):
+                try:
+                    conn.close()
+                except OSError:
+                    pass
+                continue
+
             with self._conn_cond:
                 old = self._conn
                 self._conn = conn
@@ -300,7 +411,7 @@ class SignerBridge:
                 daemon=True,
             )
             monitor.start()
-            LOG.info("signer connected from %s:%d", *addr)
+            LOG.info("signer connected from %s:%d (%s)", addr[0], addr[1], self.peer_device_name or "verified")
             if self.on_connect is not None:
                 try:
                     self.on_connect()
@@ -336,6 +447,8 @@ class SignerBridge:
             if conn is None or self._conn is conn:
                 current = self._conn
                 self._conn = None
+                self.peer_ip = ""
+                self.peer_device_name = ""
             else:
                 current = None
             self._conn_cond.notify_all()
@@ -515,12 +628,14 @@ class Ctap2Engine:
         signer: SignerBridge,
         aaguid: bytes = AAGUID,
         attestation: str = "self",
+        is_enabled: Optional[Callable[[], bool]] = None,
     ) -> None:
         if attestation not in ("self", "none"):
             raise ValueError("attestation must be 'self' or 'none'")
         self.signer = signer
         self.aaguid = aaguid
         self.attestation = attestation
+        self.is_enabled = is_enabled
         self.credentials: dict[bytes, Credential] = {}
         self._sign_count = 0
         self._engine_lock = threading.Lock()
@@ -761,6 +876,10 @@ class Ctap2Engine:
         cancel: threading.Event,
         keepalive: Callable[[], None],
     ) -> dict[int, Any]:
+        if self.is_enabled is not None and not self.is_enabled():
+            LOG.info("uKey biometric interception is PAUSED; bypassing assertion")
+            raise CtapError(CTAP2_ERR_NO_CREDENTIALS, "uKey paused by user")
+
         rp_id = _as_text(params.get(1), "rpId")
         client_hash = _as_bytes(params.get(2), "clientDataHash", 32)
         allow_list = params.get(3)
@@ -1000,16 +1119,31 @@ def detect_host_biometric() -> Optional[str]:
 class UKeyDaemon:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
+        self.enabled = bool(getattr(args, "enabled", True))
         self.auto_lock = bool(getattr(args, "auto_lock", False))
         self.auto_lock_grace_seconds = int(getattr(args, "auto_lock_grace_seconds", 5))
+        self.pairing_manager = PairingManager()
         self.device = UhidDevice(path=args.uhid, name=args.device_name)
         self.signer = SignerBridge(
             args.listen_host,
             args.port,
+            pairing_manager=self.pairing_manager,
             on_disconnect=self._on_signer_disconnect,
             on_connect=self._on_signer_connect,
         )
-        self.ctap = Ctap2Engine(self.signer, attestation=args.attestation)
+        self.ctap = Ctap2Engine(
+            self.signer,
+            attestation=args.attestation,
+            is_enabled=lambda: self.enabled,
+        )
+        self.web_server = UKeyWebServer(
+            get_status_fn=self._get_web_status,
+            set_enabled_fn=self._set_web_enabled,
+            generate_pin_fn=self.pairing_manager.get_or_create_pin,
+            revoke_device_fn=self.pairing_manager.revoke_device,
+            host="127.0.0.1",
+            port=8444,
+        )
         self.channels: set[int] = set()
         self.pending: dict[int, dict[str, Any]] = {}
         self.stop_event = threading.Event()
@@ -1113,6 +1247,32 @@ class UKeyDaemon:
         value = proc.stdout.strip().lower()
         return value == "yes" or value.endswith("lockedhint=yes")
 
+    def _get_web_status(self) -> dict[str, Any]:
+        return {
+            "status": "active" if self.enabled else "paused",
+            "enabled": self.enabled,
+            "connected": self.signer.connected,
+            "peer_ip": self.signer.peer_ip,
+            "peer_device_name": self.signer.peer_device_name,
+            "active_pin": self.pairing_manager.get_or_create_pin(),
+            "lan_ip": get_primary_ip() if getattr(self.args, "wireless", False) else "127.0.0.1",
+            "port": self.args.port,
+            "paired_devices": self.pairing_manager.list_devices(),
+            "auto_lock": self.auto_lock,
+            "device_name": self.args.device_name,
+        }
+
+    def _set_web_enabled(self, enabled: bool) -> None:
+        self.enabled = enabled
+        try:
+            cfg = ukey_config.load_config(getattr(self.args, "config", None))
+            data = cfg.to_dict()
+            data["enabled"] = enabled
+            ukey_config.save_config(data, getattr(self.args, "config", None))
+            LOG.info("uKey biometric interception set to: %s", "ACTIVE" if enabled else "PAUSED")
+        except Exception as exc:
+            LOG.warning("Could not persist enabled state to config: %s", exc)
+
     def _cancel_auto_lock(self) -> None:
         with self._auto_lock_cond:
             self._auto_lock_episode += 1
@@ -1150,11 +1310,13 @@ class UKeyDaemon:
             LOG.info("Host has no built-in fingerprint sensor; uKey Android StrongBox bridge is primary authenticator")
 
         self.signer.start()
+        self.web_server.start()
         try:
             self.device.open()
         except OSError as exc:
             LOG.error("cannot open %s: %s", self.args.uhid, exc)
             LOG.error("run setup_udev.sh first, or check that CONFIG_UHID is enabled")
+            self.web_server.stop()
             self.signer.stop()
             return 1
 
@@ -1191,6 +1353,7 @@ class UKeyDaemon:
             with self._auto_lock_cond:
                 self._shutting_down = True
             self._cancel_auto_lock()
+            self.web_server.stop()
             self.device.close()
             self.signer.stop()
             LOG.info("uKey daemon stopped")
@@ -1464,6 +1627,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="force loopback even if the config file enables wireless",
     )
     parser.add_argument(
+        "--enabled",
+        dest="enabled",
+        action="store_true",
+        default=None,
+        help="enable biometric interception (default: True)",
+    )
+    parser.add_argument(
+        "--no-enabled",
+        "--disabled",
+        dest="enabled",
+        action="store_false",
+        help="pause biometric interception (direct password fallback)",
+    )
+    parser.add_argument(
         "--auto-lock",
         dest="auto_lock",
         action="store_true",
@@ -1500,6 +1677,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"ukey: configuration error: {exc}", file=sys.stderr)
         return 2
 
+    args.enabled = config.enabled
     args.wireless = config.wireless
     args.auto_lock = config.auto_lock
     args.auto_lock_grace_seconds = config.auto_lock_grace_seconds

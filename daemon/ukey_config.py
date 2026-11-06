@@ -31,6 +31,7 @@ class ConfigError(ValueError):
 
 @dataclass(frozen=True)
 class UKeyConfig:
+    enabled: bool = True
     wireless: bool = False
     auto_lock: bool = False
     auto_lock_grace_seconds: int = 5
@@ -84,6 +85,7 @@ def validate_config(data: Mapping[str, Any]) -> dict[str, Any]:
         raise ConfigError(f"unknown configuration key(s): {', '.join(unknown)}")
 
     values = {field.name: data.get(field.name, field.default) for field in fields(UKeyConfig)}
+    _require_bool("enabled", values["enabled"])
     _require_bool("wireless", values["wireless"])
     _require_bool("auto_lock", values["auto_lock"])
     _require_int("auto_lock_grace_seconds", values["auto_lock_grace_seconds"], 0, 86400)
@@ -177,6 +179,10 @@ def resolve_config(
     """
     config = load_config(path=path, create=create, env=env)
 
+    enabled = config.enabled
+    if getattr(args, "enabled", None) is not None:
+        enabled = bool(args.enabled)
+
     wireless = config.wireless
     if getattr(args, "wireless", None) is not None:
         wireless = bool(args.wireless)
@@ -207,6 +213,7 @@ def resolve_config(
 
     values = validate_config(
         {
+            "enabled": enabled,
             "wireless": wireless,
             "auto_lock": auto_lock,
             "auto_lock_grace_seconds": grace,
