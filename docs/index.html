@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>uKey — Touch ID for Linux</title>
 <meta name="description" content="Turn your Android phone's hardware biometric enclave into a native USB FIDO2 security key for Linux. Touch your fingerprint for sudo, OpenSSH, and WebAuthn logins. 100% local, zero cloud.">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#06080C">
 
 <!-- Open Graph / Twitter Cards -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="uKey">
 <meta property="og:title" content="uKey: Touch ID for Linux">
-<meta property="og:description" content="Your Android phone's biometric hardware as a native USB FIDO2 security key for Linux. Fingerprint for sudo, SSH, and WebAuthn logins. 100% local, zero cloud.">
+<meta property="og:description" content="Your Android phone's biometric hardware as a native USB FIDO2 security key for Linux. Fingerprint for sudo, SSH, and WebAuthn logins. 100% local peer-to-peer.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="uKey: Touch ID for Linux">
-<meta name="twitter:description" content="Your phone as a native USB FIDO2 security key. Fingerprint for sudo, SSH, and WebAuthn. Free and open source.">
+<meta name="twitter:description" content="Your phone as a native USB FIDO2 security key for Linux. Free and open source.">
 
 <script>
   try { const t = localStorage.getItem("ukey-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
@@ -25,23 +25,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Geist:wght@300..800&family=Geist+Mono:wght@400..700&display=swap" rel="stylesheet">
 
 <style>
+/* =========================================================================
+   DESIGN TOKENS & SYSTEM BASE
+   ========================================================================= */
 :root {
-  --black: #000000;
-  --bg-deep: #060709;
-  --bg-surface: #0E1015;
-  --bg-surface-elevated: #161920;
-  --white: #F8FAFD;
-  --gray-1: #8E918F;   /* secondary text */
-  --gray-2: #262930;   /* borders, rules */
-  --gray-3: #12141A;   /* panel backgrounds */
-  --accent-green: #22C55E;
+  --black: #06080C;
+  --bg-deep: #06080C;
+  --bg-surface: #0E1118;
+  --bg-surface-elevated: #161A24;
+  --white: #F5F7FA;
+  --gray-1: #8E96A4;
+  --gray-2: #242A38;
+  --gray-3: #12151E;
   --accent-emerald: #10B981;
-  --accent-cyan: #06B6D4;
+  --accent-emerald-glow: rgba(16, 185, 129, 0.25);
+  --accent-cyan: #0284C7;
+  --accent-cyan-glow: rgba(2, 132, 199, 0.25);
   --accent-amber: #F59E0B;
   --accent-red: #EF4444;
-  --trackpoint: #DA2727;
-  --gutter: clamp(16px, 4vw, 64px);
-  --text: "Geist", system-ui, sans-serif;
+  --trackpoint: #E11D48;
+  --gutter: clamp(18px, 4vw, 64px);
+  --text: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --display: "Archivo", system-ui, sans-serif;
   --mono: "Geist Mono", ui-monospace, monospace;
   --ease: cubic-bezier(.16, 1, .3, 1);
@@ -49,15 +53,15 @@
 
 :root[data-theme="light"] {
   --black: #F8FAFD;
-  --bg-deep: #EFF2F6;
+  --bg-deep: #F1F4F9;
   --bg-surface: #FFFFFF;
-  --bg-surface-elevated: #E2E6EC;
+  --bg-surface-elevated: #E5EBF2;
   --white: #0B0E14;
-  --gray-1: #5A606A;
-  --gray-2: #D0D5DD;
-  --gray-3: #F3F5F8;
-  --accent-green: #15803D;
-  --accent-cyan: #0E7490;
+  --gray-1: #5A6272;
+  --gray-2: #D1D8E4;
+  --gray-3: #F6F8FB;
+  --accent-emerald: #059669;
+  --accent-cyan: #0284C7;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -69,14 +73,14 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
+  line-height: 1.55;
   overflow-x: hidden;
 }
 a { color: inherit; }
 img, svg { display: block; }
 ::selection { background: var(--accent-emerald); color: #000; }
 
-.wrap { padding-inline: var(--gutter); max-width: 1280px; margin-inline: auto; }
+.wrap { padding-inline: var(--gutter); max-width: 1240px; margin-inline: auto; }
 .mono { font-family: var(--mono); }
 
 /* Typography */
@@ -84,12 +88,12 @@ img, svg { display: block; }
   font-family: var(--display);
   font-weight: 900;
   line-height: .88;
-  letter-spacing: -.03em;
+  letter-spacing: -.035em;
   font-variation-settings: "wdth" 120;
 }
 .h2 {
   font-family: var(--display);
-  font-size: clamp(38px, 5.5vw, 84px);
+  font-size: clamp(36px, 5.2vw, 76px);
   font-weight: 800;
   line-height: .98;
   letter-spacing: -.035em;
@@ -117,7 +121,7 @@ img, svg { display: block; }
   transition: all .2s var(--ease);
 }
 .btn:hover { background: rgba(255,255,255,0.08); transform: translateY(-1px); }
-.btn.solid { background: var(--white); color: var(--black); border-color: var(--white); }
+.btn.solid { background: var(--white); color: #000; border-color: var(--white); }
 .btn.solid:hover { background: #E2E6EC; transform: translateY(-1px); }
 .btn.emerald { background: var(--accent-emerald); color: #000; border-color: var(--accent-emerald); font-weight: 700; }
 .btn.emerald:hover { filter: brightness(1.1); transform: translateY(-1px); }
@@ -127,7 +131,7 @@ img, svg { display: block; }
   position: sticky; top: 0; z-index: 100;
   display: flex; justify-content: space-between; align-items: center;
   padding: 18px var(--gutter);
-  background: rgba(6, 7, 9, 0.85);
+  background: rgba(6, 8, 12, 0.85);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -135,11 +139,11 @@ img, svg { display: block; }
 .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .brand-mark {
   width: 28px; height: 28px; border-radius: 7px;
-  background: linear-gradient(135deg, #22C55E 0%, #06B6D4 100%);
+  background: linear-gradient(135deg, #10B981 0%, #0284C7 100%);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 14px rgba(34, 197, 94, 0.35);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
 }
-.brand-mark svg { width: 17px; height: 17px; stroke: #000; }
+.brand-mark svg { width: 16px; height: 16px; stroke: #000; }
 .wordmark {
   font-family: var(--display);
   font-weight: 900;
@@ -155,7 +159,7 @@ img, svg { display: block; }
 .nav-menu a:hover { color: var(--white); }
 .nav-actions { display: flex; align-items: center; gap: 10px; }
 .icon-btn {
-  background: var(--gray-3); border: 1px solid var(--gray-2);
+  background: var(--bg-surface); border: 1px solid var(--gray-2);
   color: var(--white); font-family: var(--mono); font-size: 12px;
   padding: 7px 12px; border-radius: 6px; cursor: pointer;
   display: flex; align-items: center; gap: 6px; transition: all .15s;
@@ -165,20 +169,20 @@ img, svg { display: block; }
 
 /* Hero Section */
 .hero {
-  padding: clamp(48px, 7vh, 80px) var(--gutter) 40px;
+  padding: clamp(48px, 7vh, 84px) var(--gutter) 40px;
   text-align: center;
   position: relative;
 }
 .hero-tag {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 6px 14px; border-radius: 99px;
-  background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25);
-  font-family: var(--mono); font-size: 12px; color: var(--accent-green);
+  background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25);
+  font-family: var(--mono); font-size: 12px; color: var(--accent-emerald);
   margin-bottom: 24px;
 }
 .hero-tag .pulse-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green);
-  box-shadow: 0 0 10px var(--accent-green);
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent-emerald);
+  box-shadow: 0 0 10px var(--accent-emerald);
   animation: pulseGlow 1.8s infinite;
 }
 @keyframes pulseGlow {
@@ -186,7 +190,7 @@ img, svg { display: block; }
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 .hero-title {
-  font-size: clamp(46px, 8.5vw, 116px);
+  font-size: clamp(48px, 8.8vw, 118px);
   margin-bottom: 22px;
 }
 .hero-desc {
@@ -207,7 +211,7 @@ img, svg { display: block; }
   color: var(--white); white-space: nowrap; overflow-x: auto;
   padding-right: 12px;
 }
-.cmd-box code .p { color: var(--accent-green); }
+.cmd-box code .p { color: var(--accent-emerald); }
 .copy-btn {
   background: var(--bg-surface-elevated); border: 1px solid var(--gray-2);
   color: var(--white); font-family: var(--mono); font-size: 12px;
@@ -216,7 +220,7 @@ img, svg { display: block; }
 }
 .copy-btn:hover { background: var(--white); color: #000; }
 
-/* Micro-Telemetry Odometer Bar */
+/* Micro-Telemetry Ticker */
 .telemetry-bar {
   display: grid; grid-template-columns: repeat(5, 1fr);
   gap: 12px; max-width: 1080px; margin: 38px auto 0;
@@ -231,7 +235,7 @@ img, svg { display: block; }
   font-family: var(--mono); font-size: 24px; font-weight: 800;
   color: var(--white); display: flex; align-items: baseline; gap: 3px;
 }
-.tele-num span { font-size: 13px; color: var(--accent-green); font-weight: 600; }
+.tele-num span { font-size: 13px; color: var(--accent-emerald); font-weight: 600; }
 .tele-desc { font-size: 11.5px; color: var(--gray-1); margin-top: 4px; }
 @media (max-width: 900px) {
   .telemetry-bar { grid-template-columns: repeat(2, 1fr); }
@@ -239,38 +243,39 @@ img, svg { display: block; }
 }
 
 /* =========================================================================
-   THE GRAND INTERACTIVE HARDWARE STAGE
+   THE GRAND HARDWARE RIG (INTERACTIVE STAGE)
    ========================================================================= */
 .stage-section {
   padding: 20px var(--gutter) 80px;
 }
 .stage-outer {
-  max-width: 1180px; margin-inline: auto;
-  background: radial-gradient(circle at 50% 25%, #181D26 0%, #0A0C10 65%, #050608 100%);
+  max-width: 1200px; margin-inline: auto;
+  background: radial-gradient(circle at 50% 25%, #181D28 0%, #0A0D14 65%, #05070B 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px;
-  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8), 0 0 120px -30px rgba(6, 182, 212, 0.12);
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8), 0 0 120px -30px rgba(2, 132, 199, 0.14);
   padding: 24px clamp(16px, 3.5vw, 40px) 48px;
   position: relative;
   overflow: hidden;
+  perspective: 1200px;
 }
 
-/* Stage Top Control Deck */
+/* Control Deck */
 .deck-bar {
   display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
   gap: 14px; margin-bottom: 28px;
-  padding: 10px 16px; background: rgba(14, 16, 21, 0.7);
+  padding: 10px 16px; background: rgba(14, 17, 24, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px;
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
 }
 .tour-control { display: flex; align-items: center; gap: 10px; }
 .tour-btn {
-  background: rgba(34, 197, 94, 0.15); border: 1px solid var(--accent-green);
-  color: var(--accent-green); font-family: var(--mono); font-size: 12px; font-weight: 700;
+  background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-emerald);
+  color: var(--accent-emerald); font-family: var(--mono); font-size: 12px; font-weight: 700;
   padding: 6px 14px; border-radius: 6px; cursor: pointer;
   display: flex; align-items: center; gap: 6px; transition: all .15s;
 }
-.tour-btn:hover { background: var(--accent-green); color: #000; }
+.tour-btn:hover { background: var(--accent-emerald); color: #000; }
 .tour-btn.paused {
   background: rgba(245, 158, 11, 0.15); border-color: var(--accent-amber); color: var(--accent-amber);
 }
@@ -301,11 +306,16 @@ img, svg { display: block; }
   width: 7px; height: 7px; border-radius: 50%; background: var(--accent-cyan);
   box-shadow: 0 0 8px var(--accent-cyan);
 }
+.xray-btn {
+  background: var(--bg-surface); border: 1px solid var(--gray-2);
+  padding: 6px 12px; border-radius: 6px; font-family: var(--mono); font-size: 11.5px;
+  color: var(--gray-1); cursor: pointer; transition: all .15s;
+}
+.xray-btn:hover, .xray-btn.active {
+  color: var(--accent-cyan); border-color: var(--accent-cyan); background: rgba(2, 132, 199, 0.1);
+}
 
 /* Stage Physical Duo Container */
-.stage-outer {
-  perspective: 1200px;
-}
 .stage-duo {
   display: flex; align-items: flex-end; justify-content: center;
   gap: clamp(20px, 3.5vw, 54px);
@@ -317,7 +327,7 @@ img, svg { display: block; }
   .stage-duo { flex-direction: column; align-items: center; gap: 36px; }
 }
 
-/* 1. THINKPAD LAPTOP */
+/* 1. THINKPAD WORKSTATION */
 .tp-laptop {
   flex: 1; max-width: 680px; min-width: 320px; width: 100%;
   display: flex; flex-direction: column; align-items: center;
@@ -327,8 +337,8 @@ img, svg { display: block; }
   width: 100%; aspect-ratio: 16 / 10.4;
   border-radius: 14px 14px 3px 3px;
   background:
-    linear-gradient(#08090C, #08090C) padding-box,
-    linear-gradient(155deg, #70757D 0%, #202226 24%, #464A50 48%, #191B1E 72%, #5A5E65 100%) border-box;
+    linear-gradient(#080A0E, #080A0E) padding-box,
+    linear-gradient(155deg, #707784 0%, #20242E 24%, #464E5E 48%, #191D26 72%, #5A6272 100%) border-box;
   border: 3px solid transparent;
   padding: 10px 10px 18px;
   position: relative;
@@ -336,38 +346,37 @@ img, svg { display: block; }
 }
 .tp-notch {
   position: absolute; left: 50%; top: 4px; width: 5px; height: 5px;
-  margin-left: -2.5px; border-radius: 50%; background: #2E3136;
+  margin-left: -2.5px; border-radius: 50%; background: #2E3340;
 }
 .tp-screen {
-  width: 100%; height: 100%; background: #08090B;
+  width: 100%; height: 100%; background: #080A0D;
   border-radius: 6px; overflow: hidden;
   display: flex; flex-direction: column; position: relative;
 }
-/* Wayland Desktop Topbar */
 .wayland-topbar {
-  background: #111317; height: 22px; border-bottom: 1px solid #1F2228;
+  background: #11141C; height: 22px; border-bottom: 1px solid #1E2330;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 10px; font-family: var(--mono); font-size: 10px; color: var(--gray-1);
 }
 .wl-left { display: flex; align-items: center; gap: 8px; }
-.wl-pill { background: #242831; color: var(--white); padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+.wl-pill { background: #242B3A; color: var(--white); padding: 1px 6px; border-radius: 3px; font-weight: 600; }
 
 .wl-workspace {
   flex: 1; padding: 14px; position: relative;
-  background: radial-gradient(circle at 80% 20%, #131720 0%, #08090B 75%);
+  background: radial-gradient(circle at 80% 20%, #131824 0%, #080A0D 75%);
   display: flex; flex-direction: column; justify-content: center;
 }
 
-/* Linux Terminal Window on Laptop */
+/* Linux Terminal Window */
 .term-window {
-  background: rgba(9, 11, 14, 0.95);
-  border: 1px solid #282C34; border-radius: 8px;
+  background: rgba(9, 12, 17, 0.96);
+  border: 1px solid #283042; border-radius: 8px;
   overflow: hidden; box-shadow: 0 14px 34px rgba(0,0,0,0.55);
 }
 .term-header {
-  background: #16181E; padding: 6px 10px;
+  background: #161B26; padding: 6px 10px;
   display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid #22252C;
+  border-bottom: 1px solid #222938;
 }
 .term-dots { display: flex; gap: 5px; }
 .term-dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -376,9 +385,9 @@ img, svg { display: block; }
 .term-dot.g { background: #10B981; }
 .term-body {
   padding: 14px; font-family: var(--mono); font-size: 12px; line-height: 1.6;
-  min-height: 140px; text-align: left;
+  min-height: 140px; text-align: left; cursor: text;
 }
-.term-prompt { color: var(--accent-green); font-weight: 600; }
+.term-prompt { color: var(--accent-emerald); font-weight: 600; }
 .term-cmd { color: #FFFFFF; font-weight: 600; }
 .term-cursor {
   display: inline-block; width: 7px; height: 14px; background: var(--white);
@@ -389,23 +398,23 @@ img, svg { display: block; }
 
 /* Browser Window for WebAuthn passkey */
 .browser-window {
-  background: #11141A;
-  border: 1px solid #282C36; border-radius: 8px;
+  background: #111520;
+  border: 1px solid #283042; border-radius: 8px;
   overflow: hidden; box-shadow: 0 14px 34px rgba(0,0,0,0.55);
   display: none; flex-direction: column;
 }
 .browser-header {
-  background: #181C24; padding: 6px 10px;
+  background: #181E2C; padding: 6px 10px;
   display: flex; align-items: center; gap: 8px;
-  border-bottom: 1px solid #242832;
+  border-bottom: 1px solid #242D3E;
 }
 .browser-tab {
-  background: #11141A; color: #FFF; font-size: 10px; font-weight: 500;
+  background: #111520; color: #FFF; font-size: 10px; font-weight: 500;
   padding: 3px 8px; border-radius: 4px; display: flex; align-items: center; gap: 5px;
-  border: 1px solid #242832; border-bottom: none;
+  border: 1px solid #242D3E; border-bottom: none;
 }
 .browser-urlbar {
-  flex: 1; background: #0A0C10; border: 1px solid #1E222A;
+  flex: 1; background: #0A0D14; border: 1px solid #1E2534;
   border-radius: 4px; padding: 2px 8px; font-family: var(--mono); font-size: 9.5px;
   color: var(--accent-cyan); display: flex; align-items: center; gap: 5px;
 }
@@ -414,15 +423,32 @@ img, svg { display: block; }
   display: flex; flex-direction: column; justify-content: center;
 }
 .browser-auth-card {
-  background: #181C24; border: 1px solid #2B303C; border-radius: 8px;
+  background: #181E2C; border: 1px solid #2B3548; border-radius: 8px;
   padding: 12px 14px;
 }
 
-/* ThinkPad Keyboard Base & TrackPoint */
+/* X-Ray Kernel Bus Inspector Overlay */
+.xray-window {
+  background: rgba(6, 8, 12, 0.98);
+  border: 1px solid #0284C7; border-radius: 8px;
+  overflow: hidden; box-shadow: 0 14px 34px rgba(0,0,0,0.7), 0 0 20px rgba(2, 132, 199, 0.2);
+  display: none; flex-direction: column;
+}
+.xray-header {
+  background: #0E1626; padding: 6px 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid #1E2D4A; font-family: var(--mono); font-size: 10.5px; color: var(--accent-cyan);
+}
+.xray-body {
+  padding: 12px; font-family: var(--mono); font-size: 11px; line-height: 1.5;
+  color: #7DD3FC; min-height: 140px; text-align: left; overflow-y: auto;
+}
+
+/* Keyboard Base & TrackPoint */
 .tp-base {
   width: 106%; height: 20px; margin-top: -2px;
   border-radius: 3px 3px 12px 12px / 3px 3px 10px 10px;
-  background: linear-gradient(#8E9399 0%, #4A4D53 2.5px, #2A2C30 45%, #141517 100%);
+  background: linear-gradient(#8E95A2 0%, #4A505D 2.5px, #2A2F3A 45%, #141720 100%);
   position: relative; z-index: 2;
   box-shadow: 0 25px 40px rgba(0,0,0,0.7);
   display: flex; align-items: center; justify-content: center;
@@ -430,13 +456,13 @@ img, svg { display: block; }
 .tp-trackpoint-nub {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--trackpoint);
-  box-shadow: 0 0 4px rgba(218, 39, 39, 0.8);
+  box-shadow: 0 0 5px rgba(225, 29, 72, 0.85);
   position: absolute; top: 4px;
 }
 .tp-power-led {
   position: absolute; right: 28px; top: 7px;
-  width: 4px; height: 4px; border-radius: 50%; background: var(--accent-green);
-  box-shadow: 0 0 6px var(--accent-green);
+  width: 4px; height: 4px; border-radius: 50%; background: var(--accent-emerald);
+  box-shadow: 0 0 6px var(--accent-emerald);
 }
 .tp-shadow {
   width: 95%; height: 16px;
@@ -454,7 +480,7 @@ img, svg { display: block; }
 }
 .conduit-wire {
   position: absolute; width: 100%; height: 4px;
-  background: linear-gradient(90deg, #2D3139 0%, var(--accent-cyan) 50%, #2D3139 100%);
+  background: linear-gradient(90deg, #2D3546 0%, var(--accent-cyan) 50%, #2D3546 100%);
   border-radius: 99px; transition: all .3s;
 }
 .conduit-wire.danger {
@@ -471,8 +497,6 @@ img, svg { display: block; }
   background: var(--accent-red);
   box-shadow: 0 0 18px var(--accent-red), 0 0 30px var(--accent-red);
 }
-
-/* Pulse animation triggered by JS */
 .conduit-pulse.travel-fwd {
   animation: pulseFwd 0.45s cubic-bezier(.2, 0, 0, 1) forwards;
 }
@@ -497,13 +521,13 @@ img, svg { display: block; }
   width: 285px; flex-shrink: 0;
   border-radius: 42px; padding: 10px;
   background:
-    linear-gradient(#040507, #040507) padding-box,
-    linear-gradient(150deg, #9FA3A8 0%, #3C3E42 22%, #8A8E94 46%, #282A2E 70%, #7E8288 100%) border-box;
+    linear-gradient(#05070B, #05070B) padding-box,
+    linear-gradient(150deg, #9FA6B2 0%, #3C424E 22%, #8A92A0 46%, #282E3A 70%, #7E8694 100%) border-box;
   border: 3.5px solid transparent;
-  box-shadow: 0 30px 70px rgba(0,0,0,0.7), 0 0 50px -10px rgba(34, 197, 94, 0.15);
+  box-shadow: 0 30px 70px rgba(0,0,0,0.7), 0 0 50px -10px rgba(16, 185, 129, 0.15);
   position: relative;
 }
-.phone-btn { position: absolute; background: #5C6066; border-radius: 1px; }
+.phone-btn { position: absolute; background: #5C6370; border-radius: 1px; }
 .phone-btn.power { right: -6px; top: 105px; width: 3px; height: 34px; }
 .phone-btn.vol { right: -6px; top: 155px; width: 3px; height: 68px; }
 
@@ -518,7 +542,7 @@ img, svg { display: block; }
 }
 .phone-punchhole {
   width: 9px; height: 9px; border-radius: 50%;
-  background: #000; border: 2px solid #1E2024;
+  background: #000; border: 2px solid #1E222A;
   margin: 0 auto 4px; z-index: 25;
 }
 .phone-statusbar {
@@ -650,7 +674,7 @@ img, svg { display: block; }
   transform: scale(1.04); border-color: var(--accent-cyan);
 }
 .bio-sensor.verified {
-  background: #DCFCE7; border-color: #22C55E;
+  background: #DCFCE7; border-color: #10B981;
 }
 .sensor-radar {
   position: absolute; inset: -8px; border-radius: 50%;
@@ -669,23 +693,14 @@ img, svg { display: block; }
   margin-top: 6px; font-size: 10px; color: #64748B;
 }
 .bio-hint { font-weight: 600; color: var(--accent-cyan); }
-.bio-sheet.success .bio-hint { color: var(--accent-green); }
-
-/* Virtual Touch Pointer Indicator for Auto-Tour */
-.virtual-touch-dot {
-  position: absolute; width: 22px; height: 22px; border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9); border: 2px solid var(--accent-cyan);
-  box-shadow: 0 0 12px var(--accent-cyan);
-  pointer-events: none; z-index: 50; display: none;
-  transform: translate(-50%, -50%);
-}
+.bio-sheet.success .bio-hint { color: var(--accent-emerald); }
 
 /* =========================================================================
    INVERTED SWISS SILICON GUARANTEE SECTION
    ========================================================================= */
 .silicon-section {
   background: var(--white);
-  color: var(--black);
+  color: #000000;
   padding: clamp(80px, 12vh, 140px) 0;
   position: relative;
 }
@@ -694,7 +709,7 @@ img, svg { display: block; }
   gap: 32px clamp(24px, 4vw, 56px); margin-top: clamp(40px, 7vh, 80px);
 }
 .silicon-card {
-  padding-top: 12px; border-top: 2px solid var(--black);
+  padding-top: 12px; border-top: 2px solid #000000;
 }
 .silicon-card h3 {
   font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 12px;
@@ -705,7 +720,7 @@ img, svg { display: block; }
 .silicon-card .badge {
   display: inline-block; font-family: var(--mono); font-size: 11px;
   font-weight: 700; padding: 2px 8px; border-radius: 4px;
-  background: var(--black); color: var(--white); margin-bottom: 10px;
+  background: #000000; color: #FFFFFF; margin-bottom: 10px;
 }
 @media (max-width: 900px) {
   .silicon-grid { grid-template-columns: 1fr; }
@@ -719,14 +734,14 @@ img, svg { display: block; }
   border-bottom: 1px solid var(--gray-2);
 }
 .cpreview-box {
-  background: #08090C; border: 1px solid var(--gray-2);
+  background: #080A0E; border: 1px solid var(--gray-2);
   border-radius: 16px; overflow: hidden; margin-top: 36px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.5);
 }
 .cpreview-bar {
-  background: #101217; padding: 10px 16px;
+  background: #10141C; padding: 10px 16px;
   display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid #1E2129;
+  border-bottom: 1px solid #1E2534;
 }
 .cpreview-body { padding: clamp(20px, 3.5vw, 36px); }
 .cpreview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
@@ -753,7 +768,7 @@ img, svg { display: block; }
 }
 .way-icon {
   width: 42px; height: 42px; border-radius: 10px;
-  background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3);
+  background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);
   display: flex; align-items: center; justify-content: center; margin-bottom: 18px;
 }
 .way-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
@@ -780,16 +795,16 @@ img, svg { display: block; }
 .compare-table th, .compare-table td {
   padding: 14px 18px; border-bottom: 1px solid var(--gray-2);
 }
-.compare-table th { background: #0E1015; font-weight: 700; color: var(--white); }
+.compare-table th { background: #0E1118; font-weight: 700; color: var(--white); }
 .compare-table th.col-ukey {
-  background: rgba(34, 197, 94, 0.12); color: var(--accent-green);
-  border-inline: 1px solid rgba(34, 197, 94, 0.3);
+  background: rgba(16, 185, 129, 0.12); color: var(--accent-emerald);
+  border-inline: 1px solid rgba(16, 185, 129, 0.3);
 }
 .compare-table td.col-ukey {
-  background: rgba(34, 197, 94, 0.05); font-weight: 600;
-  border-inline: 1px solid rgba(34, 197, 94, 0.2);
+  background: rgba(16, 185, 129, 0.05); font-weight: 600;
+  border-inline: 1px solid rgba(16, 185, 129, 0.2);
 }
-.check-yes { color: var(--accent-green); font-weight: 700; }
+.check-yes { color: var(--accent-emerald); font-weight: 700; }
 .check-no { color: #64748B; }
 
 /* =========================================================================
@@ -843,7 +858,7 @@ footer {
   padding: 50px var(--gutter); font-size: 14px; color: var(--gray-1);
 }
 .footer-inner {
-  max-width: 1280px; margin-inline: auto; display: flex;
+  max-width: 1240px; margin-inline: auto; display: flex;
   justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;
 }
 .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
@@ -854,7 +869,7 @@ footer {
 
 <body>
 
-<!-- Header / Navigation -->
+<!-- Navigation -->
 <nav class="nav">
   <a href="#" class="nav-brand">
     <div class="brand-mark">
@@ -873,10 +888,10 @@ footer {
   </ul>
 
   <div class="nav-actions">
-    <button class="icon-btn" id="soundToggleBtn" title="Toggle audio effects">
-      <span>🔊 Audio: ON</span>
+    <button class="icon-btn" id="soundToggleBtn" title="Toggle audio haptics">
+      <span>🔊 Haptics: ON</span>
     </button>
-    <button class="icon-btn" id="themeToggleBtn" title="Toggle light/dark theme">
+    <button class="icon-btn" id="themeToggleBtn" title="Toggle theme">
       <span>Theme</span>
     </button>
     <a href="https://github.com/siddharthsai218/ukey" target="_blank" class="btn solid" style="padding: 7px 14px; font-size: 12.5px;">
@@ -891,7 +906,7 @@ footer {
   <section class="hero">
     <div class="hero-tag">
       <span class="pulse-dot"></span>
-      Zero Cloud • Android StrongBox Enclave (EAL5+) • Linux /dev/uhid
+      Zero Cloud • Android StrongBox Silicon (EAL5+) • Linux /dev/uhid
     </div>
 
     <h1 class="mega hero-title">Touch ID<br>for Linux.</h1>
@@ -959,6 +974,9 @@ footer {
         </div>
 
         <div class="deck-meta">
+          <button class="xray-btn" id="xrayToggleBtn" title="Inspect raw kernel packets and hex signatures">
+            <span>🔬 Kernel X-Ray</span>
+          </button>
           <div class="transport-pill" id="transportToggleBtn" title="Click to switch USB-C / Wi-Fi">
             <span class="transport-dot" id="transDot"></span>
             <span id="transLabel">USB-C (adb :8443)</span>
@@ -969,7 +987,7 @@ footer {
       <!-- Stage Physical Duo -->
       <div class="stage-duo">
 
-        <!-- 1. THINKPAD LAPTOP -->
+        <!-- 1. THINKPAD WORKSTATION -->
         <div class="tp-laptop">
           <div class="tp-lid">
             <div class="tp-notch"></div>
@@ -982,7 +1000,7 @@ footer {
                 </div>
                 <span>Fedora Linux 43 (Wayland)</span>
                 <div style="display:flex; gap:8px;">
-                  <span style="color:var(--accent-green);" id="wlUhidTag">● /dev/uhid Active</span>
+                  <span style="color:var(--accent-emerald);" id="wlUhidTag">● /dev/uhid Active</span>
                   <span>18:30</span>
                 </div>
               </div>
@@ -999,9 +1017,9 @@ footer {
                       <span class="term-dot g"></span>
                     </div>
                     <span style="color:var(--gray-1); font-family:var(--mono); font-size:11px;" id="termTitleText">siddharth@fedora:~ (bash)</span>
-                    <span style="font-family:var(--mono); font-size:10px; color:var(--accent-green);">● FIDO2 Token Attached</span>
+                    <span style="font-family:var(--mono); font-size:10px; color:var(--accent-emerald);">● FIDO2 Token Attached</span>
                   </div>
-                  <div class="term-body" id="termBody" style="cursor:text;" title="Click anywhere to type live commands">
+                  <div class="term-body" id="termBody" title="Click anywhere inside to type live commands">
                     <div id="termActiveLine" style="display:flex; align-items:center; flex-wrap:wrap;">
                       <span class="term-prompt">siddharth@fedora:~$ </span>&nbsp;
                       <span class="term-cmd" id="termTypedCmd"></span>
@@ -1014,7 +1032,7 @@ footer {
                       <span id="termPromptMsg">Touch phone fingerprint sensor or press Enter:</span>
                     </div>
                     <div id="termOutputBlock" style="display:none; margin-top:8px;">
-                      <div style="color:var(--accent-green); font-weight:700;" id="termOutHead">✓ Authorized by Android StrongBox</div>
+                      <div style="color:var(--accent-emerald); font-weight:700;" id="termOutHead">✓ Authorized by Android StrongBox</div>
                       <div style="color:var(--gray-1); margin-top:2px;" id="termOutSub">root</div>
                     </div>
                   </div>
@@ -1046,12 +1064,12 @@ footer {
                           <div style="font-size:10.5px; color:var(--gray-1);">Use your security key with <b>google.com</b></div>
                         </div>
                       </div>
-                      <div style="background:#0E1014; border:1px solid #222630; border-radius:6px; padding:8px 10px; font-size:11px; margin-top:8px;">
+                      <div style="background:#0A0D14; border:1px solid #1E2534; border-radius:6px; padding:8px 10px; font-size:11px; margin-top:8px;">
                         <div id="bWaitBox" style="color:var(--accent-cyan); display:flex; align-items:center; gap:6px;">
                           <span style="width:6px; height:6px; border-radius:50%; background:var(--accent-cyan); display:inline-block;"></span>
                           <span>Waiting for touch on security key...</span>
                         </div>
-                        <div id="bDoneBox" style="display:none; color:var(--accent-green); font-weight:700;">
+                        <div id="bDoneBox" style="display:none; color:var(--accent-emerald); font-weight:700;">
                           ✓ Verified with FIDO2 Security Key! Welcome back, Siddharth.
                         </div>
                       </div>
@@ -1059,10 +1077,29 @@ footer {
                   </div>
                 </div>
 
+                <!-- Kernel X-Ray Window -->
+                <div class="xray-window" id="xrayWindow">
+                  <div class="xray-header">
+                    <span>KERNEL /DEV/UHID PACKET BUS DISSECTOR</span>
+                    <span>64-BYTE INTERRUPT IN/OUT</span>
+                  </div>
+                  <div class="xray-body" id="xrayBody">
+                    <div>[0.001s] <span style="color:#FFF;">UHID_CREATE2:</span> dev=uKey FIDO2 (VID:1209 PID:0001)</div>
+                    <div>[0.003s] <span style="color:#FFF;">CTAPHID_INIT:</span> nonce=4f8a12e9b0 CID=0xffffffff allocated CID=0x01020304</div>
+                    <div id="xrayReqLine">[0.005s] <span style="color:var(--accent-cyan);">CTAPHID_CBOR:</span> cmd=0x10 (authenticatorGetAssertion)</div>
+                    <div id="xrayHexDump" style="color:var(--gray-1); font-size:9.5px; margin-top:4px;">
+                      Payload: a301657375646f0258204b8a12e9... (RP: pam://fedora)
+                    </div>
+                    <div id="xrayDoneLine" style="display:none; color:var(--accent-emerald); margin-top:4px;">
+                      [0.382s] <span style="color:#FFF;">CTAPHID_CBOR:</span> status=0x00 (SUCCESS) authData=37B sig=ASN.1 DER (71B)
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
-          <!-- ThinkPad Keyboard Base Deck -->
+          <!-- Keyboard Base & TrackPoint -->
           <div class="tp-base">
             <div class="tp-trackpoint-nub" title="Classic ThinkPad TrackPoint"></div>
             <div class="tp-power-led" title="Power LED"></div>
@@ -1173,9 +1210,6 @@ footer {
               </div>
             </div>
 
-            <!-- Virtual Touch Pointer -->
-            <div class="virtual-touch-dot" id="vTouchDot"></div>
-
           </div>
         </div>
 
@@ -1245,7 +1279,7 @@ footer {
             </div>
             <span style="font-family:var(--mono); font-size:12px; color:var(--gray-1);">uKey Management Console — http://127.0.0.1:8444</span>
           </div>
-          <span style="color:var(--accent-green); font-family:var(--mono); font-size:11px;">● Daemon Online</span>
+          <span style="color:var(--accent-emerald); font-family:var(--mono); font-size:11px;">● Daemon Online</span>
         </div>
 
         <div class="cpreview-body">
@@ -1270,7 +1304,7 @@ footer {
                 <button class="btn" id="cGenPinBtn" style="padding:6px 12px; font-size:11px;">Generate</button>
               </div>
               <p style="font-size:12px; color:var(--gray-1); margin-top:10px; text-align:left;">
-                One-time pairing PIN for new phones. Expires automatically in 10 minutes.
+                One-time pairing PIN for new phones. Expires automatically in 15 minutes.
               </p>
             </div>
 
@@ -1299,7 +1333,7 @@ footer {
        ========================================================================= -->
   <section class="ways-section">
     <div class="wrap">
-      <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--accent-green); letter-spacing:.08em;">
+      <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--accent-emerald); letter-spacing:.08em;">
         ONE BIOMETRIC KEY • ZERO PASSWORDS
       </div>
       <h2 class="h2" style="margin-top:10px;">Three native workflows on Linux.</h2>
@@ -1307,7 +1341,7 @@ footer {
       <div class="ways-grid">
         <div class="way-card">
           <div class="way-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
           </div>
           <h3>1. Linux PAM (sudo & login)</h3>
           <p>
@@ -1318,7 +1352,7 @@ footer {
 
         <div class="way-card">
           <div class="way-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>
           </div>
           <h3>2. OpenSSH ecdsa-sk (Git Push)</h3>
           <p>
@@ -1329,7 +1363,7 @@ footer {
 
         <div class="way-card">
           <div class="way-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
           </div>
           <h3>3. WebAuthn Passkeys in Browser</h3>
           <p>
@@ -1346,7 +1380,7 @@ footer {
        ========================================================================= -->
   <section class="compare-section" id="compare">
     <div class="wrap">
-      <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--accent-green); letter-spacing:.08em;">
+      <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--accent-emerald); letter-spacing:.08em;">
         HONEST ARCHITECTURAL ANALYSIS
       </div>
       <h2 class="h2" style="margin-top:10px;">How uKey compares.</h2>
@@ -1430,7 +1464,7 @@ footer {
        ========================================================================= -->
   <section class="install-section" id="install">
     <div class="wrap">
-      <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--accent-green); letter-spacing:.08em;">
+      <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--accent-emerald); letter-spacing:.08em;">
         UNIVERSAL LINUX SUPPORT
       </div>
       <h2 class="h2" style="margin-top:10px;">One command. Any distro.</h2>
@@ -1495,7 +1529,7 @@ ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code></pre>
           </div>
           <div class="faq-a">
             <div class="faq-a-inner">
-              Yes. When using Wi-Fi, every packet must include an authentic HMAC-SHA256 signature generated using a paired 6-digit cryptographic PIN. If an unauthorized attacker or rogue scanner on the LAN attempts to hit port <code>8443</code>, the daemon drops the connection in under <b>4ms</b> with zero processing.
+              Yes. When using Wi-Fi, every packet must include an authentic HMAC token hash generated using a paired 6-digit cryptographic PIN. If an unauthorized attacker or rogue scanner on the LAN attempts to hit port <code>8443</code>, the daemon drops the connection in under <b>4ms</b> with zero processing.
             </div>
           </div>
         </div>
@@ -1520,7 +1554,7 @@ ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code></pre>
 </footer>
 
 <!-- =========================================================================
-     JAVASCRIPT: KEYNOTE AUTO-TOUR, INTERACTIVE HARDWARE ENGINE & AUDIO
+     JAVASCRIPT: INTERACTIVE RIG, REAL TERMINAL INPUT, 3D PARALLAX & AUDIO
      ========================================================================= -->
 <script>
 // ================= 1. WEB AUDIO API SYNTHESIZER =================
@@ -1551,8 +1585,8 @@ function playHapticThump() {
   try {
     const ctx = getAudio();
     const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.type = 'sine'; osc.frequency.value = 90;
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    osc.type = 'sine'; osc.frequency.value = 85;
+    gain.gain.setValueAtTime(0.14, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
     osc.connect(gain); gain.connect(ctx.destination);
     osc.start(); osc.stop(ctx.currentTime + 0.14);
@@ -1568,7 +1602,7 @@ function playChime() {
       const osc = ctx.createOscillator(); const gain = ctx.createGain();
       osc.type = 'sine'; osc.frequency.value = freq;
       gain.gain.setValueAtTime(0, now + delay);
-      gain.gain.linearRampToValueAtTime(0.15, now + delay + 0.01);
+      gain.gain.linearRampToValueAtTime(0.16, now + delay + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
       osc.connect(gain); gain.connect(ctx.destination);
       osc.start(now + delay); osc.stop(now + delay + dur + 0.04);
@@ -1594,7 +1628,7 @@ function playBuzzer() {
 const soundToggleBtn = document.getElementById("soundToggleBtn");
 soundToggleBtn.addEventListener("click", () => {
   soundEnabled = !soundEnabled;
-  soundToggleBtn.querySelector("span").textContent = soundEnabled ? "🔊 Audio: ON" : "🔇 Audio: OFF";
+  soundToggleBtn.querySelector("span").textContent = soundEnabled ? "🔊 Haptics: ON" : "🔇 Haptics: OFF";
   if (soundEnabled) playChime();
 });
 
@@ -1610,6 +1644,7 @@ themeToggleBtn.addEventListener("click", () => {
 // ================= 2. DOM HARDWARE ELEMENTS =================
 const termWindow = document.getElementById("termWindow");
 const browserWindow = document.getElementById("browserWindow");
+const xrayWindow = document.getElementById("xrayWindow");
 const termTitleText = document.getElementById("termTitleText");
 const termTypedCmd = document.getElementById("termTypedCmd");
 const termCursor = document.getElementById("termCursor");
@@ -1618,11 +1653,19 @@ const termPromptMsg = document.getElementById("termPromptMsg");
 const termOutputBlock = document.getElementById("termOutputBlock");
 const termOutHead = document.getElementById("termOutHead");
 const termOutSub = document.getElementById("termOutSub");
+const termHiddenInput = document.getElementById("termHiddenInput");
+const termBodyEl = document.getElementById("termBody");
+const termHintText = document.getElementById("termHintText");
 
 const bTabTitle = document.getElementById("bTabTitle");
 const bUrlTitle = document.getElementById("bUrlTitle");
 const bWaitBox = document.getElementById("bWaitBox");
 const bDoneBox = document.getElementById("bDoneBox");
+
+const xrayToggleBtn = document.getElementById("xrayToggleBtn");
+const xrayReqLine = document.getElementById("xrayReqLine");
+const xrayHexDump = document.getElementById("xrayHexDump");
+const xrayDoneLine = document.getElementById("xrayDoneLine");
 
 const conduitWire = document.getElementById("conduitWire");
 const conduitPulse = document.getElementById("conduitPulse");
@@ -1642,7 +1685,6 @@ const bioIcon = document.getElementById("bioIcon");
 const bioHintText = document.getElementById("bioHintText");
 const fingerprintSensor = document.getElementById("fingerprintSensor");
 const sensorSvg = document.getElementById("sensorSvg");
-const vTouchDot = document.getElementById("vTouchDot");
 
 const tourToggleBtn = document.getElementById("tourToggleBtn");
 const tourIcon = document.getElementById("tourIcon");
@@ -1669,7 +1711,10 @@ const SCENARIOS = {
     logOk: "OK StrongBox signature verified (0.38s)",
     outHead: "root",
     outSub: "✓ PAM authenticated via Android StrongBox in 0.38s",
-    authTime: "0.38"
+    authTime: "0.38",
+    xrayCmd: "authenticatorGetAssertion (0x02)",
+    xrayPayload: "a301657375646f0258204b8a12e9... (RP: pam://fedora)",
+    xrayReply: "status=0x00 (SUCCESS) authData=37B sig=ASN.1 DER (71B)"
   },
   git: {
     name: "git push (ecdsa-sk)",
@@ -1682,7 +1727,10 @@ const SCENARIOS = {
     logOk: "OK Signed ecdsa-sk via StrongBox (0.41s)",
     outHead: "✓ Hardware signed with ecdsa-sk",
     outSub: "To github.com:siddharthsai218/ukey.git\n7fd2611..main main -> main (0 passwords entered)",
-    authTime: "0.41"
+    authTime: "0.41",
+    xrayCmd: "authenticatorGetAssertion (0x02)",
+    xrayPayload: "a3016a6769746875622e636f6d... (RP: github.com)",
+    xrayReply: "status=0x00 (SUCCESS) userPresent=1 sig=ASN.1 DER (70B)"
   },
   webauthn: {
     name: "WebAuthn (Google)",
@@ -1694,7 +1742,10 @@ const SCENARIOS = {
     logOk: "OK StrongBox assertion verified (0.35s)",
     outHead: "✓ Welcome back, Siddharth! Logged in via FIDO2.",
     outSub: "Hardware-bound passkey verified against Google root.",
-    authTime: "0.35"
+    authTime: "0.35",
+    xrayCmd: "authenticatorGetAssertion (0x02)",
+    xrayPayload: "a3016a676f6f676c652e636f6d... (RP: google.com)",
+    xrayReply: "status=0x00 (SUCCESS) FIDO2 passkey verified"
   },
   fallback: {
     name: "0.0s Fallback",
@@ -1707,7 +1758,10 @@ const SCENARIOS = {
     logOk: "PAM fallback to pam_unix.so successful (0.0s)",
     outHead: "root",
     outSub: "Instant fallback in 0.0s. Never hangs, never locks you out.",
-    authTime: "0.00"
+    authTime: "0.00",
+    xrayCmd: "BYPASS_MODE",
+    xrayPayload: "Daemon in bypass. Direct pam_unix.so execution.",
+    xrayReply: "pam_u2f yielded IGNORE (0.0s)"
   },
   rogue: {
     name: "Rogue Wi-Fi Defense",
@@ -1720,13 +1774,17 @@ const SCENARIOS = {
     logOk: "REJECTED: Missing HMAC-SHA256 token (Dropped in 3.4ms)",
     outHead: "🚨 ROGUE DEVICE BLOCKED IN <4ms",
     outSub: "Zero-Trust Wi-Fi Handshake dropped connection. Host safe.",
-    authTime: "0.00"
+    authTime: "0.00",
+    xrayCmd: "ZERO_TRUST_PROBE",
+    xrayPayload: "TCP SYN from 192.168.1.142:54892 (No pairing token)",
+    xrayReply: "REJECT: RST sent (3.4ms)"
   }
 };
 
 const SCENARIO_KEYS = ["sudo", "git", "webauthn", "fallback", "rogue"];
 let activeScKey = "sudo";
 let isWireless = false;
+let isXrayMode = false;
 let autoTourActive = true;
 let tourTimer = null;
 let typingTimer = null;
@@ -1761,30 +1819,40 @@ function runCurrentScenario() {
   bioHintText.textContent = "Tap sensor to sign";
   bioSubText.textContent = sc.bioSub;
 
-  if (sc.mode === "terminal") {
-    termWindow.style.display = "block";
+  // X-Ray info
+  xrayReqLine.innerHTML = `[0.005s] <span style="color:var(--accent-cyan);">CTAPHID_CBOR:</span> ${sc.xrayCmd}`;
+  xrayHexDump.textContent = `Payload: ${sc.xrayPayload}`;
+  xrayDoneLine.style.display = "none";
+  xrayDoneLine.innerHTML = `[0.382s] <span style="color:#FFF;">CTAPHID_CBOR:</span> ${sc.xrayReply}`;
+
+  if (isXrayMode) {
+    termWindow.style.display = "none";
     browserWindow.style.display = "none";
+    xrayWindow.style.display = "flex";
+  }
+
+  if (sc.mode === "terminal") {
+    if (!isXrayMode) {
+      termWindow.style.display = "block";
+      browserWindow.style.display = "none";
+      xrayWindow.style.display = "none";
+    }
     termTitleText.textContent = sc.title;
     termPromptLine.style.display = "none";
     termOutputBlock.style.display = "none";
     bioSheet.classList.add("hidden");
 
-    // Simulate authentic typing
     typeOutTerminal(sc.cmdText, () => {
-      // After typed, show prompt line
       termPromptLine.style.display = "flex";
       termPromptMsg.textContent = sc.promptText;
 
-      // Pulse data down conduit
       triggerConduitPulse("fwd");
 
-      // Slide up phone sheet
       setTimeout(() => {
         bioSheet.classList.remove("hidden");
         liveLogReq.innerHTML = `<span class="lt">[18:30:10]</span> <span class="lr">${sc.logReq}</span>`;
         liveLogDone.style.display = "none";
 
-        // If auto-tour is running, automatically touch the sensor
         if (autoTourActive) {
           scheduleAutoTouch();
         }
@@ -1792,8 +1860,11 @@ function runCurrentScenario() {
     });
 
   } else if (sc.mode === "browser") {
-    termWindow.style.display = "none";
-    browserWindow.style.display = "flex";
+    if (!isXrayMode) {
+      termWindow.style.display = "none";
+      browserWindow.style.display = "flex";
+      xrayWindow.style.display = "none";
+    }
     bTabTitle.textContent = sc.tab;
     bUrlTitle.textContent = sc.url;
     bWaitBox.style.display = "flex";
@@ -1813,15 +1884,17 @@ function runCurrentScenario() {
     }, 350);
 
   } else if (sc.mode === "rogue") {
-    termWindow.style.display = "block";
-    browserWindow.style.display = "none";
+    if (!isXrayMode) {
+      termWindow.style.display = "block";
+      browserWindow.style.display = "none";
+      xrayWindow.style.display = "none";
+    }
     termTitleText.textContent = sc.title;
     termPromptLine.style.display = "flex";
     termPromptMsg.textContent = sc.promptText;
     termOutputBlock.style.display = "none";
     bioSheet.classList.add("hidden");
 
-    // Danger wire
     conduitWire.classList.add("danger");
     conduitPulse.className = "conduit-pulse danger travel-fwd";
     appStatusPill.classList.add("danger");
@@ -1836,6 +1909,8 @@ function runCurrentScenario() {
       termOutHead.style.color = "var(--accent-red)";
       termOutHead.textContent = sc.outHead;
       termOutSub.textContent = sc.outSub;
+
+      xrayDoneLine.style.display = "block";
 
       const line = document.createElement("div");
       line.className = "log-line";
@@ -1869,7 +1944,7 @@ function typeOutTerminal(cmd, onDone) {
 
 function triggerConduitPulse(dir = "fwd") {
   conduitPulse.className = "conduit-pulse";
-  void conduitPulse.offsetWidth; // Reflow
+  void conduitPulse.offsetWidth;
   conduitPulse.classList.add(dir === "fwd" ? "travel-fwd" : "travel-rev");
 }
 
@@ -1884,21 +1959,22 @@ function triggerFingerprintAuth() {
     const sc = SCENARIOS[activeScKey];
 
     bioSheet.classList.add("success");
-    bioIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
-    sensorSvg.innerHTML = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+    bioIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+    sensorSvg.innerHTML = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
     bioHintText.textContent = "✓ Verified (StrongBox P-256)";
 
     liveLogDone.style.display = "block";
     liveLogDone.innerHTML = `<span class="lt">[18:30:12]</span> <span class="lo">${sc.logOk}</span>`;
 
-    // Trigger return pulse
+    xrayDoneLine.style.display = "block";
+
     triggerConduitPulse("rev");
 
     setTimeout(() => {
       if (sc.mode === "terminal") {
         termPromptLine.style.display = "none";
         termOutputBlock.style.display = "block";
-        termOutHead.style.color = "var(--accent-green)";
+        termOutHead.style.color = "var(--accent-emerald)";
         termOutHead.textContent = sc.outHead;
         termOutSub.textContent = sc.outSub;
       } else if (sc.mode === "browser") {
@@ -1907,10 +1983,8 @@ function triggerFingerprintAuth() {
         bDoneBox.innerHTML = `${sc.outHead}<div style="font-size:10px; color:var(--gray-1); margin-top:2px;">${sc.outSub}</div>`;
       }
 
-      // Roll metric
       metricAuthVal.textContent = sc.authTime;
 
-      // If auto-tour is running, schedule next scenario
       if (autoTourActive) {
         tourTimer = setTimeout(nextScenarioTour, 3800);
       }
@@ -1966,6 +2040,23 @@ document.querySelectorAll(".sc-pill").forEach(pill => {
   });
 });
 
+// X-Ray Mode Toggle
+xrayToggleBtn.addEventListener("click", () => {
+  playKeyClick();
+  isXrayMode = !isXrayMode;
+  xrayToggleBtn.classList.toggle("active", isXrayMode);
+  if (isXrayMode) {
+    termWindow.style.display = "none";
+    browserWindow.style.display = "none";
+    xrayWindow.style.display = "flex";
+  } else {
+    xrayWindow.style.display = "none";
+    const sc = SCENARIOS[activeScKey];
+    if (sc.mode === "browser") browserWindow.style.display = "flex";
+    else termWindow.style.display = "block";
+  }
+});
+
 // Transport Toggle
 transportToggleBtn.addEventListener("click", () => {
   isWireless = !isWireless;
@@ -1988,7 +2079,91 @@ document.getElementById("appClearBtn").addEventListener("click", () => {
   appConsoleBody.innerHTML = `<div class="log-line"><span class="lt">[18:30:00]</span> <span class="li">Logs cleared</span></div>`;
 });
 
-// ================= 5. MANAGEMENT CONSOLE DEMO WIDGETS =================
+// ================= 5. REAL INTERACTIVE KEYBOARD INPUT =================
+termBodyEl.addEventListener("click", () => {
+  pauseTour();
+  termHiddenInput.focus();
+  termHintText.textContent = "[Listening: Press Enter to run]";
+  termHintText.style.color = "var(--accent-emerald)";
+});
+
+termHiddenInput.addEventListener("input", (e) => {
+  termTypedCmd.textContent = termHiddenInput.value;
+  playKeyClick();
+});
+
+termHiddenInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const cmd = termHiddenInput.value.trim();
+    termHiddenInput.value = "";
+    termTypedCmd.textContent = cmd;
+    handleUserCommand(cmd);
+  }
+});
+
+function handleUserCommand(raw) {
+  const cmd = raw.toLowerCase().trim();
+  playKeyClick();
+
+  if (!cmd || cmd === "sudo" || cmd === "sudo whoami" || cmd === "sudo su" || cmd.startsWith("sudo ")) {
+    termPromptLine.style.display = "flex";
+    termPromptMsg.textContent = "Touch phone fingerprint sensor or press Enter for password:";
+    termOutputBlock.style.display = "none";
+    triggerConduitPulse("fwd");
+    bioSheet.classList.remove("hidden");
+    bioSubText.textContent = "pam://fedora (sudo)";
+    liveLogReq.innerHTML = `<span class="lt">[18:30:10]</span> <span class="lr">REQ assertion: pam://fedora</span>`;
+    liveLogDone.style.display = "none";
+  } else if (cmd === "git push" || cmd.startsWith("git push")) {
+    selectScenario("git", true);
+  } else if (cmd === "help") {
+    termPromptLine.style.display = "none";
+    termOutputBlock.style.display = "block";
+    termOutHead.style.color = "var(--accent-cyan)";
+    termOutHead.textContent = "uKey Linux Terminal Sandbox";
+    termOutSub.innerHTML = `Available commands:<br>
+• <b style="color:#FFF;">sudo whoami</b> — Trigger StrongBox biometric authentication<br>
+• <b style="color:#FFF;">git push</b> — Hardware ecdsa-sk OpenSSH key signing<br>
+• <b style="color:#FFF;">ukeyctl status</b> — View /dev/uhid virtual device & battery<br>
+• <b style="color:#FFF;">clear</b> — Reset terminal`;
+  } else if (cmd === "ukeyctl status") {
+    termPromptLine.style.display = "none";
+    termOutputBlock.style.display = "block";
+    termOutHead.style.color = "var(--accent-emerald)";
+    termOutHead.textContent = "● uKey Daemon Active (PID 3473)";
+    termOutSub.innerHTML = `Kernel Device: /dev/uhid (FIDO2/CTAP2)<br>Transport: USB-C adb reverse :8443 (Latency: 2.8ms)<br>Enclave: Android StrongBox (EAL5+ Hardware bound)`;
+  } else if (cmd === "clear") {
+    termTypedCmd.textContent = "";
+    termPromptLine.style.display = "none";
+    termOutputBlock.style.display = "none";
+    termHintText.textContent = "[Click to type: sudo, git push, help]";
+  } else {
+    termPromptLine.style.display = "none";
+    termOutputBlock.style.display = "block";
+    termOutHead.style.color = "var(--accent-amber)";
+    termOutHead.textContent = `bash: ${raw}: command executed`;
+    termOutSub.textContent = "Type 'sudo whoami' to test biometric authentication or 'help' for commands.";
+  }
+}
+
+// 3D Parallax on Stage
+const stageOuterEl = document.querySelector(".stage-outer");
+const stageDuoEl = document.querySelector(".stage-duo");
+
+if (stageOuterEl && stageDuoEl && window.matchMedia("(min-width: 960px)").matches) {
+  stageOuterEl.addEventListener("mousemove", (e) => {
+    const rect = stageOuterEl.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) - 0.5;
+    const y = ((e.clientY - rect.top) / rect.height) - 0.5;
+    stageDuoEl.style.transform = `rotateY(${x * 6}deg) rotateX(${-y * 5}deg)`;
+  });
+  stageOuterEl.addEventListener("mouseleave", () => {
+    stageDuoEl.style.transform = `rotateY(0deg) rotateX(0deg)`;
+  });
+}
+
+// ================= 6. MANAGEMENT CONSOLE DEMO WIDGETS =================
 const cMasterBtn = document.getElementById("cMasterBtn");
 const cToggleLabel = document.getElementById("cToggleLabel");
 let isConsoleOn = true;
@@ -2021,7 +2196,7 @@ cRevokeBtn.addEventListener("click", () => {
   cRevokeBtn.parentElement.innerHTML = `<span style="color:var(--accent-red); font-size:12px; font-weight:600;">✓ Device Revoked</span>`;
 });
 
-// ================= 6. DISTRO INSTALL TABS =================
+// ================= 7. DISTRO INSTALL TABS =================
 const DISTRO_SCRIPTS = {
   fedora: `# 1. Production 1-command installer (detects Fedora automatically)
 curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
@@ -2077,7 +2252,7 @@ dTabs.forEach(tab => {
   });
 });
 
-// ================= 7. FAQ ACCORDION =================
+// ================= 8. FAQ ACCORDION =================
 document.querySelectorAll(".faq-item").forEach(item => {
   const q = item.querySelector(".faq-q");
   const a = item.querySelector(".faq-a");
@@ -2094,7 +2269,7 @@ document.querySelectorAll(".faq-item").forEach(item => {
   });
 });
 
-// ================= 8. COPY BUTTONS =================
+// ================= 9. COPY BUTTONS =================
 document.querySelectorAll("[data-copy]").forEach(btn => {
   btn.addEventListener("click", () => {
     const text = btn.getAttribute("data-copy");
@@ -2106,95 +2281,6 @@ document.querySelectorAll("[data-copy]").forEach(btn => {
     });
   });
 });
-
-
-// ================= 3D MOUSE PARALLAX ON STAGE =================
-const stageOuterEl = document.querySelector(".stage-outer");
-const stageDuoEl = document.querySelector(".stage-duo");
-
-if (stageOuterEl && stageDuoEl && window.matchMedia("(min-width: 960px)").matches) {
-  stageOuterEl.addEventListener("mousemove", (e) => {
-    const rect = stageOuterEl.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) - 0.5;
-    const y = ((e.clientY - rect.top) / rect.height) - 0.5;
-    stageDuoEl.style.transform = `rotateY(${x * 6}deg) rotateX(${-y * 5}deg)`;
-  });
-  stageOuterEl.addEventListener("mouseleave", () => {
-    stageDuoEl.style.transform = `rotateY(0deg) rotateX(0deg)`;
-  });
-}
-
-// ================= REAL INTERACTIVE KEYBOARD INPUT =================
-const termHiddenInput = document.getElementById("termHiddenInput");
-const termBodyEl = document.getElementById("termBody");
-const termHintText = document.getElementById("termHintText");
-
-termBodyEl.addEventListener("click", () => {
-  pauseTour();
-  termHiddenInput.focus();
-  termHintText.textContent = "[Listening: Press Enter to run]";
-  termHintText.style.color = "var(--accent-green)";
-});
-
-termHiddenInput.addEventListener("input", (e) => {
-  termTypedCmd.textContent = termHiddenInput.value;
-  playKeyClick();
-});
-
-termHiddenInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    const cmd = termHiddenInput.value.trim();
-    termHiddenInput.value = "";
-    termTypedCmd.textContent = cmd;
-    handleUserCommand(cmd);
-  }
-});
-
-function handleUserCommand(raw) {
-  const cmd = raw.toLowerCase().trim();
-  playKeyClick();
-
-  if (!cmd || cmd === "sudo" || cmd === "sudo whoami" || cmd === "sudo su" || cmd.startsWith("sudo ")) {
-    termPromptLine.style.display = "flex";
-    termPromptMsg.textContent = "Touch phone fingerprint sensor or press Enter for password:";
-    termOutputBlock.style.display = "none";
-    triggerConduitPulse("fwd");
-    bioSheet.classList.remove("hidden");
-    bioSubText.textContent = "pam://fedora (sudo)";
-    liveLogReq.innerHTML = `<span class="lt">[18:30:10]</span> <span class="lr">REQ assertion: pam://fedora</span>`;
-    liveLogDone.style.display = "none";
-  } else if (cmd === "git push" || cmd.startsWith("git push")) {
-    selectScenario("git", true);
-  } else if (cmd === "help") {
-    termPromptLine.style.display = "none";
-    termOutputBlock.style.display = "block";
-    termOutHead.style.color = "var(--accent-cyan)";
-    termOutHead.textContent = "uKey Linux Terminal Sandbox";
-    termOutSub.innerHTML = `Available commands:<br>
-• <b style="color:#FFF;">sudo whoami</b> — Trigger StrongBox biometric authentication<br>
-• <b style="color:#FFF;">git push</b> — Hardware ecdsa-sk OpenSSH key signing<br>
-• <b style="color:#FFF;">ukeyctl status</b> — View /dev/uhid virtual device & battery<br>
-• <b style="color:#FFF;">clear</b> — Reset terminal`;
-  } else if (cmd === "ukeyctl status") {
-    termPromptLine.style.display = "none";
-    termOutputBlock.style.display = "block";
-    termOutHead.style.color = "var(--accent-green)";
-    termOutHead.textContent = "● uKey Daemon Active (PID 3473)";
-    termOutSub.innerHTML = `Kernel Device: /dev/uhid (FIDO2/CTAP2)<br>Transport: USB-C adb reverse :8443 (Latency: 2.8ms)<br>Enclave: Android StrongBox (EAL5+ Hardware bound)`;
-  } else if (cmd === "clear") {
-    termTypedCmd.textContent = "";
-    termPromptLine.style.display = "none";
-    termOutputBlock.style.display = "none";
-    termHintText.textContent = "[Click to type: sudo, git push, help]";
-  } else {
-    termPromptLine.style.display = "none";
-    termOutputBlock.style.display = "block";
-    termOutHead.style.color = "var(--accent-amber)";
-    termOutHead.textContent = `bash: ${raw}: command executed`;
-    termOutSub.textContent = "Type 'sudo whoami' to test biometric authentication or 'help' for commands.";
-  }
-}
 
 // Start initial scenario on page load
 selectScenario("sudo");
