@@ -22,3 +22,9 @@ android/app/*.iml
 *.swp
 *.swo
 .vscode/
+
+# Internal Agent & Planning Artifacts
+.agents/
+skills-lock.json
+.planning/
+*.tmp
