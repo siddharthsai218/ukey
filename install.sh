@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# uKey user installer for Fedora
-# Installs udev permissions, a Python virtual environment, and a user service.
+# uKey Universal User Installer (Linux)
+# Supports: Fedora, Ubuntu, Debian, Arch Linux, openSUSE
+# Installs udev permissions, validation tools, Python venv, and a user service.
 # Safe defaults: loopback signer bridge, auto-lock disabled.
 # ==============================================================================
 
@@ -21,28 +22,71 @@ CONFIG_PATH="${UKEY_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/ukey/config.json}"
 export UKEY_CONFIG="$CONFIG_PATH"
 
 echo -e "${CYAN}========================================================================${NC}"
-echo -e "${BOLD}${CYAN}   uKey user installer (Fedora)${NC}"
-echo -e "${CYAN}   udev permissions + virtual FIDO2 daemon + user service${NC}"
+echo -e "${BOLD}${CYAN}   uKey Universal Linux Installer${NC}"
+echo -e "${CYAN}   udev permissions + virtual FIDO2 daemon + systemd user service${NC}"
 echo -e "${CYAN}========================================================================${NC}\n"
 
-if ! command -v dnf >/dev/null 2>&1; then
-    echo -e "${RED}This installer currently supports Fedora only.${NC}"
-    echo "Use the manual setup in README.md on other distributions."
-    exit 1
+# Detect distribution
+DISTRO="unknown"
+if [[ -f /etc/os-release ]]; then
+    # shellcheck source=/dev/null
+    . /etc/os-release
+    DISTRO="${ID:-unknown}"
+    DISTRO_LIKE="${ID_LIKE:-}"
 fi
+
+echo -e "Detected distribution: ${BOLD}${PRETTY_NAME:-$DISTRO}${NC}"
 
 # Step 1: Install kernel rules and permissions via sudo
-echo -e "${CYAN}[1/5] Configuring /dev/uhid kernel permissions...${NC}"
+echo -e "\n${CYAN}[1/5] Configuring /dev/uhid kernel permissions...${NC}"
 sudo "$SCRIPT_DIR/setup_udev.sh"
 
-# Step 2: Ensure validation tools are present
-echo -e "\n${CYAN}[2/5] Checking optional validation tools...${NC}"
-if ! rpm -q fido2-tools &>/dev/null; then
-    echo -e "${YELLOW}Installing fido2-tools for validation...${NC}"
-    sudo dnf install -y fido2-tools
-else
-    echo -e "${GREEN}✓ fido2-tools is installed.${NC}"
-fi
+# Step 2: Ensure validation tools are present across distros
+echo -e "\n${CYAN}[2/5] Checking required system packages and tools...${NC}"
+
+install_distro_packages() {
+    case "$DISTRO" in
+        fedora|rhel|centos|almalinux|rocky)
+            if ! command -v fido2-token &>/dev/null; then
+                echo -e "${YELLOW}Installing fido2-tools via dnf...${NC}"
+                sudo dnf install -y fido2-tools python3-pip
+            fi
+            ;;
+        ubuntu|debian|pop|linuxmint|elementary)
+            if ! command -v fido2-token &>/dev/null || ! dpkg -s python3-venv &>/dev/null; then
+                echo -e "${YELLOW}Installing fido2-tools and python3-venv via apt-get...${NC}"
+                sudo apt-get update -qq
+                sudo apt-get install -y fido2-tools python3-venv python3-pip
+            fi
+            ;;
+        arch|manjaro|endeavouros)
+            if ! command -v fido2-token &>/dev/null; then
+                echo -e "${YELLOW}Installing libfido2 via pacman...${NC}"
+                sudo pacman -S --noconfirm --needed libfido2 python python-pip
+            fi
+            ;;
+        opensuse*|sles)
+            if ! command -v fido2-token &>/dev/null; then
+                echo -e "${YELLOW}Installing fido2-tools via zypper...${NC}"
+                sudo zypper install -y fido2-tools python3 python3-pip
+            fi
+            ;;
+        *)
+            if [[ "${DISTRO_LIKE:-}" == *"debian"* || "${DISTRO_LIKE:-}" == *"ubuntu"* ]]; then
+                sudo apt-get update -qq && sudo apt-get install -y fido2-tools python3-venv python3-pip
+            elif [[ "${DISTRO_LIKE:-}" == *"arch"* ]]; then
+                sudo pacman -S --noconfirm --needed libfido2 python python-pip
+            elif [[ "${DISTRO_LIKE:-}" == *"fedora"* || "${DISTRO_LIKE:-}" == *"rhel"* ]]; then
+                sudo dnf install -y fido2-tools python3-pip
+            else
+                echo -e "${YELLOW}Unrecognized distro family. Ensure python3-venv and fido2-tools are installed.${NC}"
+            fi
+            ;;
+    esac
+}
+
+install_distro_packages
+echo -e "${GREEN}✓ System prerequisites checked.${NC}"
 
 # Step 3: Verify Python virtual environment
 echo -e "\n${CYAN}[3/5] Verifying Python virtual environment...${NC}"
@@ -85,13 +129,14 @@ else
 fi
 
 echo -e "\n${GREEN}========================================================================${NC}"
-echo -e "${BOLD}${GREEN}Installation complete${NC}"
+echo -e "${BOLD}${GREEN}Installation complete!${NC}"
 echo -e "${GREEN}========================================================================${NC}"
-echo -e "• Default transport: USB via ${BOLD}adb reverse${NC}, loopback ${CYAN}127.0.0.1:8443${NC}"
-echo -e "• Default behavior: auto-lock ${BOLD}disabled${NC}; phone disconnect leaves the session unlocked"
+echo -e "• Dashboard: ${BOLD}${CYAN}http://127.0.0.1:8444${NC}"
+echo -e "• Terminal UI: ${CYAN}ukeyctl menu${NC}"
+echo -e "• Safe defaults: Auto-lock ${BOLD}disabled${NC}, loopback ${CYAN}127.0.0.1:8443${NC}"
 echo -e "• Opt in to Wi-Fi: ${CYAN}ukeyctl config set wireless true${NC}"
 echo -e "• Opt in to auto-lock: ${CYAN}ukeyctl config set auto_lock true${NC}"
+echo -e "• Setup passwordless sudo: ${CYAN}sudo ./scripts/setup_pam_sudo.sh${NC}"
+echo -e "• Setup git push signing: ${CYAN}ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey${NC}"
 echo -e "• Apply changes: ${CYAN}systemctl --user restart ukey${NC}"
-echo -e "• Config file: ${CYAN}${CONFIG_PATH}${NC}"
-echo -e "• Status: ${CYAN}ukeyctl status${NC}"
-echo -e "• Logs: ${CYAN}ukeyctl logs${NC}\n"
+echo -e "• Status: ${CYAN}ukeyctl status${NC}\n"

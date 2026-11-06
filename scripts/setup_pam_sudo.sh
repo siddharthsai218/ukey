@@ -44,23 +44,62 @@ fi
 
 # Step 1: Check required packages
 echo -e "\n${CYAN}[1/4] Checking required system packages...${NC}"
-MISSING_PKGS=()
-if ! rpm -q pam-u2f &>/dev/null; then
-    MISSING_PKGS+=("pam-u2f")
-fi
-if ! rpm -q pamu2fcfg &>/dev/null; then
-    MISSING_PKGS+=("pamu2fcfg")
-fi
-if ! rpm -q fido2-tools &>/dev/null; then
-    MISSING_PKGS+=("fido2-tools")
+DISTRO="unknown"
+if [[ -f /etc/os-release ]]; then
+    # shellcheck source=/dev/null
+    . /etc/os-release
+    DISTRO="${ID:-unknown}"
 fi
 
-if [[ ${#MISSING_PKGS[@]} -gt 0 ]]; then
-    echo -e "${YELLOW}Installing missing packages: ${MISSING_PKGS[*]}...${NC}"
-    dnf install -y "${MISSING_PKGS[@]}"
-else
-    echo -e "${GREEN}✓ pam-u2f and fido2-tools are already installed.${NC}"
-fi
+case "$DISTRO" in
+    fedora|rhel|centos|almalinux|rocky)
+        MISSING_PKGS=()
+        rpm -q pam-u2f &>/dev/null || MISSING_PKGS+=("pam-u2f")
+        rpm -q pamu2fcfg &>/dev/null || MISSING_PKGS+=("pamu2fcfg")
+        rpm -q fido2-tools &>/dev/null || MISSING_PKGS+=("fido2-tools")
+        if [[ ${#MISSING_PKGS[@]} -gt 0 ]]; then
+            echo -e "${YELLOW}Installing via dnf: ${MISSING_PKGS[*]}...${NC}"
+            dnf install -y "${MISSING_PKGS[@]}"
+        fi
+        ;;
+    ubuntu|debian|pop|linuxmint|elementary)
+        MISSING_PKGS=()
+        dpkg -s libpam-u2f &>/dev/null || MISSING_PKGS+=("libpam-u2f")
+        command -v pamu2fcfg &>/dev/null || MISSING_PKGS+=("pamu2fcfg")
+        command -v fido2-token &>/dev/null || MISSING_PKGS+=("fido2-tools")
+        if [[ ${#MISSING_PKGS[@]} -gt 0 ]]; then
+            echo -e "${YELLOW}Installing via apt-get: ${MISSING_PKGS[*]}...${NC}"
+            apt-get update -qq
+            apt-get install -y "${MISSING_PKGS[@]}"
+        fi
+        ;;
+    arch|manjaro|endeavouros)
+        MISSING_PKGS=()
+        pacman -Q pam-u2f &>/dev/null || MISSING_PKGS+=("pam-u2f")
+        pacman -Q libfido2 &>/dev/null || MISSING_PKGS+=("libfido2")
+        if [[ ${#MISSING_PKGS[@]} -gt 0 ]]; then
+            echo -e "${YELLOW}Installing via pacman: ${MISSING_PKGS[*]}...${NC}"
+            pacman -S --noconfirm "${MISSING_PKGS[@]}"
+        fi
+        ;;
+    opensuse*|sles)
+        MISSING_PKGS=()
+        rpm -q pam_u2f &>/dev/null || MISSING_PKGS+=("pam_u2f")
+        command -v fido2-token &>/dev/null || MISSING_PKGS+=("fido2-tools")
+        if [[ ${#MISSING_PKGS[@]} -gt 0 ]]; then
+            echo -e "${YELLOW}Installing via zypper: ${MISSING_PKGS[*]}...${NC}"
+            zypper install -y "${MISSING_PKGS[@]}"
+        fi
+        ;;
+    *)
+        echo -e "${YELLOW}Unknown distro. Verifying pam_u2f and pamu2fcfg are available...${NC}"
+        if ! command -v pamu2fcfg &>/dev/null; then
+            echo -e "${RED}Error: pamu2fcfg not found. Please install pam-u2f / libpam-u2f for your distro.${NC}"
+            exit 1
+        fi
+        ;;
+esac
+echo -e "${GREEN}✓ PAM U2F prerequisites verified.${NC}"
 
 # Step 2: Ensure Yubico directory exists for the user
 echo -e "\n${CYAN}[2/4] Verifying user enrollment directory...${NC}"
