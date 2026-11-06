@@ -107,6 +107,46 @@ object Protocol {
             .toString()
     }
 
+    fun pairRequest(pin: String, deviceName: String): String =
+        JSONObject()
+            .put("action", "pair")
+            .put("pin", pin.trim())
+            .put("device_name", deviceName)
+            .toString()
+
+    fun authRequest(token: String, deviceName: String): String =
+        JSONObject()
+            .put("action", "auth")
+            .put("token", token.trim())
+            .put("device_name", deviceName)
+            .toString()
+
+    data class HandshakeResult(
+        val success: Boolean,
+        val token: String? = null,
+        val error: String? = null,
+    )
+
+    fun parseHandshakeResponse(raw: String): HandshakeResult {
+        val json = try {
+            JSONObject(raw)
+        } catch (_: JSONException) {
+            return HandshakeResult(success = false, error = "Malformed response")
+        }
+        val status = json.optString("status")
+        return if (status == "ok") {
+            HandshakeResult(
+                success = true,
+                token = json.optString("token").takeIf { it.isNotBlank() },
+            )
+        } else {
+            HandshakeResult(
+                success = false,
+                error = json.optString("error", "unauthorized"),
+            )
+        }
+    }
+
     fun describeError(error: Throwable): String = when (error) {
         is ProtocolException -> error.message ?: "invalid_request"
         is CredentialException -> error.message ?: "credential_error"

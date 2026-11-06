@@ -33,6 +33,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var hostInput: EditText
     private lateinit var portInput: EditText
+    private lateinit var pinInput: EditText
+    private lateinit var pinInputRow: LinearLayout
+    private lateinit var pairedStatusRow: LinearLayout
+    private lateinit var unpairButton: Button
     private lateinit var statusPill: TextView
     private lateinit var statusDetail: TextView
     private lateinit var securityWarning: LinearLayout
@@ -85,7 +89,13 @@ class MainActivity : AppCompatActivity() {
             BridgeState.clearLog()
             Toast.makeText(this, R.string.logs_cleared, Toast.LENGTH_SHORT).show()
         }
+        unpairButton.setOnClickListener {
+            prefs.edit().remove(UKeyService.KEY_DEVICE_TOKEN).remove(UKeyService.KEY_PAIRING_PIN).apply()
+            updatePairingUi()
+            Toast.makeText(this, "Device unpaired. Enter a PIN from laptop to re-pair.", Toast.LENGTH_SHORT).show()
+        }
 
+        updatePairingUi()
         observeBridgeState()
         checkDeviceSecurity()
         requestNotificationPermissionIfNeeded()
@@ -109,6 +119,7 @@ class MainActivity : AppCompatActivity() {
         BridgeState.isUiResumed = true
         NotificationManagerCompat.from(this).cancel(UKeyService.AUTH_NOTIFICATION_ID)
         checkDeviceSecurity()
+        updatePairingUi()
         BridgeState.pending.value?.let { maybeShowPrompt(it) }
     }
 
@@ -127,12 +138,27 @@ class MainActivity : AppCompatActivity() {
     private fun bindViews() {
         hostInput = findViewById(R.id.hostInput)
         portInput = findViewById(R.id.portInput)
+        pinInput = findViewById(R.id.pinInput)
+        pinInputRow = findViewById(R.id.pinInputRow)
+        pairedStatusRow = findViewById(R.id.pairedStatusRow)
+        unpairButton = findViewById(R.id.unpairButton)
         statusPill = findViewById(R.id.statusPill)
         statusDetail = findViewById(R.id.statusDetail)
         securityWarning = findViewById(R.id.securityWarning)
         securityWarningBody = findViewById(R.id.securityWarningBody)
         logText = findViewById(R.id.logText)
         logScroll = findViewById(R.id.logScroll)
+    }
+
+    private fun updatePairingUi() {
+        val hasToken = !prefs.getString(UKeyService.KEY_DEVICE_TOKEN, null).isNullOrBlank()
+        if (hasToken) {
+            pinInputRow.visibility = View.GONE
+            pairedStatusRow.visibility = View.VISIBLE
+        } else {
+            pinInputRow.visibility = View.VISIBLE
+            pairedStatusRow.visibility = View.GONE
+        }
     }
 
     private fun observeBridgeState() {
@@ -162,6 +188,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderConnection(snapshot: ConnectionSnapshot) {
+        updatePairingUi()
         val (label, background) = when (snapshot.phase) {
             ConnectionPhase.CONNECTED ->
                 "🟢 Connected" to R.drawable.bg_status_connected
@@ -231,10 +258,14 @@ class MainActivity : AppCompatActivity() {
             .putBoolean(UKeyService.KEY_ENABLED, true)
             .apply()
 
+        val pin = pinInput.text.toString().trim()
         val intent = Intent(this, UKeyService::class.java)
             .setAction(UKeyService.ACTION_CONNECT)
             .putExtra(UKeyService.EXTRA_HOST, host)
             .putExtra(UKeyService.EXTRA_PORT, port)
+        if (pin.isNotBlank()) {
+            intent.putExtra(UKeyService.EXTRA_PAIRING_PIN, pin)
+        }
         ContextCompat.startForegroundService(this, intent)
 
         if (!autoStart) {

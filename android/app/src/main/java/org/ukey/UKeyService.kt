@@ -94,6 +94,7 @@ class UKeyService : Service() {
                     EXTRA_PORT,
                     prefs().getInt(KEY_PORT, DEFAULT_PORT),
                 )
+                val pin = intent.getStringExtra(EXTRA_PAIRING_PIN)
                 if (!isValidEndpoint(host, port)) {
                     BridgeState.setConnection(
                         ConnectionSnapshot(
@@ -105,11 +106,14 @@ class UKeyService : Service() {
                     )
                     return START_STICKY
                 }
-                prefs().edit()
+                val editor = prefs().edit()
                     .putString(KEY_HOST, host)
                     .putInt(KEY_PORT, port)
                     .putBoolean(KEY_ENABLED, true)
-                    .apply()
+                if (!pin.isNullOrBlank()) {
+                    editor.putString(KEY_PAIRING_PIN, pin.trim())
+                }
+                editor.apply()
                 connect(host, port)
             }
 
@@ -155,9 +159,31 @@ class UKeyService : Service() {
 
         currentHost = host
         currentPort = port
-        val newClient = DaemonClient(host, port) { message, wire ->
-            handleMessage(message, wire)
-        }
+        val newClient = DaemonClient(
+            host = host,
+            port = port,
+            deviceTokenProvider = { prefs().getString(KEY_DEVICE_TOKEN, null) },
+            pairingPinProvider = { prefs().getString(KEY_PAIRING_PIN, null) },
+            onTokenReceived = { token ->
+                prefs().edit()
+                    .putString(KEY_DEVICE_TOKEN, token)
+                    .remove(KEY_PAIRING_PIN)
+                    .apply()
+                Log.i(TAG, "Device paired successfully with daemon; permanent token stored")
+            },
+            onAuthFailed = { error ->
+                Log.w(TAG, "Daemon authentication failed: $error")
+                if (error == "unauthorized" || error == "invalid_pin") {
+                    prefs().edit()
+                        .remove(KEY_DEVICE_TOKEN)
+                        .remove(KEY_PAIRING_PIN)
+                        .apply()
+                }
+            },
+            onMessage = { message, wire ->
+                handleMessage(message, wire)
+            },
+        )
         client = newClient
         connectionJob = serviceScope.launch {
             try {
@@ -465,6 +491,8 @@ class UKeyService : Service() {
         const val KEY_HOST = "host"
         const val KEY_PORT = "port"
         const val KEY_ENABLED = "enabled"
+        const val KEY_DEVICE_TOKEN = "device_token"
+        const val KEY_PAIRING_PIN = "pairing_pin"
         const val DEFAULT_HOST = "127.0.0.1"
         const val DEFAULT_PORT = 8443
 
@@ -472,6 +500,7 @@ class UKeyService : Service() {
         const val ACTION_STOP = "org.ukey.action.STOP"
         const val EXTRA_HOST = "org.ukey.extra.HOST"
         const val EXTRA_PORT = "org.ukey.extra.PORT"
+        const val EXTRA_PAIRING_PIN = "org.ukey.extra.PAIRING_PIN"
 
         private const val CHANNEL_STATUS = "ukey_bridge_status"
         private const val CHANNEL_AUTH = "ukey_auth_requests"

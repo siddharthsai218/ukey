@@ -23,19 +23,18 @@ import kotlinx.coroutines.launch
 import org.ukey.BridgeState
 import org.ukey.ConnectionPhase
 import org.ukey.ConnectionSnapshot
+import org.ukey.Protocol
 
 /**
- * TCP client for the Linux daemon.
- *
- * The daemon may use either 4-byte big-endian length-prefixed UTF-8 JSON frames
- * or raw newline-delimited JSON. Framing is auto-detected from the first
- * message and responses mirror it, so the same client works with both.
- *
- * Auto-reconnect uses exponential backoff with jitter.
+ * TCP client for the Linux daemon with one-time pairing and instant auto-connect.
  */
 class DaemonClient(
     private val host: String,
     private val port: Int,
+    private val deviceTokenProvider: () -> String?,
+    private val pairingPinProvider: () -> String?,
+    private val onTokenReceived: (String) -> Unit,
+    private val onAuthFailed: (String) -> Unit,
     private val onMessage: suspend (String, JsonWire) -> Unit,
 ) : Closeable {
 
@@ -68,6 +67,35 @@ class DaemonClient(
                 connected = true
                 connectedAtNanos = System.nanoTime()
 
+                // Authenticate connection (one-time PIN or instant saved token)
+                val wire = JsonWire(connection.getInputStream(), connection.getOutputStream())
+                val token = deviceTokenProvider()
+                val pin = pairingPinProvider()
+                val model = android.os.Build.MODEL ?: "Android Phone"
+
+                if (!token.isNullOrBlank()) {
+                    wire.writeMessage(Protocol.authRequest(token, model))
+                    val respRaw = wire.readMessage()
+                        ?: throw IOException("Daemon closed connection during auth")
+                    val result = Protocol.parseHandshakeResponse(respRaw)
+                    if (!result.success) {
+                        onAuthFailed(result.error ?: "unauthorized")
+                        throw IOException("Authentication failed: ${result.error}")
+                    }
+                } else if (!pin.isNullOrBlank()) {
+                    wire.writeMessage(Protocol.pairRequest(pin, model))
+                    val respRaw = wire.readMessage()
+                        ?: throw IOException("Daemon closed connection during pairing")
+                    val result = Protocol.parseHandshakeResponse(respRaw)
+                    if (!result.success || result.token == null) {
+                        onAuthFailed(result.error ?: "invalid_pin")
+                        throw IOException("Pairing failed: ${result.error}")
+                    }
+                    onTokenReceived(result.token)
+                } else {
+                    throw IOException("Pairing required: enter 6-digit PIN from laptop")
+                }
+
                 BridgeState.setConnection(
                     ConnectionSnapshot(
                         phase = ConnectionPhase.CONNECTED,
@@ -76,7 +104,7 @@ class DaemonClient(
                         detail = "Ready for biometric requests",
                     ),
                 )
-                serve(connection)
+                serve(wire)
                 if (!closed) {
                     BridgeState.setConnection(
                         ConnectionSnapshot(
@@ -125,8 +153,7 @@ class DaemonClient(
         closeSocket()
     }
 
-    private suspend fun serve(connection: Socket) = coroutineScope {
-        val wire = JsonWire(connection.getInputStream(), connection.getOutputStream())
+    private suspend fun serve(wire: JsonWire) = coroutineScope {
         val incoming = Channel<String>(capacity = 1)
         val handler = launch {
             for (message in incoming) {
