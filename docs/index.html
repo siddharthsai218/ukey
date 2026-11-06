@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>uKey — Hardware-Grade FIDO2 for Linux Using Your Phone's Enclave</title>
 <meta name="description" content="Turn your Android phone's biometric hardware into a native USB FIDO2 security key for Linux. Passwordless sudo, OpenSSH git push, and WebAuthn logins. 100% local, zero cloud.">
-<meta name="theme-color" content="#0B0D13">
+<meta name="theme-color" content="#080A0F">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
@@ -26,21 +26,22 @@
 
 <style>
 :root {
-  --bg-base: #0B0D13;
-  --bg-surface: #11141E;
-  --bg-elevated: #171C28;
+  --bg-base: #080A0F;
+  --bg-surface: #0F121B;
+  --bg-elevated: #151926;
   --border: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.18);
-  --text-main: #F1F5F9;
+  --border-hover: rgba(255, 255, 255, 0.2);
+  --text-main: #F8FAFD;
   --text-muted: #94A3B8;
   --text-dim: #64748B;
   --emerald: #00E599;
-  --emerald-glow: rgba(0, 229, 153, 0.15);
+  --emerald-glow: rgba(0, 229, 153, 0.2);
   --cyan: #00F2FE;
-  --cyan-glow: rgba(0, 242, 254, 0.15);
+  --cyan-glow: rgba(0, 242, 254, 0.2);
   --amber: #FBBF24;
-  --coral: #FF4D4D;
-  --gutter: clamp(18px, 4vw, 64px);
+  --coral: #FF4444;
+  --coral-glow: rgba(255, 68, 68, 0.25);
+  --gutter: clamp(18px, 4.5vw, 64px);
   --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -52,15 +53,16 @@
   --bg-elevated: #F1F5F9;
   --border: rgba(0, 0, 0, 0.08);
   --border-hover: rgba(0, 0, 0, 0.18);
-  --text-main: #0F172A;
+  --text-main: #0B0E14;
   --text-muted: #475569;
   --text-dim: #94A3B8;
   --emerald: #059669;
-  --emerald-glow: rgba(5, 150, 105, 0.12);
+  --emerald-glow: rgba(5, 150, 105, 0.15);
   --cyan: #0284C7;
-  --cyan-glow: rgba(2, 132, 199, 0.12);
+  --cyan-glow: rgba(2, 132, 199, 0.15);
   --amber: #D97706;
   --coral: #DC2626;
+  --coral-glow: rgba(220, 38, 38, 0.2);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -80,352 +82,545 @@ a { color: inherit; text-decoration: none; }
 ::selection { background: var(--emerald); color: #000; }
 :focus-visible { outline: 2px solid var(--emerald); outline-offset: 3px; }
 
-/* Subtle Technical Grid Background */
-.tech-grid-bg {
-  position: absolute; inset: 0; pointer-events: none; z-index: 0;
-  background-image: 
-    linear-gradient(to right, var(--border) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse at 50% 10%, #000 30%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 10%, #000 30%, transparent 75%);
+/* Dynamic Ambient Glow */
+.ambient-glow {
+  position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+  width: 900px; height: 500px;
+  background: radial-gradient(circle, rgba(0, 229, 153, 0.08) 0%, rgba(0, 242, 254, 0.04) 40%, transparent 70%);
+  pointer-events: none; z-index: 0; filter: blur(60px);
 }
 
-/* Navigation */
-.header-nav {
+/* Header & Nav */
+.site-header {
   position: sticky; top: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px var(--gutter);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  background: color-mix(in srgb, var(--bg-base) 85%, transparent);
+  padding: 18px var(--gutter);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
   border-bottom: 1px solid var(--border);
 }
-.brand-mark {
+.brand-link {
   display: flex; align-items: center; gap: 10px;
-  font-family: var(--font-mono); font-size: 18px; font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--font-mono); font-size: 19px; font-weight: 800;
+  letter-spacing: -0.03em;
 }
-.brand-chip {
+.brand-chip-glow {
   width: 10px; height: 10px; border-radius: 2px;
-  background: var(--emerald);
-  box-shadow: 0 0 10px var(--emerald);
+  background: var(--emerald); box-shadow: 0 0 12px var(--emerald);
+  animation: pulse-glow 2.5s infinite ease-in-out;
 }
-.nav-menu {
-  display: flex; align-items: center; gap: 28px; list-style: none;
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+
+.nav-links {
+  display: flex; align-items: center; gap: 32px; list-style: none;
   font-size: 14.5px; font-weight: 500; color: var(--text-muted);
 }
-.nav-menu a { transition: color 0.15s; }
-.nav-menu a:hover { color: var(--text-main); }
-@media (max-width: 860px) { .nav-menu { display: none; } }
+.nav-links a { transition: color 0.15s; }
+.nav-links a:hover { color: var(--text-main); }
+@media (max-width: 860px) { .nav-links { display: none; } }
 
-.nav-actions { display: flex; align-items: center; gap: 12px; }
-.theme-switch {
-  width: 38px; height: 38px; border-radius: 8px;
+.nav-controls { display: flex; align-items: center; gap: 10px; }
+.sound-toggle-btn, .theme-toggle-btn {
   background: var(--bg-surface); border: 1px solid var(--border);
-  color: var(--text-main); display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.15s;
+  color: var(--text-muted); padding: 7px 12px; border-radius: 8px;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
 }
-.theme-switch:hover { border-color: var(--border-hover); }
+.sound-toggle-btn:hover, .theme-toggle-btn:hover {
+  color: var(--text-main); border-color: var(--border-hover);
+}
+.sound-toggle-btn.active { color: var(--emerald); border-color: var(--emerald); }
+
+.github-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  color: var(--text-main); padding: 8px 16px; border-radius: 8px;
+  font-size: 13.5px; font-weight: 600; transition: all 0.15s;
+}
+.github-cta:hover { border-color: var(--border-hover); background: var(--bg-elevated); }
 
 /* Buttons */
-.btn-primary {
-  display: inline-flex; align-items: center; gap: 8px;
+.btn-laser {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   background: var(--emerald); color: #000;
-  padding: 12px 22px; border-radius: 8px;
+  padding: 13px 24px; border-radius: 8px;
   font-size: 14.5px; font-weight: 700; border: none; cursor: pointer;
-  transition: all 0.18s var(--ease);
+  transition: all 0.2s var(--ease);
+  box-shadow: 0 2px 14px var(--emerald-glow);
 }
-.btn-primary:hover {
-  filter: brightness(1.1); transform: translateY(-1px);
-  box-shadow: 0 4px 16px var(--emerald-glow);
+.btn-laser:hover {
+  transform: translateY(-2px); filter: brightness(1.1);
+  box-shadow: 0 6px 24px var(--emerald-glow);
 }
-.btn-secondary {
-  display: inline-flex; align-items: center; gap: 8px;
+.btn-glass {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   background: var(--bg-surface); color: var(--text-main);
-  padding: 12px 20px; border-radius: 8px;
+  padding: 13px 22px; border-radius: 8px;
   font-size: 14.5px; font-weight: 600; border: 1px solid var(--border); cursor: pointer;
-  transition: all 0.18s var(--ease);
+  transition: all 0.2s var(--ease);
 }
-.btn-secondary:hover { border-color: var(--border-hover); background: var(--bg-elevated); }
+.btn-glass:hover {
+  border-color: var(--border-hover); background: var(--bg-elevated); transform: translateY(-2px);
+}
 
-/* Hero Section */
-.hero-wrapper {
-  position: relative; padding: clamp(60px, 9vh, 110px) var(--gutter) 40px;
-  max-width: 1200px; margin: 0 auto; text-align: center;
+/* =========================================================================
+   HERO SECTION: DUAL-COLUMN WITH LIVE CYBERNETIC MESH CANVAS
+   ========================================================================= */
+.hero-container {
+  position: relative; max-width: 1280px; margin: 0 auto;
+  padding: clamp(50px, 8vh, 90px) var(--gutter) 40px;
+  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 40px; align-items: center;
 }
-.badge-version {
+@media (max-width: 960px) {
+  .hero-container { grid-template-columns: 1fr; text-align: center; }
+}
+
+.hero-pill {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 6px 14px; border-radius: 99px;
   background: var(--emerald-glow); border: 1px solid color-mix(in srgb, var(--emerald) 40%, transparent);
   color: var(--emerald); font-family: var(--font-mono); font-size: 12.5px; font-weight: 600;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
-.badge-version span.pulse {
+.hero-pill .blinker {
   width: 6px; height: 6px; border-radius: 50%; background: var(--emerald);
   animation: pulse-ring 2s infinite;
 }
 @keyframes pulse-ring {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+  0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
 }
 
-.hero-heading {
-  font-size: clamp(38px, 5.8vw, 76px);
-  font-weight: 800; line-height: 1.05; letter-spacing: -0.035em;
-  max-width: 22ch; margin: 0 auto 20px;
+.hero-headline {
+  font-size: clamp(38px, 5.2vw, 74px); font-weight: 800;
+  line-height: 1.05; letter-spacing: -0.035em; margin-bottom: 20px;
 }
-.hero-heading span.highlight {
-  background: linear-gradient(135deg, var(--text-main) 30%, var(--emerald) 100%);
+.hero-headline .text-laser {
+  background: linear-gradient(135deg, var(--text-main) 20%, var(--emerald) 70%, var(--cyan) 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-.hero-lead {
-  font-size: clamp(17px, 1.8vw, 21px); line-height: 1.5; color: var(--text-muted);
-  max-width: 38em; margin: 0 auto 32px;
+.hero-paragraph {
+  font-size: clamp(17px, 1.6vw, 20px); line-height: 1.55; color: var(--text-muted);
+  max-width: 36em; margin-bottom: 32px;
 }
-.hero-lead strong { color: var(--text-main); font-weight: 600; }
+.hero-paragraph strong { color: var(--text-main); font-weight: 600; }
+@media (max-width: 960px) { .hero-paragraph { margin-inline: auto; } }
 
-.hero-actions {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 14px;
-  margin-bottom: 36px;
+.hero-btn-row {
+  display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 34px;
 }
+@media (max-width: 960px) { .hero-btn-row { justify-content: center; } }
 
-/* Quick Install Box */
-.install-terminal-box {
+/* 1-Click Install Command Terminal */
+.hero-cmd-box {
   background: var(--bg-surface); border: 1px solid var(--border);
-  border-radius: 10px; max-width: 680px; margin: 0 auto;
+  border-radius: 10px; max-width: 620px;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; font-family: var(--font-mono); font-size: 13.5px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  padding: 10px 16px; font-family: var(--font-mono); font-size: 13px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25);
 }
-.install-terminal-box code {
+@media (max-width: 960px) { .hero-cmd-box { margin: 0 auto; } }
+.hero-cmd-box code {
   color: var(--text-main); overflow-x: auto; white-space: nowrap; margin-right: 12px;
 }
-.install-terminal-box code span.prefix { color: var(--emerald); }
-.copy-pill-btn {
+.hero-cmd-box code span.c-prompt { color: var(--emerald); }
+.btn-copy-tag {
   background: var(--bg-elevated); border: 1px solid var(--border);
   color: var(--text-main); font-family: var(--font-mono); font-size: 12px; font-weight: 600;
   padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: all 0.15s;
-  white-space: nowrap;
 }
-.copy-pill-btn:hover { background: var(--emerald); color: #000; border-color: var(--emerald); }
+.btn-copy-tag:hover { background: var(--emerald); color: #000; border-color: var(--emerald); }
 
-/* Technical Telemetry Strip */
-.telemetry-strip {
+/* Right Hero: Cybernetic Canvas Canvas */
+.hero-canvas-wrap {
+  position: relative; width: 100%; aspect-ratio: 1 / 0.95;
+  border-radius: 20px; overflow: hidden;
+  border: 1px solid var(--border);
+  background: radial-gradient(circle at 50% 50%, #101420 0%, #080A0F 90%);
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.6), 0 20px 50px rgba(0,0,0,0.4);
+}
+#heroCanvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+}
+.canvas-hud-overlay {
+  position: absolute; bottom: 14px; left: 16px; right: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
+  pointer-events: none;
+}
+.canvas-hud-overlay span.status-live { color: var(--emerald); font-weight: 600; }
+
+/* Fact Strip (Border-Divided Modern Matrix) */
+.fact-strip {
+  max-width: 1280px; margin: 40px auto 0; padding-inline: var(--gutter);
+}
+.fact-grid {
   display: grid; grid-template-columns: repeat(4, 1fr);
-  gap: 1px; background: var(--border);
   border: 1px solid var(--border); border-radius: 12px;
-  max-width: 1080px; margin: 44px auto 0; overflow: hidden;
+  background: var(--bg-surface); overflow: hidden;
 }
-.telemetry-item {
-  background: var(--bg-surface); padding: 22px 20px; text-align: left;
+.fact-cell {
+  padding: 24px 22px; text-align: left;
+  border-right: 1px solid var(--border);
 }
-.telemetry-num {
-  font-family: var(--font-mono); font-size: 26px; font-weight: 800; color: var(--text-main);
+.fact-cell:last-child { border-right: none; }
+.fact-val {
+  font-family: var(--font-mono); font-size: 28px; font-weight: 800; color: var(--text-main);
   display: flex; align-items: baseline; gap: 4px; line-height: 1;
 }
-.telemetry-num span.unit { font-size: 13px; color: var(--emerald); font-weight: 600; }
-.telemetry-label {
-  font-size: 12.5px; color: var(--text-muted); margin-top: 6px; font-weight: 500;
-}
-@media (max-width: 820px) {
-  .telemetry-strip { grid-template-columns: repeat(2, 1fr); }
+.fact-val span.sub { font-size: 13px; color: var(--emerald); font-weight: 600; }
+.fact-label { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+@media (max-width: 860px) {
+  .fact-grid { grid-template-columns: repeat(2, 1fr); }
+  .fact-cell:nth-child(2) { border-right: none; }
+  .fact-cell:nth-child(3), .fact-cell:nth-child(4) { border-top: 1px solid var(--border); }
 }
 
 /* =========================================================================
-   THE SIGNATURE FEATURE:
-   INTERACTIVE CRYPTOGRAPHIC BUS & HARDWARE RIG
+   THE SIGNATURE SHOWPIECE:
+   INTERACTIVE LASER-CONNECTED HARDWARE STAGE
    ========================================================================= */
-.rig-section {
-  padding: 50px var(--gutter) 90px;
+.stage-section {
+  padding: 80px var(--gutter) 110px;
   max-width: 1280px; margin: 0 auto;
 }
-.section-header-center {
-  text-align: center; max-width: 46em; margin: 0 auto 36px;
+.stage-header {
+  text-align: center; max-width: 48em; margin: 0 auto 36px;
 }
-.section-tag {
+.stage-tag {
   font-family: var(--font-mono); font-size: 12px; font-weight: 700;
-  color: var(--cyan); letter-spacing: 0.08em; text-transform: uppercase;
-  margin-bottom: 8px;
+  color: var(--cyan); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
 }
-.section-title {
-  font-size: clamp(28px, 4.2vw, 48px); font-weight: 800;
-  letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 12px;
+.stage-title {
+  font-size: clamp(30px, 4.4vw, 52px); font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 14px;
 }
-.section-desc { font-size: 16px; color: var(--text-muted); }
+.stage-desc { font-size: 16.5px; color: var(--text-muted); }
 
-/* Control Console */
-.rig-toolbar {
+/* Controls Toolbar */
+.stage-toolbar {
   background: var(--bg-surface); border: 1px solid var(--border);
   border-radius: 12px; padding: 12px 18px;
   display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-  gap: 16px; margin-bottom: 24px;
+  gap: 16px; margin-bottom: 26px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 }
-.scenario-selector { display: flex; flex-wrap: wrap; gap: 8px; }
-.sc-button {
+.scenarios-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.sc-tag-btn {
   background: var(--bg-elevated); border: 1px solid var(--border);
   color: var(--text-muted); font-family: var(--font-mono); font-size: 12.5px; font-weight: 600;
   padding: 8px 14px; border-radius: 6px; cursor: pointer; transition: all 0.15s;
 }
-.sc-button:hover { color: var(--text-main); border-color: var(--border-hover); }
-.sc-button.active {
-  background: var(--emerald); color: #000; border-color: var(--emerald);
+.sc-tag-btn:hover { color: var(--text-main); border-color: var(--border-hover); }
+.sc-tag-btn.active {
+  background: var(--emerald); color: #000; border-color: var(--emerald); font-weight: 700;
 }
-.sc-button.danger.active {
+.sc-tag-btn.danger.active {
   background: var(--coral); color: #FFF; border-color: var(--coral);
 }
 
-.transport-toggle-group {
+.transport-switch-group {
   display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px;
 }
-.transport-btn {
+.transport-pill-btn {
   background: var(--bg-elevated); border: 1px solid var(--border);
   color: var(--text-muted); padding: 6px 12px; border-radius: 6px; cursor: pointer;
   transition: all 0.15s;
 }
-.transport-btn.active {
+.transport-pill-btn.active {
   background: var(--cyan-glow); color: var(--cyan); border-color: var(--cyan); font-weight: 700;
 }
 
-/* 3-Column Live Hardware Stage */
-.stage-grid {
-  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 3fr) minmax(0, 4fr);
-  gap: 20px; align-items: stretch;
-}
-@media (max-width: 1040px) {
-  .stage-grid { grid-template-columns: 1fr; }
+/* The Live Interactive Arena */
+.stage-arena {
+  position: relative;
+  background: radial-gradient(ellipse at 50% 30%, #121624 0%, #06080C 85%);
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: clamp(30px, 4vw, 56px) 24px 44px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 30px 80px rgba(0,0,0,0.6);
 }
 
-/* Col 1: Linux Terminal */
-.device-box {
-  background: #080A0F; border: 1px solid var(--border);
-  border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+.arena-duo {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: clamp(16px, 3vw, 44px);
+  width: 100%; max-width: 1140px; position: relative;
 }
-.device-topbar {
-  background: #11141D; padding: 10px 14px;
-  border-bottom: 1px solid #1C212E; display: flex; justify-content: space-between; align-items: center;
+@media (max-width: 980px) {
+  .arena-duo { flex-direction: column; align-items: center; gap: 40px; }
 }
-.topbar-dots { display: flex; gap: 6px; }
-.topbar-dot { width: 8px; height: 8px; border-radius: 50%; background: #2A3144; }
-.topbar-dot.close { background: #FF5F56; }
-.topbar-dot.min { background: #FFBD2E; }
-.topbar-dot.max { background: #27C93F; }
-.device-title { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); }
 
-.terminal-viewport {
-  padding: 16px 18px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.65;
-  color: #E2E8F0; text-align: left; min-height: 280px; flex: 1;
+/* 1. Realistic Vector Laptop */
+.laptop-chassis {
+  flex: 1; max-width: 640px; min-width: 320px;
+  display: flex; flex-direction: column; align-items: center;
+  position: relative;
 }
-.term-prompt-line { color: var(--emerald); font-weight: 600; }
-.term-cursor {
-  display: inline-block; width: 8px; height: 14px; background: var(--emerald);
-  vertical-align: middle; animation: blink 1s infinite;
+.laptop-lid {
+  width: 100%; aspect-ratio: 16 / 10.4;
+  border-radius: 14px 14px 4px 4px;
+  background:
+    linear-gradient(#08080A, #08080A) padding-box,
+    linear-gradient(160deg, #8A8E94 0%, #2E3034 22%, #5C6066 45%, #25272A 70%, #6A6E74 100%) border-box;
+  border: 3px solid transparent;
+  padding: 10px 10px 18px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  position: relative;
 }
-.term-waiting-badge {
+.laptop-lid::before {
+  content: ""; position: absolute; left: 50%; top: 4px;
+  width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #3C3F44;
+}
+.laptop-screen {
+  width: 100%; height: 100%; background: #0A0C10;
+  border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;
+  position: relative;
+}
+.screen-topbar {
+  background: #141720; height: 22px; border-bottom: 1px solid #1E2330;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 10px; font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);
+}
+.topbar-tag { background: #222736; color: var(--text-main); padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+.topbar-status-pulse { color: var(--emerald); font-weight: 600; }
+
+.screen-workspace {
+  flex: 1; padding: 14px 16px; display: flex; flex-direction: column;
+  background: #08090D; font-family: var(--font-mono); font-size: 12px; line-height: 1.65;
+  color: #E2E8F0; text-align: left; overflow: hidden;
+}
+.screen-prompt { color: var(--emerald); font-weight: 600; }
+.screen-cmd-line { color: #FFF; font-weight: 500; }
+.screen-wait-badge {
   display: flex; align-items: center; gap: 8px; margin-top: 10px;
   color: var(--amber); background: rgba(251, 191, 36, 0.1);
   padding: 6px 12px; border-radius: 6px; width: fit-content;
 }
-.term-auth-success {
+.screen-wait-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--amber);
+  animation: blink 1.2s infinite;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.screen-result-ok {
   margin-top: 12px; color: var(--emerald); font-weight: 600;
-  background: var(--emerald-glow); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--emerald);
+  background: var(--emerald-glow); padding: 8px 12px; border-radius: 6px;
+  border: 1px solid var(--emerald);
 }
-.term-auth-alert {
+.screen-result-err {
   margin-top: 12px; color: var(--coral); font-weight: 600;
-  background: rgba(255, 77, 77, 0.12); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--coral);
+  background: var(--coral-glow); padding: 8px 12px; border-radius: 6px;
+  border: 1px solid var(--coral);
 }
 
-/* Col 2: The Cryptographic Protocol Bus (The WOW Factor) */
-.bus-viewport {
-  background: var(--bg-surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px; display: flex; flex-direction: column;
+.laptop-base {
+  width: 108%; height: 16px; margin-top: -2px;
+  border-radius: 3px 3px 12px 12px / 3px 3px 9px 9px;
+  background: linear-gradient(#9FA3A9 0%, #585C62 3px, #36393E 45%, #191A1D 100%);
+  position: relative; z-index: 2;
+  box-shadow: 0 20px 30px rgba(0,0,0,0.6);
 }
-.bus-header {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px;
+.laptop-notch {
+  position: absolute; left: 50%; top: 0; width: 84px; height: 5px;
+  margin-left: -42px; border-radius: 0 0 6px 6px; background: #131416;
 }
-.bus-title { font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; color: var(--cyan); }
-.bus-status-chip {
-  font-family: var(--font-mono); font-size: 10px; padding: 2px 6px;
-  background: var(--cyan-glow); color: var(--cyan); border-radius: 4px; font-weight: 600;
+.laptop-shadow {
+  width: 96%; height: 14px;
+  background: radial-gradient(closest-side, rgba(0,0,0,0.5), transparent);
+  margin-top: -6px;
 }
-.bus-packet-stream {
-  flex: 1; display: flex; flex-direction: column; gap: 10px;
-  font-family: var(--font-mono); font-size: 11px; text-align: left;
-}
-.packet-node {
-  background: var(--bg-elevated); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 10px; transition: all 0.2s;
-}
-.packet-node.active { border-color: var(--cyan); }
-.packet-node.verified { border-color: var(--emerald); background: var(--emerald-glow); }
-.packet-node.blocked { border-color: var(--coral); background: rgba(255, 77, 77, 0.1); }
-.packet-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
-.packet-data { color: var(--text-main); font-size: 10.5px; word-break: break-all; }
 
-/* Col 3: Android Phone & StrongBox Sensor */
-.phone-device-box {
-  background: var(--bg-surface); border: 1px solid var(--border);
-  border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
-  padding: 16px; text-align: left;
+/* 2. Optical Laser Data Conduit (Center) */
+.laser-conduit-wrap {
+  position: relative; width: 110px; height: 200px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-.phone-header-row {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+@media (max-width: 980px) {
+  .laser-conduit-wrap { width: 100%; height: 60px; flex-direction: row; }
 }
-.phone-chip-spec { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.laser-fiber-line {
+  position: absolute; width: 100%; height: 3px;
+  background: linear-gradient(90deg, #1C2333 0%, var(--cyan) 50%, #1C2333 100%);
+  border-radius: 99px; transition: background 0.3s;
+}
+.laser-fiber-line.pulse-danger {
+  background: linear-gradient(90deg, var(--coral) 0%, #FF1E1E 50%, var(--coral) 100%);
+  box-shadow: 0 0 16px var(--coral);
+}
+.laser-photon-bullet {
+  position: absolute; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--cyan); box-shadow: 0 0 20px var(--cyan);
+  animation: laserTravel 1.6s infinite ease-in-out;
+}
+.laser-photon-bullet.danger {
+  background: var(--coral); box-shadow: 0 0 24px var(--coral);
+}
+@keyframes laserTravel {
+  0% { left: 0%; opacity: 0; transform: scale(.7); }
+  20% { opacity: 1; transform: scale(1.3); }
+  80% { opacity: 1; transform: scale(1.3); }
+  100% { left: 100%; opacity: 0; transform: scale(.7); }
+}
 
-.biometric-card {
-  background: var(--bg-elevated); border: 1px solid var(--border);
-  border-radius: 10px; padding: 16px; flex: 1; display: flex; flex-direction: column;
-  justify-content: space-between; text-align: center;
+/* 3. Titanium Phone Slab */
+.phone-chassis {
+  width: 275px; flex-shrink: 0;
+  border-radius: 40px; padding: 10px;
+  background:
+    linear-gradient(#050507, #050507) padding-box,
+    linear-gradient(150deg, #A8ACB0 0%, #46484D 24%, #9EA2A6 48%, #323438 72%, #8B8F94 100%) border-box;
+  border: 3px solid transparent;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+  position: relative;
 }
-.bio-app-title { font-size: 13px; font-weight: 700; color: var(--text-main); text-align: left; }
-.bio-prompt-sub { font-family: var(--font-mono); font-size: 11px; color: var(--cyan); text-align: left; margin-top: 2px; }
+.phone-screen {
+  background: #F3F6FA; border-radius: 30px; height: 510px; overflow: hidden;
+  display: flex; flex-direction: column; position: relative;
+}
+.phone-punchhole {
+  width: 9px; height: 9px; border-radius: 50%; background: #000;
+  border: 2px solid #1E2024; margin: 4px auto 2px; z-index: 20;
+}
+.phone-top-bar {
+  display: flex; justify-content: space-between; padding: 0 14px 4px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 10px; font-weight: 600; color: #0F172A; border-bottom: 1px solid #E2E8F0;
+}
 
-.fingerprint-touch-sensor {
-  width: 72px; height: 72px; margin: 24px auto; border-radius: 50%;
-  background: var(--bg-surface); border: 2px dashed var(--border-hover);
+/* Mobile App View */
+.uapp-view {
+  padding: 10px 12px; flex: 1; display: flex; flex-direction: column; text-align: left;
+}
+.uapp-header-title { font-size: 22px; font-weight: 900; letter-spacing: -0.03em; color: #0F172A; line-height: 1; }
+.uapp-header-sub { font-size: 10.5px; color: #64748B; margin-top: 2px; }
+
+.uapp-conn-box {
+  background: #FFF; border: 1px solid #E2E8F0; border-radius: 8px;
+  margin-top: 10px; padding: 8px 10px;
+}
+.uapp-conn-label { font-size: 8.5px; font-weight: 700; color: #0F766E; letter-spacing: 0.08em; text-transform: uppercase; }
+.uapp-conn-row {
+  display: flex; justify-content: space-between; align-items: center; margin-top: 4px;
+  font-family: var(--font-mono); font-size: 11px; color: #0F172A; font-weight: 600;
+}
+.uapp-conn-tag {
+  font-size: 9px; padding: 2px 6px; border-radius: 4px;
+  background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 700;
+}
+.uapp-conn-tag.alert-tag {
+  background: #FEE2E2; color: #991B1B; border-color: #FCA5A5;
+}
+
+.uapp-audit-logs {
+  background: #0B0F19; border-radius: 8px; margin-top: 8px; flex: 1;
+  padding: 8px 10px; font-family: var(--font-mono); font-size: 9px; line-height: 1.5;
+  color: #D1FAE5; overflow-y: auto; text-align: left;
+}
+.log-ts { color: #64748B; }
+
+/* BiometricPrompt Bottom Sheet Modal */
+.bio-modal-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: #181B24; border-top: 1px solid #2C303E;
+  border-radius: 22px 22px 0 0; padding: 12px 14px 16px;
+  box-shadow: 0 -12px 35px rgba(0,0,0,0.75); z-index: 30; text-align: center;
+}
+.bio-drag-handle { width: 32px; height: 3.5px; border-radius: 99px; background: #444A58; margin: 0 auto 10px; }
+.bio-sheet-head { font-size: 12px; font-weight: 700; color: #FFF; text-align: left; }
+.bio-sheet-rp { font-family: var(--font-mono); font-size: 10px; color: var(--cyan); text-align: left; margin-top: 2px; }
+.bio-sheet-desc { font-size: 10px; color: var(--text-muted); text-align: left; margin: 6px 0 12px; }
+
+/* Interactive Laser Scanner Fingerprint Button */
+.sensor-scanner-pad {
+  width: 62px; height: 62px; margin: 0 auto; border-radius: 50%;
+  background: #202534; border: 2px dashed #485268;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; position: relative; transition: all 0.2s;
+  overflow: hidden;
 }
-.fingerprint-touch-sensor:hover {
-  transform: scale(1.06); border-color: var(--cyan); border-style: solid;
+.sensor-scanner-pad:hover {
+  transform: scale(1.08); border-color: var(--cyan); border-style: solid;
   box-shadow: 0 0 20px var(--cyan-glow);
 }
-.fingerprint-touch-sensor.verified {
+.sensor-scanner-pad.verified {
   border-color: var(--emerald); border-style: solid;
   background: var(--emerald-glow); box-shadow: 0 0 25px var(--emerald-glow);
 }
-
-.sensor-prompt-text {
-  font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); font-weight: 600;
+/* Holographic Laser Beam Sweeping */
+.sensor-laser-beam {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  box-shadow: 0 0 8px var(--cyan);
+  animation: laserSweep 1.8s infinite ease-in-out;
 }
+@keyframes laserSweep {
+  0% { top: 0%; opacity: 0; }
+  50% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+.sensor-hint-label {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 8px; display: block;
+}
+
+/* =========================================================================
+   LIVE CRYPTOGRAPHIC TELEMETRY HUD
+   ========================================================================= */
+.telemetry-hud-wrap {
+  margin-top: 24px; background: var(--bg-surface);
+  border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px;
+}
+.hud-title-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px;
+}
+.hud-title { font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; color: var(--cyan); }
+.hud-badge {
+  font-family: var(--font-mono); font-size: 10px; padding: 2px 8px; border-radius: 4px;
+  background: var(--cyan-glow); color: var(--cyan); font-weight: 600;
+}
+
+.hud-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; text-align: left;
+}
+@media (max-width: 860px) { .hud-grid { grid-template-columns: 1fr; } }
+.hud-card {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px;
+}
+.hud-card.active { border-color: var(--cyan); }
+.hud-card.verified { border-color: var(--emerald); background: var(--emerald-glow); }
+.hud-card.blocked { border-color: var(--coral); background: var(--coral-glow); }
+.hud-card-lbl { font-family: var(--font-mono); font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; }
+.hud-card-val { font-family: var(--font-mono); font-size: 11px; color: var(--text-main); margin-top: 4px; word-break: break-all; }
 
 /* =========================================================================
    FOUR ARCHITECTURAL PILLARS (NO AI CARDS, CLEAN PRECISION)
    ========================================================================= */
 .pillars-section {
-  padding: 80px var(--gutter);
+  padding: 90px var(--gutter);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg-surface) 40%, transparent);
 }
 .pillars-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 24px; max-width: 1200px; margin: 40px auto 0;
+  gap: 24px; max-width: 1240px; margin: 40px auto 0;
 }
 .pillar-card {
   background: var(--bg-surface); border: 1px solid var(--border);
-  border-radius: 10px; padding: 26px 22px; text-align: left;
+  border-radius: 12px; padding: 26px 22px; text-align: left;
   display: flex; flex-direction: column; justify-content: space-between;
   transition: transform 0.2s, border-color 0.2s;
 }
-.pillar-card:hover { transform: translateY(-2px); border-color: var(--border-hover); }
-.pillar-number { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--emerald); margin-bottom: 12px; }
-.pillar-title { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 10px; }
-.pillar-desc { font-size: 14.5px; color: var(--text-muted); line-height: 1.6; }
-.pillar-tag {
+.pillar-card:hover { transform: translateY(-3px); border-color: var(--border-hover); }
+.pillar-num { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--emerald); margin-bottom: 12px; }
+.pillar-heading { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 10px; }
+.pillar-body { font-size: 14.5px; color: var(--text-muted); line-height: 1.6; }
+.pillar-spec {
   display: inline-block; font-family: var(--font-mono); font-size: 11px;
   color: var(--cyan); margin-top: 18px;
 }
@@ -435,96 +630,96 @@ a { color: inherit; text-decoration: none; }
    uKey vs mahirsn/passkey vs YubiKey vs Cloud
    ========================================================================= */
 .compare-section {
-  padding: 80px var(--gutter);
-  max-width: 1180px; margin: 0 auto;
+  padding: 90px var(--gutter);
+  max-width: 1200px; margin: 0 auto;
 }
-.table-responsive {
+.compare-table-wrap {
   margin-top: 40px; overflow-x: auto;
   border: 1px solid var(--border); border-radius: 12px;
   background: var(--bg-surface);
 }
-.tech-table {
+.matrix-table {
   width: 100%; border-collapse: collapse; text-align: left; font-size: 14.5px;
 }
-.tech-table th {
+.matrix-table th {
   background: var(--bg-elevated); padding: 16px 18px;
   font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-muted);
   border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.05em;
 }
-.tech-table th.col-ukey { color: var(--emerald); border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
-.tech-table td {
+.matrix-table th.col-ukey { color: var(--emerald); border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+.matrix-table td {
   padding: 16px 18px; border-bottom: 1px solid var(--border); color: var(--text-muted);
 }
-.tech-table td.col-ukey {
+.matrix-table td.col-ukey {
   background: var(--emerald-glow); color: var(--text-main); font-weight: 600;
   border-left: 1px solid var(--border); border-right: 1px solid var(--border);
 }
-.tech-table tr:last-child td { border-bottom: none; }
-.status-yes { color: var(--emerald); font-weight: 700; }
-.status-no { color: var(--coral); font-weight: 600; }
+.matrix-table tr:last-child td { border-bottom: none; }
+.stat-yes { color: var(--emerald); font-weight: 700; }
+.stat-no { color: var(--coral); font-weight: 600; }
 
 /* =========================================================================
    UNIVERSAL MULTI-DISTRO INSTALLATION
    ========================================================================= */
 .install-section {
-  padding: 80px var(--gutter);
+  padding: 90px var(--gutter);
   border-top: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg-surface) 30%, transparent);
 }
-.distro-selector-tabs {
+.distro-tabs-row {
   display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
   margin: 32px 0 20px;
 }
-.distro-tab-btn {
+.distro-tab-item {
   background: var(--bg-surface); border: 1px solid var(--border);
   color: var(--text-muted); font-family: var(--font-mono); font-size: 13px; font-weight: 600;
   padding: 10px 18px; border-radius: 8px; cursor: pointer; transition: all 0.15s;
 }
-.distro-tab-btn.active {
+.distro-tab-item.active {
   background: var(--emerald); color: #000; border-color: var(--emerald);
 }
 
-.distro-code-container {
+.distro-code-card {
   max-width: 820px; margin: 0 auto;
   background: var(--bg-surface); border: 1px solid var(--border);
   border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
-.code-header-bar {
+.distro-code-topbar {
   background: var(--bg-elevated); padding: 10px 18px;
   display: flex; justify-content: space-between; align-items: center;
   border-bottom: 1px solid var(--border);
 }
-.code-pkg-mgr { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
-.distro-code-container pre {
+.distro-pkg-title { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+.distro-code-card pre {
   padding: 20px; text-align: left; overflow-x: auto;
   font-family: var(--font-mono); font-size: 13.5px; line-height: 1.6; color: var(--text-main);
 }
 
 /* FAQ Accordion */
 .faq-section {
-  padding: 80px var(--gutter);
-  max-width: 900px; margin: 0 auto;
+  padding: 90px var(--gutter);
+  max-width: 920px; margin: 0 auto;
 }
-.faq-container { display: flex; flex-direction: column; gap: 12px; margin-top: 36px; }
-.faq-box {
+.faq-stack { display: flex; flex-direction: column; gap: 12px; margin-top: 36px; }
+.faq-item-card {
   background: var(--bg-surface); border: 1px solid var(--border);
   border-radius: 10px; overflow: hidden; text-align: left;
 }
-.faq-question {
+.faq-question-btn {
   padding: 20px 22px; font-size: 16.5px; font-weight: 700; cursor: pointer;
   display: flex; justify-content: space-between; align-items: center; user-select: none;
 }
-.faq-question span.arrow { font-family: var(--font-mono); font-size: 14px; transition: transform 0.2s; }
-.faq-box.open .faq-question span.arrow { transform: rotate(180deg); }
-.faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s var(--ease); }
-.faq-answer-inner {
+.faq-question-btn span.arr { font-family: var(--font-mono); font-size: 14px; transition: transform 0.2s; }
+.faq-item-card.open .faq-question-btn span.arr { transform: rotate(180deg); }
+.faq-collapse-body { max-height: 0; overflow: hidden; transition: max-height 0.3s var(--ease); }
+.faq-inner-text {
   padding: 0 22px 22px; font-size: 15px; color: var(--text-muted); line-height: 1.65;
 }
-.faq-answer-inner strong { color: var(--text-main); }
+.faq-inner-text strong { color: var(--text-main); }
 
 /* Footer */
 .site-footer {
-  border-top: 1px solid var(--border); padding: 40px var(--gutter);
+  border-top: 1px solid var(--border); padding: 44px var(--gutter);
   display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
   gap: 20px; font-size: 14px; color: var(--text-muted);
 }
@@ -534,16 +729,16 @@ a { color: inherit; text-decoration: none; }
 </head>
 
 <body>
-<div class="tech-grid-bg"></div>
+<div class="ambient-glow"></div>
 
 <!-- NAVIGATION -->
-<header class="header-nav">
-  <a class="brand-mark" href="#">
-    <span class="brand-chip"></span>
+<header class="site-header">
+  <a class="brand-link" href="#">
+    <span class="brand-chip-glow"></span>
     <span>uKey</span>
   </a>
 
-  <ul class="nav-menu">
+  <ul class="nav-links">
     <li><a href="#simulator">Simulator</a></li>
     <li><a href="#architecture">Architecture</a></li>
     <li><a href="#compare">Comparison</a></li>
@@ -551,13 +746,14 @@ a { color: inherit; text-decoration: none; }
     <li><a href="#faq">FAQ</a></li>
   </ul>
 
-  <div class="nav-actions">
-    <button class="theme-switch" id="themeBtn" aria-label="Toggle theme">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.5 5.5 0 0 1-7.54-7.54C12.92 3.04 12.46 3 12 3z"/>
-      </svg>
+  <div class="nav-controls">
+    <button class="sound-toggle-btn active" id="soundBtn" title="Toggle Haptic Sound">
+      <span>🔊 Sound: ON</span>
     </button>
-    <a href="https://github.com/siddharthsai218/ukey" class="btn-secondary" target="_blank" rel="noopener">
+    <button class="theme-toggle-btn" id="themeBtn" aria-label="Toggle theme">
+      <span>Theme</span>
+    </button>
+    <a href="https://github.com/siddharthsai218/ukey" class="github-cta" target="_blank" rel="noopener">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
       </svg>
@@ -567,178 +763,231 @@ a { color: inherit; text-decoration: none; }
 </header>
 
 <main>
-  <!-- HERO SECTION -->
-  <section class="hero-wrapper">
-    <div class="badge-version">
-      <span class="pulse"></span>
-      <span>v1.2.0 • Linux Kernel Virtual Security Key</span>
+  <!-- =========================================================================
+       HERO SECTION WITH DYNAMIC CYBERNETIC MESH CANVAS
+       ========================================================================= -->
+  <section class="hero-container">
+    <div>
+      <div class="hero-pill">
+        <span class="blinker"></span>
+        <span>v1.2.0 • Linux Kernel Virtual Security Key</span>
+      </div>
+
+      <h1 class="hero-headline">
+        Hardware-grade 2FA.<br>
+        <span class="text-laser">Without the $60 dongle.</span>
+      </h1>
+
+      <p class="hero-paragraph">
+        Turn your Android phone’s hardware enclave into a native USB FIDO2 key for Linux. Tap your fingerprint for <strong>passwordless sudo</strong>, <strong>OpenSSH git push</strong>, and <strong>WebAuthn</strong>. 100% local, zero cloud.
+      </p>
+
+      <div class="hero-btn-row">
+        <a href="#simulator" class="btn-laser">
+          <span>⚡ Try Interactive Rig</span>
+        </a>
+        <a href="uKey_Product_Guide.pdf" target="_blank" class="btn-glass">
+          <span>Product Guide (PDF)</span>
+        </a>
+        <a href="http://127.0.0.1:8444" target="_blank" class="btn-glass">
+          <span>Web Dashboard</span>
+        </a>
+      </div>
+
+      <!-- Quick Command Terminal -->
+      <div class="hero-cmd-box">
+        <code><span class="c-prompt">$ </span>curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash</code>
+        <button class="btn-copy-tag" data-copy="curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash">Copy</button>
+      </div>
     </div>
 
-    <h1 class="hero-heading">
-      Hardware-grade 2FA.<br>
-      <span class="highlight">Without the $60 dongle.</span>
-    </h1>
-
-    <p class="hero-lead">
-      Turn your Android phone’s hardware enclave into a native USB FIDO2 key for Linux. Tap your fingerprint for <strong>passwordless sudo</strong>, <strong>OpenSSH git push</strong>, and <strong>WebAuthn</strong>. 100% local, zero cloud.
-    </p>
-
-    <div class="hero-actions">
-      <a href="#simulator" class="btn-primary">
-        <span>⚡ Test Interactive Bus</span>
-      </a>
-      <a href="#install" class="btn-secondary">
-        <span>Get Started on Linux</span>
-      </a>
-      <a href="http://127.0.0.1:8444" target="_blank" class="btn-secondary">
-        <span>Local Settings Console</span>
-      </a>
+    <!-- Live Cybernetic Biometric Canvas -->
+    <div class="hero-canvas-wrap">
+      <canvas id="heroCanvas"></canvas>
+      <div class="canvas-hud-overlay">
+        <span>STRONGBOX HARDWARE MESH</span>
+        <span class="status-live">● ENCLAVE ONLINE</span>
+      </div>
     </div>
+  </section>
 
-    <!-- Quick Terminal Copy Box -->
-    <div class="install-terminal-box">
-      <code><span class="prefix">$ </span>curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash</code>
-      <button class="copy-pill-btn" data-copy="curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash">Copy</button>
-    </div>
-
-    <!-- Telemetry Strip -->
-    <div class="telemetry-strip">
-      <div class="telemetry-item">
-        <div class="telemetry-num">&lt; 5 <span class="unit">ms</span></div>
-        <div class="telemetry-label">Handshake & Verification</div>
+  <!-- Fact Strip -->
+  <section class="fact-strip">
+    <div class="fact-grid">
+      <div class="fact-cell">
+        <div class="fact-val">&lt; 5 <span class="sub">ms</span></div>
+        <div class="fact-label">Handshake & Verification</div>
       </div>
-      <div class="telemetry-item">
-        <div class="telemetry-num">0.0 <span class="unit">s</span></div>
-        <div class="telemetry-label">Instant Password Fallback</div>
+      <div class="fact-cell">
+        <div class="fact-val">0.0 <span class="sub">s</span></div>
+        <div class="fact-label">Instant Password Fallback</div>
       </div>
-      <div class="telemetry-item">
-        <div class="telemetry-num">CC EAL5+ <span class="unit"></span></div>
-        <div class="telemetry-label">Android StrongBox Silicon</div>
+      <div class="fact-cell">
+        <div class="fact-val">CC EAL5+</div>
+        <div class="fact-label">Android StrongBox Silicon</div>
       </div>
-      <div class="telemetry-item">
-        <div class="telemetry-num">100% <span class="unit">Local</span></div>
-        <div class="telemetry-label">Zero Cloud Relays or Telemetry</div>
+      <div class="fact-cell">
+        <div class="fact-val">100% <span class="sub">Local</span></div>
+        <div class="fact-label">Peer-to-Peer, Zero Cloud Relays</div>
       </div>
     </div>
   </section>
 
   <!-- =========================================================================
-       SIGNATURE INTERACTION:
-       CRYPTOGRAPHIC PACKET BUS & LIVE HARDWARE SIMULATOR
+       SIGNATURE SHOWPIECE:
+       INTERACTIVE HARDWARE SIMULATOR WITH LIVE LASER CONDUIT
        ========================================================================= -->
-  <section class="rig-section" id="simulator">
-    <div class="section-header-center">
-      <div class="section-tag">Interactive Hardware Simulator</div>
-      <h2 class="section-title">See the Cryptographic Bus in Action</h2>
-      <p class="section-desc">
-        Watch how the Linux kernel (/dev/uhid), the local zero-trust transport, and Android StrongBox coordinate cryptographic signatures in real-time.
+  <section class="stage-section" id="simulator">
+    <div class="stage-header">
+      <div class="stage-tag">Interactive Hardware Simulator</div>
+      <h2 class="stage-title">Touch ID for Linux, Tested Live.</h2>
+      <p class="stage-desc">
+        Click any scenario below to see the Linux terminal type the command, fire the cryptographic assertion across the laser fiber, and verify via your phone's biometric enclave.
       </p>
     </div>
 
     <!-- Toolbar -->
-    <div class="rig-toolbar">
-      <div class="scenario-selector">
-        <button class="sc-button active" data-scenario="sudo">01 Sudo Elevation</button>
-        <button class="sc-button" data-scenario="git">02 Git Push (OpenSSH)</button>
-        <button class="sc-button" data-scenario="webauthn">03 WebAuthn (Google)</button>
-        <button class="sc-button" data-scenario="fallback">04 0.0s Fallback</button>
-        <button class="sc-button danger" data-scenario="rogue">05 Rogue Intruder</button>
+    <div class="stage-toolbar">
+      <div class="scenarios-group">
+        <button class="sc-tag-btn active" data-scenario="sudo">🖐️ 01. Sudo Elevation</button>
+        <button class="sc-tag-btn" data-scenario="git">🔑 02. Git Push (OpenSSH)</button>
+        <button class="sc-tag-btn" data-scenario="web">🌐 03. WebAuthn Passkeys</button>
+        <button class="sc-tag-btn" data-scenario="fallback">⚡ 04. 0.0s Fallback</button>
+        <button class="sc-tag-btn danger" data-scenario="rogue">🚨 05. Rogue Wi-Fi Attack</button>
       </div>
 
-      <div class="transport-toggle-group">
+      <div class="transport-switch-group">
         <span>Transport:</span>
-        <button class="transport-btn active" id="btnUsb">USB (adb reverse)</button>
-        <button class="transport-btn" id="btnWifi">Wi-Fi (Zero-Trust)</button>
+        <button class="transport-pill-btn active" id="btnUsb">USB (adb reverse)</button>
+        <button class="transport-pill-btn" id="btnWifi">Wi-Fi (Zero-Trust)</button>
       </div>
     </div>
 
-    <!-- 3-Column Stage Grid -->
-    <div class="stage-grid">
+    <!-- The Realistic Arena -->
+    <div class="stage-arena">
+      <div class="arena-duo">
 
-      <!-- Column 1: Linux Terminal -->
-      <div class="device-box">
-        <div class="device-topbar">
-          <div class="topbar-dots">
-            <span class="topbar-dot close"></span>
-            <span class="topbar-dot min"></span>
-            <span class="topbar-dot max"></span>
-          </div>
-          <div class="device-title" id="termTitleText">siddharth@fedora:~ (bash)</div>
-          <div style="font-family:var(--font-mono); font-size:10px; color:var(--emerald);">● /dev/uhid Active</div>
-        </div>
+        <!-- 1. Realistic Vector Laptop -->
+        <div class="laptop-chassis">
+          <div class="laptop-lid">
+            <div class="laptop-screen">
+              <!-- Wayland top bar -->
+              <div class="screen-topbar">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="topbar-tag">1</span>
+                  <span style="color:#FFF;">kitty (bash)</span>
+                </div>
+                <span>Fedora Linux 43</span>
+                <div style="display:flex; gap:10px;">
+                  <span class="topbar-status-pulse" id="laptopStatusTag">● /dev/uhid Active</span>
+                  <span>18:30</span>
+                </div>
+              </div>
 
-        <div class="terminal-viewport">
-          <div><span class="term-prompt-line">siddharth@fedora:~$ </span><span id="termCmdText">sudo dnf update</span></div>
-          <div id="termWaitLine" class="term-waiting-badge">
-            <span class="term-cursor"></span>
-            <span id="termWaitPrompt">Touch phone biometric or press Enter for password:</span>
-          </div>
-          <div id="termDoneBlock" style="display:none;"></div>
-        </div>
-      </div>
-
-      <!-- Column 2: Cryptographic Bus Inspector (The WOW Feature) -->
-      <div class="bus-viewport">
-        <div class="bus-header">
-          <span class="bus-title">FIDO2 CTAP2 PACKET BUS</span>
-          <span class="bus-status-chip" id="busProtocolLabel">CTAPHID_CBOR (0x10)</span>
-        </div>
-
-        <div class="bus-packet-stream">
-          <div class="packet-node active" id="busNodeRequest">
-            <div class="packet-label">KERNEL INBOUND (GET_ASSERTION)</div>
-            <div class="packet-data" id="busReqPayload">rpId: pam://fedora | clientDataHash: 3f8a...c91d</div>
-          </div>
-
-          <div class="packet-node" id="busNodeTransport">
-            <div class="packet-label">LOCAL BRIDGE TRANSPORT</div>
-            <div class="packet-data" id="busTransportPayload">127.0.0.1:8443 (Frame: 64B length-prefixed JSON)</div>
-          </div>
-
-          <div class="packet-node" id="busNodeCrypto">
-            <div class="packet-label">STRONGBOX SILICON ENCLAVE</div>
-            <div class="packet-data" id="busCryptoPayload">Waiting for hardware biometric trigger...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Column 3: Android Phone & StrongBox Sensor -->
-      <div class="phone-device-box">
-        <div class="phone-header-row">
-          <span style="font-size:12px; font-weight:700;">Pixel 7 Pro</span>
-          <span class="phone-chip-spec">StrongBox Keymaster</span>
-        </div>
-
-        <div class="biometric-card">
-          <div>
-            <div class="bio-app-title">uKey Authenticator</div>
-            <div class="bio-prompt-sub" id="bioPromptRp">Authorize: pam://fedora</div>
-          </div>
-
-          <!-- Interactive Fingerprint Button -->
-          <div>
-            <div class="fingerprint-touch-sensor" id="fingerprintBtn" title="Click to touch sensor">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" id="fpSvg">
-                <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
-                <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
-                <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>
-                <path d="M2 12a10 10 0 0 1 18-6"/>
-                <path d="M2 16h.01"/>
-                <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
-                <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/>
-                <path d="M8.65 22c.21-.66.45-1.32.57-2"/>
-                <path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>
-              </svg>
+              <!-- Live Terminal Workspace -->
+              <div class="screen-workspace" id="screenTerminal">
+                <div>
+                  <span class="screen-prompt">siddharth@fedora:~$ </span>
+                  <span class="screen-cmd-line" id="termCmdLine">sudo dnf update</span>
+                </div>
+                <div class="screen-wait-badge" id="termWaitBadge">
+                  <span class="screen-wait-dot"></span>
+                  <span id="termWaitText">Touch phone biometric or press Enter for password:</span>
+                </div>
+                <div id="termResultBlock" style="display:none;"></div>
+              </div>
             </div>
-            <div class="sensor-prompt-text" id="sensorPromptText">Tap sensor to sign</div>
           </div>
+          <div class="laptop-base"><div class="laptop-notch"></div></div>
+          <div class="laptop-shadow"></div>
+        </div>
 
-          <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-dim);">
-            Hardware P-256 Key • Non-Exportable
+        <!-- 2. Optical Laser Data Conduit -->
+        <div class="laser-conduit-wrap">
+          <div class="laser-fiber-line" id="fiberLine"></div>
+          <div class="laser-photon-bullet" id="photonBullet"></div>
+        </div>
+
+        <!-- 3. Titanium Phone Slab -->
+        <div class="phone-chassis">
+          <div class="phone-screen">
+            <div class="phone-punchhole"></div>
+            <div class="phone-top-bar">
+              <span>18:30</span>
+              <span>5G  88%</span>
+            </div>
+
+            <!-- uKey Android App UI -->
+            <div class="uapp-view">
+              <div class="uapp-header-title">uKey</div>
+              <div class="uapp-header-sub">Hardware Biometric Authenticator</div>
+
+              <div class="uapp-conn-box">
+                <div class="uapp-conn-label">DAEMON BRIDGE</div>
+                <div class="uapp-conn-row">
+                  <span id="phoneBridgeIp">127.0.0.1:8443</span>
+                  <span class="uapp-conn-tag" id="phoneBridgeTag">CONNECTED</span>
+                </div>
+              </div>
+
+              <div class="uapp-audit-logs" id="phoneAuditLogs">
+                <div><span class="log-ts">[18:30:01]</span> StrongBox Keystore ready</div>
+                <div><span class="log-ts">[18:30:02]</span> Paired with laptop (token verified)</div>
+                <div id="phoneLogLiveReq"><span class="log-ts">[18:30:10]</span> REQ: pam://fedora</div>
+              </div>
+            </div>
+
+            <!-- Material 3 BiometricPrompt Modal Sheet -->
+            <div class="bio-modal-sheet" id="phoneBioModal">
+              <div class="bio-drag-handle"></div>
+              <div class="bio-sheet-head">uKey Authenticator</div>
+              <div class="bio-sheet-rp" id="phoneSheetRp">Authorize sudo: pam://fedora</div>
+              <div class="bio-sheet-desc">Touch fingerprint sensor to sign with StrongBox</div>
+
+              <!-- Interactive Laser Scanner Button -->
+              <div class="sensor-scanner-pad" id="sensorBtn" title="Click to touch sensor">
+                <div class="sensor-laser-beam"></div>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" id="sensorSvg">
+                  <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
+                  <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
+                  <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>
+                  <path d="M2 12a10 10 0 0 1 18-6"/>
+                  <path d="M2 16h.01"/>
+                  <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
+                  <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/>
+                  <path d="M8.65 22c.21-.66.45-1.32.57-2"/>
+                  <path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>
+                </svg>
+              </div>
+              <span class="sensor-hint-label" id="sensorHintText">Tap sensor to sign</span>
+            </div>
+
           </div>
         </div>
-      </div>
 
+      </div>
+    </div>
+
+    <!-- Live Cryptographic Telemetry HUD -->
+    <div class="telemetry-hud-wrap">
+      <div class="hud-title-bar">
+        <span class="hud-title">REAL-TIME FIDO2 CTAP2 PROTOCOL BUS</span>
+        <span class="hud-badge" id="hudProtocolTag">CTAPHID_CBOR (0x10)</span>
+      </div>
+      <div class="hud-grid">
+        <div class="hud-card active" id="hudCardReq">
+          <div class="hud-card-lbl">KERNEL INBOUND (ASSERTION REQUEST)</div>
+          <div class="hud-card-val" id="hudReqVal">rpId: pam://fedora | clientDataHash: 3f8a...c91d</div>
+        </div>
+        <div class="hud-card active" id="hudCardTransport">
+          <div class="hud-card-lbl">TRANSPORT SOCKET</div>
+          <div class="hud-card-val" id="hudTransportVal">127.0.0.1:8443 (USB Loopback adb reverse)</div>
+        </div>
+        <div class="hud-card" id="hudCardCrypto">
+          <div class="hud-card-lbl">STRONGBOX SILICON ENCLAVE</div>
+          <div class="hud-card-val" id="hudCryptoVal">Waiting for biometric touch on sensor...</div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -746,76 +995,75 @@ a { color: inherit; text-decoration: none; }
        FOUR ARCHITECTURAL PILLARS (NO AI CARDS, CLEAN PRECISION)
        ========================================================================= -->
   <section class="pillars-section" id="architecture">
-    <div class="section-header-center">
-      <div class="section-tag">Architecture Overview</div>
-      <h2 class="section-title">Built Different from First Principles</h2>
-      <p class="section-desc">
-        Why uKey succeeds where browser passkeys, Bluetooth dongles, and cloud sync tools fail.
+    <div class="stage-header">
+      <div class="stage-tag">Architecture Overview</div>
+      <h2 class="stage-title">Engineered Different from First Principles</h2>
+      <p class="stage-desc">
+        Why uKey succeeds where browser extensions, Bluetooth dongles, and cloud sync tools fail.
       </p>
     </div>
 
     <div class="pillars-grid">
       <div class="pillar-card">
         <div>
-          <div class="pillar-number">01 / KERNEL LEVEL</div>
-          <h3 class="pillar-title">Virtual /dev/uhid Device</h3>
-          <p class="pillar-desc">
+          <div class="pillar-num">01 / KERNEL LEVEL</div>
+          <h3 class="pillar-heading">Virtual /dev/uhid Device</h3>
+          <p class="pillar-body">
             Not a browser extension. uKey registers a true USB Human Interface Device in the Linux kernel on usage page <code>0xF1D0</code>. Any PAM module, OpenSSH client, or browser sees a physical hardware YubiKey.
           </p>
         </div>
-        <div class="pillar-tag">BUS_USB • Native HID</div>
+        <div class="pillar-spec">BUS_USB • Native HID</div>
       </div>
 
       <div class="pillar-card">
         <div>
-          <div class="pillar-number">02 / SILICON SECURITY</div>
-          <h3 class="pillar-title">Android StrongBox Enclave</h3>
-          <p class="pillar-desc">
+          <div class="pillar-num">02 / SILICON SECURITY</div>
+          <h3 class="pillar-heading">Android StrongBox Enclave</h3>
+          <p class="pillar-body">
             Private keys are generated directly inside tamper-resistant hardware (CC EAL5+). Keys never enter Android RAM and cannot be exported even on rooted devices.
           </p>
         </div>
-        <div class="pillar-tag">NIST P-256 • Hardware Enclave</div>
+        <div class="pillar-spec">NIST P-256 • Hardware Enclave</div>
       </div>
 
       <div class="pillar-card">
         <div>
-          <div class="pillar-number">03 / ZERO-TRUST PROTOCOL</div>
-          <h3 class="pillar-title">One-Time PIN Pairing</h3>
-          <p class="pillar-desc">
+          <div class="pillar-num">03 / ZERO-TRUST PROTOCOL</div>
+          <h3 class="pillar-heading">One-Time PIN Pairing</h3>
+          <p class="pillar-body">
             Single-use 6-digit PIN yields a persistent 256-bit token. All Wi-Fi handshake frames use HMAC-SHA256 nonces. Rogue devices on public networks are dropped in under 4ms.
           </p>
         </div>
-        <div class="pillar-tag">Sub-4ms Rogue Rejection</div>
+        <div class="pillar-spec">Sub-4ms Rogue Rejection</div>
       </div>
 
       <div class="pillar-card">
         <div>
-          <div class="pillar-number">04 / FAIL-SAFE INTEGRATION</div>
-          <h3 class="pillar-title">0.0s Password Fallback</h3>
-          <p class="pillar-desc">
+          <div class="pillar-num">04 / FAIL-SAFE INTEGRATION</div>
+          <h3 class="pillar-heading">0.0s Password Fallback</h3>
+          <p class="pillar-body">
             Phone out of battery or in another room? PAM <code>sufficient</code> fallback immediately prompts for your standard UNIX password with zero lag. You are never locked out of your machine.
           </p>
         </div>
-        <div class="pillar-tag">Zero Lockout Risk</div>
+        <div class="pillar-spec">Zero Lockout Risk</div>
       </div>
     </div>
   </section>
 
   <!-- =========================================================================
-       TECHNICAL COMPARISON MATRIX
-       uKey vs mahirsn/passkey vs YubiKey vs Cloud Passkeys
+       TECHNICAL BENCHMARK MATRIX
        ========================================================================= -->
   <section class="compare-section" id="compare">
-    <div class="section-header-center">
-      <div class="section-tag">Objective Benchmarks</div>
-      <h2 class="section-title">How uKey Compares</h2>
-      <p class="section-desc">
-        A direct technical comparison with prior art, physical tokens, and commercial passkey implementations.
+    <div class="stage-header">
+      <div class="stage-tag">Objective Benchmarks</div>
+      <h2 class="stage-title">How uKey Compares</h2>
+      <p class="stage-desc">
+        A direct technical comparison with prior art, physical dongles, and cloud passkeys.
       </p>
     </div>
 
-    <div class="table-responsive">
-      <table class="tech-table">
+    <div class="compare-table-wrap">
+      <table class="matrix-table">
         <thead>
           <tr>
             <th>Architecture Capability</th>
@@ -828,10 +1076,10 @@ a { color: inherit; text-decoration: none; }
         <tbody>
           <tr>
             <td>Hardware Unit Cost</td>
-            <td class="col-ukey status-yes">$0 (Free & Open Source)</td>
-            <td class="status-yes">$0 (Free)</td>
-            <td class="status-no">$55 – $95+</td>
-            <td class="status-yes">$0 (Built-in)</td>
+            <td class="col-ukey stat-yes">$0 (Free & Open Source)</td>
+            <td class="stat-yes">$0 (Free)</td>
+            <td class="stat-no">$55 – $95+</td>
+            <td class="stat-yes">$0 (Built-in)</td>
           </tr>
           <tr>
             <td>Transport Protocol</td>
@@ -842,31 +1090,31 @@ a { color: inherit; text-decoration: none; }
           </tr>
           <tr>
             <td>Auth Latency</td>
-            <td class="col-ukey status-yes">&lt; 5 ms (Instant)</td>
-            <td class="status-no">1,500 – 3,000 ms (BLE latency)</td>
-            <td class="status-yes">&lt; 10 ms</td>
+            <td class="col-ukey stat-yes">&lt; 5 ms (Instant)</td>
+            <td class="stat-no">1,500 – 3,000 ms (BLE latency)</td>
+            <td class="stat-yes">&lt; 10 ms</td>
             <td>Variable (Cloud dependent)</td>
           </tr>
           <tr>
             <td>Linux Sudo (PAM) Auth</td>
-            <td class="col-ukey status-yes">✓ Native pam_u2f (0.4s)</td>
-            <td class="status-no">✗ None</td>
-            <td class="status-yes">✓ Native pam_u2f</td>
-            <td class="status-no">✗ Impossible (Browser only)</td>
+            <td class="col-ukey stat-yes">✓ Native pam_u2f (0.4s)</td>
+            <td class="stat-no">✗ None</td>
+            <td class="stat-yes">✓ Native pam_u2f</td>
+            <td class="stat-no">✗ Impossible (Browser only)</td>
           </tr>
           <tr>
             <td>OpenSSH Git Push (ecdsa-sk)</td>
-            <td class="col-ukey status-yes">✓ Native FIDO2 SSH Keys</td>
-            <td class="status-no">✗ Not supported</td>
-            <td class="status-yes">✓ Supported</td>
-            <td class="status-no">✗ Impossible</td>
+            <td class="col-ukey stat-yes">✓ Native FIDO2 SSH Keys</td>
+            <td class="stat-no">✗ Not supported</td>
+            <td class="stat-yes">✓ Supported</td>
+            <td class="stat-no">✗ Impossible</td>
           </tr>
           <tr>
             <td>Desktop Auto-Lock</td>
-            <td class="col-ukey status-yes">✓ Native systemd-logind</td>
-            <td class="status-no">✗ None</td>
-            <td class="status-no">✗ Physical pull only</td>
-            <td class="status-no">✗ None</td>
+            <td class="col-ukey stat-yes">✓ Native systemd-logind</td>
+            <td class="stat-no">✗ None</td>
+            <td class="stat-no">✗ Physical pull only</td>
+            <td class="stat-no">✗ None</td>
           </tr>
           <tr>
             <td>Key Storage Layer</td>
@@ -877,17 +1125,17 @@ a { color: inherit; text-decoration: none; }
           </tr>
           <tr>
             <td>Cloud Reliance</td>
-            <td class="col-ukey status-yes">✓ 100% Local Peer-to-Peer</td>
-            <td class="status-yes">✓ Local</td>
-            <td class="status-yes">✓ Local</td>
-            <td class="status-no">✗ Cloud synchronized</td>
+            <td class="col-ukey stat-yes">✓ 100% Local Peer-to-Peer</td>
+            <td class="stat-yes">✓ Local</td>
+            <td class="stat-yes">✓ Local</td>
+            <td class="stat-no">✗ Cloud synchronized</td>
           </tr>
           <tr>
             <td>Linux Multi-Distro Support</td>
-            <td class="col-ukey status-yes">✓ Fedora, Ubuntu, Arch, SUSE</td>
+            <td class="col-ukey stat-yes">✓ Fedora, Ubuntu, Arch, SUSE</td>
             <td>Manual Rust build</td>
-            <td class="status-yes">✓ Universal</td>
-            <td class="status-no">✗ macOS / ChromeOS focused</td>
+            <td class="stat-yes">✓ Universal</td>
+            <td class="stat-no">✗ macOS / ChromeOS focused</td>
           </tr>
         </tbody>
       </table>
@@ -898,27 +1146,27 @@ a { color: inherit; text-decoration: none; }
        UNIVERSAL MULTI-DISTRO INSTALLATION
        ========================================================================= -->
   <section class="install-section" id="install">
-    <div class="section-header-center">
-      <div class="section-tag">Quick Deployment</div>
-      <h2 class="section-title">One Command. Any Linux Distribution.</h2>
-      <p class="section-desc">
+    <div class="stage-header">
+      <div class="stage-tag">Quick Deployment</div>
+      <h2 class="stage-title">One Command. Any Linux Distribution.</h2>
+      <p class="stage-desc">
         Configures /dev/uhid udev rules, builds the Python virtual environment, and installs a persistent systemd user service.
       </p>
     </div>
 
-    <div class="distro-selector-tabs">
-      <button class="distro-tab-btn active" data-distro="fedora">Fedora / RHEL</button>
-      <button class="distro-tab-btn" data-distro="ubuntu">Ubuntu / Debian</button>
-      <button class="distro-tab-btn" data-distro="arch">Arch Linux</button>
-      <button class="distro-tab-btn" data-distro="suse">openSUSE</button>
+    <div class="distro-tabs-row">
+      <button class="distro-tab-item active" data-distro="fedora">Fedora / RHEL</button>
+      <button class="distro-tab-item" data-distro="ubuntu">Ubuntu / Debian</button>
+      <button class="distro-tab-item" data-distro="arch">Arch Linux</button>
+      <button class="distro-tab-item" data-distro="suse">openSUSE</button>
     </div>
 
-    <div class="distro-code-container">
-      <div class="code-header-bar">
-        <span class="code-pkg-mgr" id="codeDistroLabel">Fedora 40+ / RHEL 9 (dnf)</span>
-        <button class="copy-pill-btn" id="btnCopyDistro">Copy Command</button>
+    <div class="distro-code-card">
+      <div class="distro-code-topbar">
+        <span class="distro-pkg-title" id="distroPkgTitle">Fedora 40+ / RHEL 9 (dnf)</span>
+        <button class="btn-copy-tag" id="btnCopyDistro">Copy Command</button>
       </div>
-      <pre><code id="codeDistroBody"># 1. Universal installer (configures /dev/uhid, systemd user service)
+      <pre><code id="distroCodeText"># 1. Universal installer (configures /dev/uhid, systemd user service)
 curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
 
 # 2. Configure passwordless sudo with 0.0s password fallback
@@ -931,53 +1179,53 @@ ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code></pre>
 
   <!-- FAQ SECTION -->
   <section class="faq-section" id="faq">
-    <div class="section-header-center">
-      <div class="section-tag">Common Inquiries</div>
-      <h2 class="section-title">Frequently Asked Questions</h2>
+    <div class="stage-header">
+      <div class="stage-tag">Technical FAQ</div>
+      <h2 class="stage-title">Frequently Asked Questions</h2>
     </div>
 
-    <div class="faq-container">
-      <div class="faq-box">
-        <div class="faq-question">How does uKey differ from mahirsn/passkey on Google Play? <span class="arrow">▾</span></div>
-        <div class="faq-answer">
-          <div class="faq-answer-inner">
+    <div class="faq-stack">
+      <div class="faq-item-card">
+        <div class="faq-question-btn">How does uKey differ from mahirsn/passkey on Google Play? <span class="arr">▾</span></div>
+        <div class="faq-collapse-body">
+          <div class="faq-inner-text">
             <strong>mahirsn/passkey</strong> relies on Bluetooth Low Energy (BLE) and USB. On Linux, BLE suffers from 1,500ms to 3,000ms latency, persistent BlueZ pairing dropouts, and is missing entirely on many custom desktop PCs. It also lacks native Linux PAM sudo integration and desktop session lock.<br><br>
             <strong>uKey</strong> utilizes Zero-Trust Wi-Fi LAN + USB with <strong>&lt;5ms latency</strong>, single-use PIN pairing, native <code>pam_u2f</code> for instant terminal sudo, <code>ecdsa-sk</code> for git push, and native systemd session auto-lock.
           </div>
         </div>
       </div>
 
-      <div class="faq-box">
-        <div class="faq-question">Can uKey replace passwords and PATs when pushing to GitHub? <span class="arrow">▾</span></div>
-        <div class="faq-answer">
-          <div class="faq-answer-inner">
+      <div class="faq-item-card">
+        <div class="faq-question-btn">Can uKey replace passwords and PATs when pushing to GitHub? <span class="arr">▾</span></div>
+        <div class="faq-collapse-body">
+          <div class="faq-inner-text">
             <strong>Yes.</strong> OpenSSH natively supports FIDO2 security keys via the <code>ecdsa-sk</code> key type. Running <code>ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code> requests a biometric touch on your phone. Uploading the public key to GitHub allows every <code>git push</code> to verify your fingerprint instead of asking for personal access tokens.
           </div>
         </div>
       </div>
 
-      <div class="faq-box">
-        <div class="faq-question">Can attackers on the same Wi-Fi sniff or replay my credentials? <span class="arrow">▾</span></div>
-        <div class="faq-answer">
-          <div class="faq-answer-inner">
+      <div class="faq-item-card">
+        <div class="faq-question-btn">Can attackers on the same Wi-Fi sniff or replay my credentials? <span class="arr">▾</span></div>
+        <div class="faq-collapse-body">
+          <div class="faq-inner-text">
             <strong>No.</strong> Your private key never leaves Android StrongBox hardware. Furthermore, Wi-Fi connections require a one-time 6-digit PIN pairing that yields a 256-bit device token. All handshake frames use HMAC-SHA256 challenge-response with random nonces. Unpaired connections are dropped by the daemon in &lt;4ms.
           </div>
         </div>
       </div>
 
-      <div class="faq-box">
-        <div class="faq-question">What if my phone battery dies or is left in another room? <span class="arrow">▾</span></div>
-        <div class="faq-answer">
-          <div class="faq-answer-inner">
+      <div class="faq-item-card">
+        <div class="faq-question-btn">What if my phone battery dies or is left in another room? <span class="arr">▾</span></div>
+        <div class="faq-collapse-body">
+          <div class="faq-inner-text">
             <strong>You are never locked out.</strong> The PAM rule is configured with <code>auth sufficient pam_u2f.so</code>. If the phone is disconnected, or if you press <kbd>Enter</kbd>, Linux immediately falls back to your regular UNIX password with <strong>0.0s delay</strong>.
           </div>
         </div>
       </div>
 
-      <div class="faq-box">
-        <div class="faq-question">Does my fingerprint biometric data ever leave the phone? <span class="arrow">▾</span></div>
-        <div class="faq-answer">
-          <div class="faq-answer-inner">
+      <div class="faq-item-card">
+        <div class="faq-question-btn">Does my fingerprint biometric data ever leave the phone? <span class="arr">▾</span></div>
+        <div class="faq-collapse-body">
+          <div class="faq-inner-text">
             <strong>Never.</strong> Biometric verification takes place entirely inside Android's BiometricPrompt and Keystore hardware. The laptop only receives the cryptographic ECDSA signature. No biometric imagery or templates ever cross the network.
           </div>
         </div>
@@ -998,35 +1246,41 @@ ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code></pre>
   </div>
 </footer>
 
-<!-- INTERACTIVE SCRIPTS -->
+<!-- SCRIPT LAYER: CYBERNETIC MESH CANVAS & HARDWARE SIMULATOR -->
 <script>
-// Web Audio API Synthesizer (Haptic audio cues without external assets)
+// =========================================================================
+// 1. WEB AUDIO API SYNTHESIZER
+// =========================================================================
 let audioCtx;
+let soundEnabled = true;
+
 function getAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
 function playClickTick() {
+  if (!soundEnabled) return;
   try {
     const ctx = getAudio();
     const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.type = 'sine'; osc.frequency.value = 750;
-    gain.gain.setValueAtTime(0.04, ctx.currentTime);
+    osc.type = 'sine'; osc.frequency.value = 800;
+    gain.gain.setValueAtTime(0.035, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
     osc.connect(gain); gain.connect(ctx.destination);
     osc.start(); osc.stop(ctx.currentTime + 0.05);
   } catch(e) {}
 }
 function playSuccessChime() {
+  if (!soundEnabled) return;
   try {
     const ctx = getAudio();
     const now = ctx.currentTime;
-    [[880, 0, .1], [1174.6, .08, .12], [1480, .16, .16]].forEach(([freq, delay, dur]) => {
+    [[880, 0, .1], [1174.6, .08, .12], [1567.9, .16, .16]].forEach(([freq, delay, dur]) => {
       const osc = ctx.createOscillator(); const gain = ctx.createGain();
       osc.type = 'sine'; osc.frequency.value = freq;
       gain.gain.setValueAtTime(0, now + delay);
-      gain.gain.linearRampToValueAtTime(0.15, now + delay + 0.01);
+      gain.gain.linearRampToValueAtTime(0.14, now + delay + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
       osc.connect(gain); gain.connect(ctx.destination);
       osc.start(now + delay); osc.stop(now + delay + dur + 0.05);
@@ -1034,17 +1288,26 @@ function playSuccessChime() {
   } catch(e) {}
 }
 function playAlertBuzz() {
+  if (!soundEnabled) return;
   try {
     const ctx = getAudio();
     const now = ctx.currentTime;
     const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.type = 'sawtooth'; osc.frequency.value = 130;
+    osc.type = 'sawtooth'; osc.frequency.value = 140;
     gain.gain.setValueAtTime(0.18, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
     osc.connect(gain); gain.connect(ctx.destination);
     osc.start(); osc.stop(now + 0.28);
   } catch(e) {}
 }
+
+const soundBtn = document.getElementById("soundBtn");
+soundBtn.addEventListener("click", () => {
+  soundEnabled = !soundEnabled;
+  soundBtn.classList.toggle("active", soundEnabled);
+  soundBtn.innerHTML = soundEnabled ? "<span>🔊 Sound: ON</span>" : "<span>🔇 Sound: OFF</span>";
+  if (soundEnabled) playClickTick();
+});
 
 // Theme switch
 const themeBtn = document.getElementById("themeBtn");
@@ -1056,129 +1319,299 @@ themeBtn.addEventListener("click", () => {
   localStorage.setItem("ukey-theme", nxt);
 });
 
-// Hardware & Packet Bus Simulator State
-const termCmdText = document.getElementById("termCmdText");
-const termWaitPrompt = document.getElementById("termWaitPrompt");
-const termWaitLine = document.getElementById("termWaitLine");
-const termDoneBlock = document.getElementById("termDoneBlock");
-const termTitleText = document.getElementById("termTitleText");
+// =========================================================================
+// 2. HERO CYBERNETIC MESH CANVAS
+// Draws glowing biometric ridge contours and cryptographic particle pulses
+// =========================================================================
+const canvas = document.getElementById("heroCanvas");
+if (canvas) {
+  const ctx = canvas.getContext("2d");
+  let width, height;
+  let mouse = { x: -1000, y: -1000, radius: 120 };
 
-const busProtocolLabel = document.getElementById("busProtocolLabel");
-const busReqPayload = document.getElementById("busReqPayload");
-const busTransportPayload = document.getElementById("busTransportPayload");
-const busCryptoPayload = document.getElementById("busCryptoPayload");
-const busNodeRequest = document.getElementById("busNodeRequest");
-const busNodeTransport = document.getElementById("busNodeTransport");
-const busNodeCrypto = document.getElementById("busNodeCrypto");
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    width = canvas.width = rect.width * (window.devicePixelRatio || 1);
+    height = canvas.height = rect.height * (window.devicePixelRatio || 1);
+    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
 
-const bioPromptRp = document.getElementById("bioPromptRp");
-const fingerprintBtn = document.getElementById("fingerprintBtn");
-const sensorPromptText = document.getElementById("sensorPromptText");
+  // Floating particles
+  const particles = [];
+  const particleCount = 28;
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * (canvas.width / (window.devicePixelRatio || 1)),
+      y: Math.random() * (canvas.height / (window.devicePixelRatio || 1)),
+      vx: (Math.random() - 0.5) * 0.6,
+      vy: (Math.random() - 0.5) * 0.6,
+      size: Math.random() * 2 + 1,
+      color: Math.random() > 0.5 ? "#00E599" : "#00F2FE"
+    });
+  }
+
+  // Floating hex tokens
+  const tokens = ["0xF1D0", "CTAP2", "P-256", "SHA256", "CC EAL5+", "uhid", "ECDSA"];
+  const tokenNodes = tokens.map((tok, idx) => ({
+    text: tok,
+    x: 40 + (idx % 3) * 110,
+    y: 50 + Math.floor(idx / 3) * 90,
+    baseY: 50 + Math.floor(idx / 3) * 90,
+    phase: Math.random() * Math.PI * 2
+  }));
+
+  canvas.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+  });
+  canvas.addEventListener("mouseleave", () => {
+    mouse.x = -1000; mouse.y = -1000;
+  });
+
+  let animFrame = 0;
+  function renderCanvas() {
+    animFrame++;
+    const w = canvas.width / (window.devicePixelRatio || 1);
+    const h = canvas.height / (window.devicePixelRatio || 1);
+    ctx.clearRect(0, 0, w, h);
+
+    const cx = w * 0.5;
+    const cy = h * 0.52;
+
+    // Draw Biometric Fingerprint Contours
+    ctx.lineWidth = 1.4;
+    for (let r = 25; r < 165; r += 14) {
+      ctx.beginPath();
+      const wave = Math.sin(animFrame * 0.02 + r * 0.1) * 3;
+      ctx.strokeStyle = `rgba(0, 229, 153, ${Math.max(0.12, 0.45 - r / 300)})`;
+
+      ctx.arc(cx, cy, r + wave, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(0, 242, 254, ${Math.max(0.1, 0.4 - r / 320)})`;
+      ctx.arc(cx, cy, r + wave, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+    }
+
+    // Interactive mouse glow
+    if (mouse.x > 0) {
+      const grad = ctx.createRadialGradient(mouse.x, mouse.y, 10, mouse.x, mouse.y, mouse.radius);
+      grad.addColorStop(0, "rgba(0, 242, 254, 0.25)");
+      grad.addColorStop(1, "transparent");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, mouse.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw Particles & circuit connectors
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Draw Hex Telemetry Tokens
+    ctx.font = '600 11px "JetBrains Mono", monospace';
+    tokenNodes.forEach(tok => {
+      tok.y = tok.baseY + Math.sin(animFrame * 0.03 + tok.phase) * 6;
+      ctx.fillStyle = "rgba(148, 163, 184, 0.35)";
+      ctx.fillText(tok.text, tok.x, tok.y);
+    });
+
+    requestAnimationFrame(renderCanvas);
+  }
+  renderCanvas();
+}
+
+// =========================================================================
+// 3. HARDWARE & LASER CONDUIT SIMULATOR LOGIC
+// =========================================================================
+const termCmdLine = document.getElementById("termCmdLine");
+const termWaitText = document.getElementById("termWaitText");
+const termWaitBadge = document.getElementById("termWaitBadge");
+const termResultBlock = document.getElementById("termResultBlock");
+const laptopStatusTag = document.getElementById("laptopStatusTag");
+
+const fiberLine = document.getElementById("fiberLine");
+const photonBullet = document.getElementById("photonBullet");
+
+const phoneBridgeIp = document.getElementById("phoneBridgeIp");
+const phoneBridgeTag = document.getElementById("phoneBridgeTag");
+const phoneAuditLogs = document.getElementById("phoneAuditLogs");
+const phoneLogLiveReq = document.getElementById("phoneLogLiveReq");
+const phoneBioModal = document.getElementById("phoneBioModal");
+const phoneSheetRp = document.getElementById("phoneSheetRp");
+const sensorBtn = document.getElementById("sensorBtn");
+const sensorHintText = document.getElementById("sensorHintText");
+
+const hudProtocolTag = document.getElementById("hudProtocolTag");
+const hudReqVal = document.getElementById("hudReqVal");
+const hudTransportVal = document.getElementById("hudTransportVal");
+const hudCryptoVal = document.getElementById("hudCryptoVal");
+const hudCardReq = document.getElementById("hudCardReq");
+const hudCardTransport = document.getElementById("hudCardTransport");
+const hudCardCrypto = document.getElementById("hudCardCrypto");
 
 let activeScenario = "sudo";
-let isWifiTransport = false;
+let isWifi = false;
 
-const SIMULATION_DATA = {
+const SCENARIOS_DB = {
   sudo: {
-    termTitle: "siddharth@fedora:~ (bash)",
     cmd: "sudo dnf update",
     prompt: "Touch phone biometric or press Enter for password:",
-    busProto: "CTAPHID_CBOR (0x10)",
-    busReq: "rpId: pam://fedora | clientDataHash: 3f8a...c91d",
-    busCryptoWait: "Awaiting StrongBox P-256 user presence...",
-    bioRp: "Authorize: pam://fedora (sudo)",
-    authOkMsg: "✓ Authorized by Android StrongBox\nRunning transaction check... All packages up to date!",
-    busOkMsg: "OK: P-256 ECDSA signature (r, s) generated in 0.38s"
+    rp: "Authorize sudo: pam://fedora",
+    logReq: "REQ assertion: pam://fedora",
+    hudProto: "CTAPHID_CBOR (0x10)",
+    hudReq: "rpId: pam://fedora | clientDataHash: 3f8a...c91d",
+    hudWait: "Awaiting StrongBox P-256 biometric presence...",
+    hudOk: "OK: P-256 ECDSA signature (r, s) generated in 0.38s",
+    termOk: "✓ Authorized by Android StrongBox\nRunning transaction check... All packages up to date!"
   },
   git: {
-    termTitle: "siddharth@fedora:~/Desktop/ukey (git)",
     cmd: "git push origin main",
     prompt: "Confirm user presence on security key ~/.ssh/id_ukey...",
-    busProto: "SSH_SK_ECDSA (FIDO2)",
-    busReq: "rpId: ssh:github.com | flags: 0x01 (UP) | user: siddharth",
-    busCryptoWait: "Awaiting StrongBox hardware signature for Git commit...",
-    bioRp: "Authorize git push: github.com",
-    authOkMsg: "Writing objects: 100% (5/5), 1.2 KiB | done.\nTo github.com:siddharthsai218/ukey.git\n   7fd2611..e0135d7  main -> main (0 passwords entered)",
-    busOkMsg: "OK: OpenSSH assertion signed via StrongBox Keymaster in 0.41s"
+    rp: "Authorize git push: github.com",
+    logReq: "REQ OpenSSH: ecdsa-sk (github.com)",
+    hudProto: "SSH_SK_ECDSA (FIDO2)",
+    hudReq: "rpId: ssh:github.com | flags: 0x01 (UP) | user: siddharth",
+    hudWait: "Awaiting StrongBox hardware signature for Git commit...",
+    hudOk: "OK: OpenSSH assertion signed via StrongBox Keymaster in 0.41s",
+    termOk: "Writing objects: 100% (5/5), 1.2 KiB | done.\nTo github.com:siddharthsai218/ukey.git\n   7fd2611..29965fa  main -> main (0 passwords entered)"
   },
-  webauthn: {
-    termTitle: "chrome (Google Account 2FA)",
-    cmd: "webauthn:navigator.credentials.get()",
-    prompt: "Waiting for physical security key touch...",
-    busProto: "WEBAUTHN_ASSERTION",
-    busReq: "rpId: google.com | challenge: 8d2e...44a1",
-    busCryptoWait: "Awaiting biometric touch for Google Account...",
-    bioRp: "Authorize login: google.com",
-    authOkMsg: "✓ Welcome back, Siddharth!\nIdentity verified against Google WebAuthn root.",
-    busOkMsg: "OK: Hardware-bound credential assertion verified in 0.35s"
+  web: {
+    cmd: "google-chrome https://myaccount.google.com/security",
+    prompt: "Waiting for physical FIDO2 security key touch...",
+    rp: "Authorize login: google.com",
+    logReq: "REQ WebAuthn: google.com (assertion)",
+    hudProto: "WEBAUTHN_ASSERTION",
+    hudReq: "rpId: google.com | challenge: 8d2e...44a1",
+    hudWait: "Awaiting biometric touch for Google Account...",
+    hudOk: "OK: Hardware-bound credential assertion verified in 0.35s",
+    termOk: "✓ Welcome back, Siddharth!\nIdentity verified against Google WebAuthn root via FIDO2."
   },
   fallback: {
-    termTitle: "siddharth@fedora:~ (bash)",
     cmd: "sudo whoami",
     prompt: "[sudo] password for siddharth: ********",
-    busProto: "PAM_FALLBACK (0.0s)",
-    busReq: "ukeyctl off: Bridge bypass enabled",
-    busCryptoWait: "Bypassed: Prompting local UNIX password immediately",
-    bioRp: "uKey Bypassed (ukeyctl off)",
-    authOkMsg: "root\n✓ 0.0s instant fallback. Never locks you out.",
-    busOkMsg: "OK: pam_unix.so processed password immediately."
+    rp: "uKey Bypassed (ukeyctl off)",
+    logReq: "Bridge bypass: 0.0s password fallback",
+    hudProto: "PAM_FALLBACK (0.0s)",
+    hudReq: "ukeyctl off: Bridge bypass mode enabled",
+    hudWait: "Bypassed: Prompting local UNIX password immediately",
+    hudOk: "OK: pam_unix.so processed password immediately in 0.0s.",
+    termOk: "root\n✓ 0.0s instant fallback. Zero hangs, zero lockouts."
   },
   rogue: {
-    termTitle: "siddharth@fedora:~ (security-audit)",
     cmd: "ukeyctl security-audit --live",
     prompt: "Listening for unauthorized frames on 0.0.0.0:8443...",
-    busProto: "SECURITY_DEFENSE (ALERT)",
-    busReq: "UNAUTHORIZED_CONNECT: 192.168.1.142:54892 (NO_TOKEN)",
-    busCryptoWait: "Connection rejected: missing / invalid HMAC token",
-    bioRp: "ATTACK BLOCKED: 192.168.1.142",
-    authOkMsg: "🚨 ROGUE DEVICE BLOCKED IN 3.2ms\nUnauthorized peer dropped. Zero-Trust handshake protected host.",
-    busOkMsg: "DROP: Unpaired TCP client disconnected in 3.2ms"
+    rp: "SECURITY ALERT: Rogue connection detected",
+    logReq: "ALERT: Unauthorized peer 192.168.1.142:54892",
+    hudProto: "SECURITY_DEFENSE (ALERT)",
+    hudReq: "UNAUTHORIZED_CONNECT: 192.168.1.142:54892 (NO_TOKEN)",
+    hudWait: "Connection rejected: missing / invalid HMAC token",
+    hudOk: "DROP: Unpaired TCP client disconnected in 3.2ms",
+    termOk: "🚨 ROGUE DEVICE BLOCKED IN 3.2ms\nUnauthorized peer dropped. Zero-Trust handshake protected host."
   }
 };
 
-function updateStage() {
-  const data = SIMULATION_DATA[activeScenario];
-  termTitleText.textContent = data.termTitle;
-  termCmdText.textContent = data.cmd;
-  termWaitPrompt.textContent = data.prompt;
-  termDoneBlock.style.display = "none";
-  termWaitLine.style.display = "flex";
+// Smooth typing animation for the terminal command
+let typingTimer = null;
+function typeCommand(text, callback) {
+  if (typingTimer) clearTimeout(typingTimer);
+  termCmdLine.textContent = "";
+  let i = 0;
+  function step() {
+    if (i < text.length) {
+      termCmdLine.textContent += text.charAt(i);
+      i++;
+      typingTimer = setTimeout(step, 24);
+    } else {
+      if (callback) callback();
+    }
+  }
+  step();
+}
 
-  busProtocolLabel.textContent = data.busProto;
-  busReqPayload.textContent = data.busReq;
-  busTransportPayload.textContent = isWifiTransport 
+function updateSimulation() {
+  const sc = SCENARIOS_DB[activeScenario];
+
+  // Reset visuals
+  fiberLine.classList.remove("pulse-danger");
+  photonBullet.classList.remove("danger");
+  phoneBridgeTag.className = "uapp-conn-tag";
+  phoneBridgeTag.textContent = "CONNECTED";
+  laptopStatusTag.style.color = "var(--emerald)";
+  laptopStatusTag.textContent = "● /dev/uhid Active";
+
+  termResultBlock.style.display = "none";
+  termWaitBadge.style.display = "none";
+
+  hudProtocolTag.textContent = sc.hudProto;
+  hudReqVal.textContent = sc.hudReq;
+  hudTransportVal.textContent = isWifi 
     ? "10.59.72.79:8443 (Zero-Trust Wi-Fi LAN)" 
     : "127.0.0.1:8443 (USB Loopback adb reverse)";
-  busCryptoPayload.textContent = data.busCryptoWait;
+  hudCryptoVal.textContent = sc.hudWait;
 
-  busNodeRequest.className = "packet-node active";
-  busNodeTransport.className = "packet-node active";
-  busNodeCrypto.className = "packet-node";
+  hudCardReq.className = "hud-card active";
+  hudCardTransport.className = "hud-card active";
+  hudCardCrypto.className = "hud-card";
 
-  bioPromptRp.textContent = data.bioRp;
-  fingerprintBtn.classList.remove("verified");
-  sensorPromptText.textContent = "Tap sensor to sign";
+  phoneSheetRp.textContent = sc.rp;
+  phoneLogLiveReq.innerHTML = `<span class="log-ts">[18:30:10]</span> ${sc.logReq}`;
+  sensorBtn.classList.remove("verified");
+  sensorHintText.textContent = "Tap sensor to sign";
 
-  if (activeScenario === "rogue") {
-    playAlertBuzz();
-    termWaitLine.style.display = "none";
-    termDoneBlock.style.display = "block";
-    termDoneBlock.className = "term-auth-alert";
-    termDoneBlock.textContent = data.authOkMsg;
-    busNodeTransport.className = "packet-node blocked";
-    busNodeCrypto.className = "packet-node blocked";
-    busCryptoPayload.textContent = data.busOkMsg;
-  }
+  // Execute realistic typing in terminal
+  typeCommand(sc.cmd, () => {
+    termWaitBadge.style.display = "flex";
+    termWaitText.textContent = sc.prompt;
+
+    if (activeScenario === "rogue") {
+      fiberLine.classList.add("pulse-danger");
+      photonBullet.classList.add("danger");
+      phoneBridgeTag.className = "uapp-conn-tag alert-tag";
+      phoneBridgeTag.textContent = "ATTACK BLOCKED";
+      laptopStatusTag.style.color = "var(--coral)";
+      laptopStatusTag.textContent = "● ROGUE REJECTED";
+
+      playAlertBuzz();
+
+      setTimeout(() => {
+        termWaitBadge.style.display = "none";
+        termResultBlock.style.display = "block";
+        termResultBlock.className = "screen-result-err";
+        termResultBlock.textContent = sc.termOk;
+
+        hudCardTransport.className = "hud-card blocked";
+        hudCardCrypto.className = "hud-card blocked";
+        hudCryptoVal.textContent = sc.hudOk;
+
+        const l = document.createElement("div");
+        l.innerHTML = `<span class="log-ts">[18:30:12]</span> <span style="color:var(--coral);">DROP rogue: invalid token</span>`;
+        phoneAuditLogs.appendChild(l);
+      }, 400);
+    }
+  });
 }
 
 // Scenario buttons
-document.querySelectorAll(".sc-button").forEach(btn => {
+document.querySelectorAll(".sc-tag-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     playClickTick();
-    document.querySelectorAll(".sc-button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".sc-tag-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     activeScenario = btn.dataset.scenario;
-    updateStage();
+    updateSimulation();
   });
 });
 
@@ -1187,70 +1620,62 @@ const btnUsb = document.getElementById("btnUsb");
 const btnWifi = document.getElementById("btnWifi");
 btnUsb.addEventListener("click", () => {
   playClickTick();
-  isWifiTransport = false;
+  isWifi = false;
   btnUsb.classList.add("active");
   btnWifi.classList.remove("active");
-  updateStage();
+  phoneBridgeIp.textContent = "127.0.0.1:8443";
+  updateSimulation();
 });
 btnWifi.addEventListener("click", () => {
   playClickTick();
-  isWifiTransport = true;
+  isWifi = true;
   btnWifi.classList.add("active");
   btnUsb.classList.remove("active");
-  updateStage();
+  phoneBridgeIp.textContent = "10.59.72.79:8443";
+  updateSimulation();
 });
 
 // Fingerprint Touch Action
-fingerprintBtn.addEventListener("click", () => {
+sensorBtn.addEventListener("click", () => {
   if (activeScenario === "rogue") return;
   playClickTick();
-  sensorPromptText.textContent = "Signing in StrongBox...";
-  fingerprintBtn.classList.add("verified");
+  sensorHintText.textContent = "Signing in StrongBox...";
+  sensorBtn.classList.add("verified");
 
   setTimeout(() => {
     playSuccessChime();
-    const data = SIMULATION_DATA[activeScenario];
-    sensorPromptText.textContent = "✓ Verified (StrongBox)";
-    termWaitLine.style.display = "none";
-    termDoneBlock.style.display = "block";
-    termDoneBlock.className = "term-auth-success";
-    termDoneBlock.textContent = data.authOkMsg;
+    const sc = SCENARIOS_DB[activeScenario];
+    sensorHintText.textContent = "✓ Verified (StrongBox)";
+    termWaitBadge.style.display = "none";
+    termResultBlock.style.display = "block";
+    termResultBlock.className = "screen-result-ok";
+    termResultBlock.textContent = sc.termOk;
 
-    busNodeCrypto.className = "packet-node verified";
-    busCryptoPayload.textContent = data.busOkMsg;
-  }, 350);
+    hudCardCrypto.className = "hud-card verified";
+    hudCryptoVal.textContent = sc.hudOk;
+
+    const l = document.createElement("div");
+    l.innerHTML = `<span class="log-ts">[18:30:12]</span> OK StrongBox signature verified`;
+    phoneAuditLogs.appendChild(l);
+  }, 320);
 });
 
 // Distro Tabs
-const DISTRO_COMMANDS = {
-  fedora: `# 1. Universal installer (configures /dev/uhid, systemd user service)
+const DISTRO_SCRIPTS = {
+  fedora: {
+    title: "Fedora 40+ / RHEL 9 (dnf)",
+    code: `# 1. Universal installer (configures /dev/uhid, systemd user service)
 curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
 
 # 2. Configure passwordless sudo with 0.0s password fallback
 sudo ./scripts/setup_pam_sudo.sh
 
 # 3. Add OpenSSH FIDO2 hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`,
-
-  ubuntu: `# 1. Universal installer (installs libpam-u2f, fido2-tools automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure PAM sudo
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. OpenSSH hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`,
-
-  arch: `# 1. Universal installer (installs pam-u2f, libfido2 automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure PAM sudo
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. OpenSSH hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`,
-
-  suse: `# 1. Universal installer (installs pam_u2f, fido2-tools automatically)
+ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
+  },
+  ubuntu: {
+    title: "Ubuntu 22.04+ / Debian 12 (apt-get)",
+    code: `# 1. Universal installer (installs libpam-u2f, fido2-tools automatically)
 curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
 
 # 2. Configure PAM sudo
@@ -1258,33 +1683,49 @@ sudo ./scripts/setup_pam_sudo.sh
 
 # 3. OpenSSH hardware key for Git Push
 ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
+  },
+  arch: {
+    title: "Arch Linux / Manjaro (pacman)",
+    code: `# 1. Universal installer (installs pam-u2f, libfido2 automatically)
+curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
+
+# 2. Configure PAM sudo
+sudo ./scripts/setup_pam_sudo.sh
+
+# 3. OpenSSH hardware key for Git Push
+ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
+  },
+  suse: {
+    title: "openSUSE Tumbleweed / Leap (zypper)",
+    code: `# 1. Universal installer (installs pam_u2f, fido2-tools automatically)
+curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
+
+# 2. Configure PAM sudo
+sudo ./scripts/setup_pam_sudo.sh
+
+# 3. OpenSSH hardware key for Git Push
+ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
+  }
 };
 
-const distroLabels = {
-  fedora: "Fedora 40+ / RHEL 9 (dnf)",
-  ubuntu: "Ubuntu 22.04+ / Debian 12 (apt-get)",
-  arch: "Arch Linux / Manjaro (pacman)",
-  suse: "openSUSE Tumbleweed / Leap (zypper)"
-};
-
-const distroTabs = document.querySelectorAll(".distro-tab-btn");
-const codeDistroLabel = document.getElementById("codeDistroLabel");
-const codeDistroBody = document.getElementById("codeDistroBody");
+const distroTabItems = document.querySelectorAll(".distro-tab-item");
+const distroPkgTitle = document.getElementById("distroPkgTitle");
+const distroCodeText = document.getElementById("distroCodeText");
 const btnCopyDistro = document.getElementById("btnCopyDistro");
 
-distroTabs.forEach(tab => {
-  tab.addEventListener("click", () => {
+distroTabItems.forEach(item => {
+  item.addEventListener("click", () => {
     playClickTick();
-    distroTabs.forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    const d = tab.dataset.distro;
-    codeDistroLabel.textContent = distroLabels[d];
-    codeDistroBody.innerText = DISTRO_COMMANDS[d];
+    distroTabItems.forEach(t => t.classList.remove("active"));
+    item.classList.add("active");
+    const d = item.dataset.distro;
+    distroPkgTitle.textContent = DISTRO_SCRIPTS[d].title;
+    distroCodeText.innerText = DISTRO_SCRIPTS[d].code;
   });
 });
 
 btnCopyDistro.addEventListener("click", () => {
-  navigator.clipboard.writeText(codeDistroBody.innerText).then(() => {
+  navigator.clipboard.writeText(distroCodeText.innerText).then(() => {
     playClickTick();
     btnCopyDistro.textContent = "Copied!";
     setTimeout(() => btnCopyDistro.textContent = "Copy Command", 2000);
@@ -1305,24 +1746,24 @@ document.querySelectorAll("[data-copy]").forEach(btn => {
 });
 
 // FAQ Accordion
-document.querySelectorAll(".faq-box").forEach(box => {
-  box.querySelector(".faq-question").addEventListener("click", () => {
+document.querySelectorAll(".faq-item-card").forEach(box => {
+  box.querySelector(".faq-question-btn").addEventListener("click", () => {
     playClickTick();
     const isOpen = box.classList.contains("open");
-    document.querySelectorAll(".faq-box").forEach(b => {
+    document.querySelectorAll(".faq-item-card").forEach(b => {
       b.classList.remove("open");
-      b.querySelector(".faq-answer").style.maxHeight = null;
+      b.querySelector(".faq-collapse-body").style.maxHeight = null;
     });
     if (!isOpen) {
       box.classList.add("open");
-      const a = box.querySelector(".faq-answer");
+      const a = box.querySelector(".faq-collapse-body");
       a.style.maxHeight = a.scrollHeight + "px";
     }
   });
 });
 
-// Init
-updateStage();
+// Initialize first simulation scenario
+updateSimulation();
 </script>
 </body>
 </html>
