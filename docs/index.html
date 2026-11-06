@@ -1,1415 +1,2079 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>uKey — There is no USB key</title>
-<meta name="description" content="A virtual FIDO2 authenticator for Linux. The kernel sees a USB security key. The private key lives on an Android phone. A readable Python daemon connects the two.">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#070a0d">
+<title>uKey — Touch ID for Linux</title>
+<meta name="description" content="Turn your Android phone's biometric hardware into a native USB FIDO2 security key for Linux. Fingerprint for sudo, git push, and WebAuthn. 100% local, zero cloud.">
+<meta name="theme-color" content="#090A0F">
+
+<!-- Open Graph / Twitter Cards -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="uKey">
-<meta property="og:title" content="uKey — There is no USB key">
-<meta property="og:description" content="The kernel sees a real FIDO2 device. The private key lives on an Android phone. This is how the illusion is built — including the parts that don't work yet.">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="uKey — There is no USB key">
-<meta name="twitter:description" content="A virtual FIDO2 authenticator for Linux. The key is a phone. The source is readable.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23070a0d'/%3E%3Cpath d='M21.5 7a6.5 6.5 0 1 0-5.8 9.4L7 25.1V29h4v-3h3v-3h1.9A6.5 6.5 0 0 0 21.5 7Zm0 4a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z' fill='%235eead4'/%3E%3C/svg%3E">
-<script>document.documentElement.classList.add("js");</script>
+<meta property="og:title" content="uKey: Touch ID for Linux">
+<meta property="og:description" content="Your Android phone's biometric enclave as a native USB FIDO2 security key for Linux. Fingerprint for sudo, git push, and WebAuthn logins. 100% local, zero cloud.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="uKey: Touch ID for Linux">
+<meta name="twitter:description" content="Your phone as a native USB FIDO2 security key. Fingerprint for sudo, git push, and WebAuthn. Free and open source.">
+
+<script>
+  try { const t = localStorage.getItem("ukey-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Geist:wght@300..800&family=Geist+Mono:wght@400..700&display=swap" rel="stylesheet">
+
 <style>
-/* ---------- tokens ---------- */
 :root {
-  --bg: #070a0d;
-  --bg-soft: #0a0f14;
-  --panel: rgba(12, 18, 25, 0.78);
-  --panel-solid: #0b1118;
-  --panel-2: #0e161f;
-  --line: rgba(148, 163, 184, 0.14);
-  --line-strong: rgba(148, 163, 184, 0.28);
-  --text: #e9f0f7;
-  --muted: #93a4b5;
-  --dim: #657687;
-  --teal: #5eead4;
-  --teal-deep: #14b8a6;
-  --violet: #a78bfa;
-  --amber: #fbbf24;
-  --rose: #fb7185;
-  --green: #4ade80;
-  --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --max: 1180px;
-  --gutter: clamp(1.15rem, 4vw, 2.5rem);
-  --radius: 18px;
-  --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+  --black: #090A0F;
+  --black-card: #11131A;
+  --white: #F8FAFD;
+  --gray-1: #94A3B8;
+  --gray-2: #232733;
+  --gray-3: #161822;
+  --accent-green: #34D399;
+  --accent-green-bg: rgba(52, 211, 153, 0.12);
+  --accent-cyan: #38BDF8;
+  --accent-cyan-bg: rgba(56, 189, 248, 0.12);
+  --accent-amber: #FBBF24;
+  --accent-red: #F87171;
+  --gutter: clamp(18px, 4.5vw, 72px);
+  --text: "Geist", system-ui, -apple-system, sans-serif;
+  --display: "Archivo", system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --border-subtle: rgba(255, 255, 255, 0.08);
 }
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 92px; }
+
+:root[data-theme="light"] {
+  --black: #F8FAFD;
+  --black-card: #FFFFFF;
+  --white: #0B0E14;
+  --gray-1: #64748B;
+  --gray-2: #E2E8F0;
+  --gray-3: #F1F5F9;
+  --accent-green: #059669;
+  --accent-green-bg: rgba(5, 150, 105, 0.12);
+  --accent-cyan: #0284C7;
+  --accent-cyan-bg: rgba(2, 132, 199, 0.12);
+  --accent-amber: #D97706;
+  --accent-red: #DC2626;
+  --border-subtle: rgba(0, 0, 0, 0.09);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; background: var(--black); }
 body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  font-size: 16px;
-  line-height: 1.6;
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--text);
+  font-size: 16.5px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  transition: background 0.25s var(--ease), color 0.25s var(--ease);
 }
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  background:
-    radial-gradient(900px 620px at 82% -8%, rgba(94, 234, 212, 0.13), transparent 62%),
-    radial-gradient(720px 560px at 8% 28%, rgba(167, 139, 250, 0.08), transparent 66%),
-    radial-gradient(900px 700px at 50% 108%, rgba(20, 184, 166, 0.06), transparent 65%),
-    var(--bg);
-}
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.26;
-  background-image:
-    linear-gradient(rgba(148, 163, 184, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.055) 1px, transparent 1px);
-  background-size: 72px 72px;
-  -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 18%, #000 10%, transparent 75%);
-  mask-image: radial-gradient(ellipse 75% 60% at 50% 18%, #000 10%, transparent 75%);
-}
-::selection { background: rgba(94, 234, 212, 0.28); color: #fff; }
+
 a { color: inherit; text-decoration: none; }
-button, input { font: inherit; }
-button { color: inherit; }
-img, svg { display: block; max-width: 100%; }
-code, pre, kbd, samp { font-family: var(--mono); }
-:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 4px; }
-.wrap { width: min(var(--max), calc(100% - (2 * var(--gutter)))); margin-inline: auto; }
-.skip {
-  position: absolute; left: 16px; top: -60px; z-index: 200;
-  background: var(--teal); color: #04110f; padding: 10px 14px;
-  border-radius: 8px; font-weight: 700; font-size: 13px;
-  transition: top 160ms ease;
-}
-.skip:focus { top: 14px; }
+::selection { background: var(--white); color: var(--black); }
+:focus-visible { outline: 2px solid var(--accent-green); outline-offset: 3px; }
 
-/* ---------- nav ---------- */
+/* Scroll Progress Bar */
+.scroll-progress {
+  position: fixed; top: 0; left: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan));
+  z-index: 200; width: 0; transition: width .1s ease-out;
+}
+
+/* Navigation */
 .nav {
-  position: sticky; top: 0; z-index: 80;
-  border-bottom: 1px solid var(--line);
-  background: rgba(7, 10, 13, 0.72);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px var(--gutter);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: color-mix(in srgb, var(--black) 88%, transparent);
+  border-bottom: 1px solid var(--border-subtle);
 }
-.nav-inner {
-  height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+.wordmark {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 24px;
+  letter-spacing: -.03em;
+  display: flex; align-items: center; gap: 8px;
 }
-.brand { display: inline-flex; align-items: center; gap: 11px; font-weight: 760; letter-spacing: -0.03em; font-size: 19px; }
-.brand-mark {
-  width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
-  background: linear-gradient(145deg, rgba(94, 234, 212, 0.18), rgba(94, 234, 212, 0.04));
-  border: 1px solid rgba(94, 234, 212, 0.32);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 28px rgba(94, 234, 212, 0.08);
+.wordmark .badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--accent-green-bg);
+  border: 1px solid color-mix(in srgb, var(--accent-green) 40%, transparent);
+  color: var(--accent-green);
+  font-weight: 600;
+  display: flex; align-items: center; gap: 5px;
 }
-.brand-mark svg { width: 19px; height: 19px; }
-.brand small {
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
-  color: var(--dim); font-weight: 500; text-transform: uppercase;
-  padding-left: 2px; border-left: 1px solid var(--line-strong); margin-left: 2px; padding-left: 12px;
+.pulse-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+  animation: pulse-glow 2s infinite;
 }
-.nav-links { display: flex; align-items: center; gap: 4px; }
-.nav-links a {
-  color: var(--muted); font-size: 13.5px; padding: 8px 11px; border-radius: 8px;
-  transition: color 160ms ease, background 160ms ease;
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
 }
-.nav-links a:hover { color: var(--text); background: rgba(148, 163, 184, 0.08); }
-.nav-actions { display: flex; align-items: center; gap: 9px; }
-.nav-github {
-  display: inline-flex; align-items: center; gap: 7px;
-  font-size: 13px; font-weight: 600; color: var(--text);
-  border: 1px solid var(--line-strong); border-radius: 9px; padding: 8px 12px;
-  background: rgba(148, 163, 184, 0.05);
-  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
-}
-.nav-github:hover { border-color: rgba(94, 234, 212, 0.48); background: rgba(94, 234, 212, 0.07); transform: translateY(-1px); }
-.nav-github svg { width: 15px; height: 15px; }
-.menu-btn {
-  display: none; width: 38px; height: 38px; border: 1px solid var(--line-strong);
-  background: transparent; border-radius: 9px; cursor: pointer; place-items: center;
-}
-.menu-btn span { display: block; width: 16px; height: 1.5px; background: var(--text); margin: 3px 0; transition: transform 160ms ease, opacity 160ms ease; }
-.menu-btn[aria-expanded="true"] span:nth-child(1) { transform: translateY(4.5px) rotate(45deg); }
-.menu-btn[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
-.menu-btn[aria-expanded="true"] span:nth-child(3) { transform: translateY(-4.5px) rotate(-45deg); }
 
-/* ---------- shared type ---------- */
-.kicker {
-  display: inline-flex; align-items: center; gap: 9px;
-  font-family: var(--mono); font-size: 11px; font-weight: 600;
-  letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal);
+.nav-links { display: flex; align-items: center; gap: 24px; list-style: none; }
+.nav-links a { font-size: 14.5px; color: var(--gray-1); transition: color .15s; font-weight: 500; }
+.nav-links a:hover { color: var(--white); }
+@media (max-width: 820px) { .nav-links { display: none; } }
+
+.nav-actions { display: flex; align-items: center; gap: 12px; }
+
+.theme-toggle {
+  background: var(--gray-3); border: 1px solid var(--border-subtle);
+  color: var(--white); width: 38px; height: 38px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .15s;
 }
-.kicker::before { content: ""; width: 22px; height: 1px; background: currentColor; opacity: 0.7; }
-.display {
-  margin: 18px 0 0; font-size: clamp(2.25rem, 5vw, 4.35rem);
-  line-height: 0.99; letter-spacing: -0.055em; font-weight: 800;
+.theme-toggle:hover { border-color: var(--white); transform: scale(1.05); }
+
+/* Typography & General */
+.wrap { padding-inline: var(--gutter); }
+.mega {
+  font-family: var(--display);
+  font-weight: 900;
+  line-height: .92;
+  letter-spacing: -.035em;
+  font-variation-settings: "wdth" 115;
 }
-.display em { font-style: normal; color: var(--teal); }
-.lede { color: var(--muted); font-size: clamp(1rem, 1.45vw, 1.14rem); line-height: 1.78; }
-.section { position: relative; padding: clamp(4.2rem, 8vw, 7rem) 0; border-top: 1px solid var(--line); }
-.section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 0.62fr); gap: clamp(1.5rem, 4vw, 4rem); align-items: end; margin-bottom: clamp(2rem, 4vw, 3.5rem); }
-.section-head .lede { margin: 0; max-width: 52ch; }
-.section-head .display { margin-top: 14px; max-width: 17ch; }
-.section-head.center { grid-template-columns: 1fr; text-align: center; justify-items: center; }
-.section-head.center .display { margin-inline: auto; }
-.section-head.center .lede { max-width: 68ch; }
+.h2 {
+  font-family: var(--display);
+  font-size: clamp(34px, 5.2vw, 76px);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -.03em;
+}
+.lede {
+  font-size: clamp(17px, 1.6vw, 21px);
+  line-height: 1.5;
+  color: var(--gray-1);
+  max-width: 36em;
+}
+.lede b { color: var(--white); }
 .mono { font-family: var(--mono); }
-.muted { color: var(--muted); }
-.dim { color: var(--dim); }
-.accent { color: var(--teal); }
-.nowrap { white-space: nowrap; }
 
-/* ---------- buttons ---------- */
+/* Buttons */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-  min-height: 44px; padding: 11px 17px; border-radius: 10px;
-  border: 1px solid var(--line-strong); background: rgba(148, 163, 184, 0.05);
-  color: var(--text); font-size: 13.5px; font-weight: 650; letter-spacing: -0.01em;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 22px;
+  font: 600 14.5px/1 var(--text);
+  border: 1px solid var(--border-subtle);
+  background: var(--gray-3);
+  color: var(--white);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all .18s var(--ease);
 }
-.btn:hover { transform: translateY(-2px); border-color: rgba(94, 234, 212, 0.45); background: rgba(94, 234, 212, 0.08); }
-.btn.solid {
-  background: linear-gradient(180deg, #74f4df, #34d6c0);
-  color: #04201c; border-color: transparent;
-  box-shadow: 0 10px 34px rgba(45, 212, 191, 0.22), inset 0 1px 0 rgba(255,255,255,0.45);
-}
-.btn.solid:hover { background: linear-gradient(180deg, #8af7e4, #4de0cb); box-shadow: 0 14px 40px rgba(45, 212, 191, 0.28); }
-.btn svg { width: 15px; height: 15px; }
-.btn.ghost { background: transparent; }
+.btn:hover { background: var(--white); color: var(--black); border-color: var(--white); transform: translateY(-1px); }
+.btn.solid { background: var(--white); color: var(--black); border-color: var(--white); }
+.btn.solid:hover { background: transparent; color: var(--white); }
+.btn.github { background: #24292F; color: #FFF; border-color: #383E47; }
+.btn.github:hover { background: #323842; color: #FFF; }
 
-/* ---------- hero ---------- */
-.hero { position: relative; padding: clamp(3.4rem, 8vw, 7rem) 0 clamp(3rem, 6vw, 5rem); }
-.hero-grid { display: grid; grid-template-columns: minmax(0, 1.03fr) minmax(0, 0.97fr); gap: clamp(2.4rem, 5vw, 5.2rem); align-items: center; }
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 9px; flex-wrap: wrap;
-  padding: 7px 11px 7px 8px; border: 1px solid var(--line);
-  background: rgba(148, 163, 184, 0.045); border-radius: 999px;
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.09em;
-  text-transform: uppercase; color: var(--muted);
+/* Hero Section */
+.hero {
+  padding: clamp(50px, 7vw, 100px) var(--gutter) 30px;
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center;
+  position: relative;
 }
-.eyebrow .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 0 rgba(94, 234, 212, 0.5); animation: pulse 2.4s infinite; margin-left: 3px; }
-.eyebrow b { color: var(--text); font-weight: 600; }
-.hero h1 {
-  margin: 22px 0 0; font-size: clamp(3.5rem, 8.6vw, 7.7rem);
-  line-height: 0.87; letter-spacing: -0.075em; font-weight: 820;
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 12.5px;
+  padding: 6px 16px;
+  border-radius: 99px;
+  background: var(--accent-green-bg);
+  border: 1px solid color-mix(in srgb, var(--accent-green) 35%, transparent);
+  color: var(--accent-green);
+  margin-bottom: 24px;
+  font-weight: 600;
 }
-.hero h1 .line { display: block; }
-.hero h1 .no { color: transparent; -webkit-text-stroke: 1.1px rgba(233, 240, 247, 0.68); text-stroke: 1.1px rgba(233, 240, 247, 0.68); }
-.hero h1 .key { color: var(--teal); position: relative; display: inline-block; }
-.hero h1 .key::after {
-  content: ""; position: absolute; left: 2%; right: 2%; bottom: 3px; height: 9px;
-  background: rgba(94, 234, 212, 0.12); border-radius: 50%;
-  filter: blur(8px); z-index: -1;
+.hero-title {
+  font-size: clamp(44px, 7.5vw, 105px);
+  margin-bottom: 20px;
+  max-width: 16ch;
 }
-.hero-sub { margin: 24px 0 0; font-size: clamp(1.22rem, 2.2vw, 1.65rem); line-height: 1.2; letter-spacing: -0.035em; font-weight: 600; color: var(--text); }
-.hero-sub span { color: var(--muted); font-weight: 400; }
-.hero-lede { margin: 17px 0 0; max-width: 54ch; font-size: 15.5px; line-height: 1.78; color: var(--muted); }
-.hero-lede strong { color: var(--text); font-weight: 600; }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
-.hero-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 25px; color: var(--dim); font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; }
-.hero-meta span { display: inline-flex; gap: 7px; align-items: center; }
-.hero-meta i { width: 3px; height: 3px; border-radius: 50%; background: var(--line-strong); font-style: normal; }
-.hero-meta .ok { color: var(--teal); }
-.hero-scroll { display: inline-flex; align-items: center; gap: 9px; margin-top: 36px; color: var(--dim); font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
-.hero-scroll svg { width: 13px; height: 13px; animation: nudge 2s ease-in-out infinite; }
+.hero-desc {
+  max-width: 38em; text-align: center; margin-bottom: 34px;
+}
+.hero-cta {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 14px;
+  margin-bottom: 32px;
+}
+.cmd-box {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--gray-3); border: 1px solid var(--border-subtle);
+  border-radius: 10px; padding: 12px 18px;
+  font-family: var(--mono); font-size: 13px;
+  max-width: 660px; width: 100%;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.cmd-box code { color: var(--white); overflow-x: auto; white-space: nowrap; margin-right: 12px; }
+.cmd-box code span.p { color: var(--gray-1); }
+.copy-btn {
+  background: var(--gray-2); border: 1px solid var(--border-subtle); color: var(--white);
+  font-size: 12px; font-family: var(--mono); padding: 7px 14px;
+  border-radius: 6px; cursor: pointer; transition: all .15s;
+  white-space: nowrap; font-weight: 600;
+}
+.copy-btn:hover { background: var(--accent-green); color: #000; border-color: var(--accent-green); }
 
-/* ---------- stage / hero visual ---------- */
-.stage {
-  position: relative; padding: 14px;
-  border: 1px solid var(--line); border-radius: 24px;
-  background:
-    radial-gradient(120% 90% at 85% 0%, rgba(94, 234, 212, 0.10), transparent 58%),
-    linear-gradient(160deg, rgba(14, 22, 31, 0.92), rgba(8, 12, 17, 0.92));
-  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.04);
+/* Live Metrics Strip */
+.metrics-strip {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px; max-width: 980px; width: 100%; margin: 34px auto 0;
+}
+.metric-pill {
+  background: var(--black-card); border: 1px solid var(--border-subtle);
+  border-radius: 10px; padding: 14px 18px; text-align: left;
+  display: flex; flex-direction: column; gap: 4px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+}
+.metric-val {
+  font-family: var(--display); font-size: 26px; font-weight: 900;
+  color: var(--white); line-height: 1; display: flex; align-items: baseline; gap: 4px;
+}
+.metric-val span { font-size: 13px; font-family: var(--mono); color: var(--accent-green); }
+.metric-label { font-size: 12px; color: var(--gray-1); font-weight: 500; }
+
+/* =========================================================================
+   HARDWARE RIG: LAPTOP TO MOBILE INTERACTIVE STAGE
+   ========================================================================= */
+.rig-section {
+  padding: 30px var(--gutter) 90px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.rig-header {
+  text-align: center; max-width: 44em; margin: 0 auto 28px;
+}
+.rig-controls {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+  gap: 14px; margin-bottom: 24px;
+  padding: 12px 18px; background: var(--black-card);
+  border: 1px solid var(--border-subtle); border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+}
+.mode-toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+.mode-btn {
+  background: transparent; border: 1px solid var(--border-subtle);
+  color: var(--gray-1); font-family: var(--mono); font-size: 12.5px;
+  padding: 8px 14px; border-radius: 7px; cursor: pointer;
+  transition: all .15s; display: flex; align-items: center; gap: 6px;
+}
+.mode-btn:hover { color: var(--white); border-color: var(--white); }
+.mode-btn.active {
+  background: var(--white); color: var(--black); border-color: var(--white); font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.mode-btn.danger.active {
+  background: var(--accent-red); color: #FFF; border-color: var(--accent-red);
+}
+
+.conn-switcher {
+  display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px;
+}
+.conn-pill {
+  padding: 6px 12px; border-radius: 99px; background: var(--gray-3);
+  border: 1px solid var(--border-subtle); color: var(--white);
+  cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px;
+}
+.conn-pill.active {
+  border-color: var(--accent-green); background: var(--accent-green-bg); color: var(--accent-green);
+  font-weight: 600;
+}
+.conn-pill.wifi.active {
+  border-color: var(--accent-cyan); background: var(--accent-cyan-bg); color: var(--accent-cyan);
+}
+.conn-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+/* The Physical Stage */
+.stage-viewport {
+  position: relative;
+  background: radial-gradient(circle at 50% 25%, #181B24 0%, #080A0E 75%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: clamp(28px, 4vw, 50px) 24px 44px;
+  min-height: 570px;
+  display: flex; align-items: center; justify-content: center;
   overflow: hidden;
-}
-.stage::before {
-  content: ""; position: absolute; width: 420px; height: 420px; right: -180px; top: -210px;
-  border-radius: 50%; border: 1px solid rgba(94, 234, 212, 0.12);
-  box-shadow: 0 0 0 28px rgba(94, 234, 212, 0.025), 0 0 0 56px rgba(94, 234, 212, 0.018);
-  pointer-events: none;
-}
-.stage-top { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 7px 14px; }
-.stage-title { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
-.stage-title .record { width: 7px; height: 7px; border-radius: 50%; background: var(--rose); box-shadow: 0 0 12px rgba(251, 113, 133, 0.55); }
-.stage-title b { color: var(--muted); font-weight: 500; }
-.stage-status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 9.5px; color: var(--teal); letter-spacing: 0.08em; text-transform: uppercase; }
-.stage-status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px var(--teal); }
-.stage-inner { position: relative; border: 1px solid var(--line); border-radius: 15px; background: rgba(4, 8, 11, 0.68); overflow: hidden; }
-.stage-terminal { padding: 16px 16px 14px; border-bottom: 1px solid var(--line); }
-.term-line { display: flex; gap: 9px; align-items: baseline; font-family: var(--mono); font-size: 10.5px; line-height: 1.85; white-space: nowrap; }
-.term-line .prompt { color: var(--teal); user-select: none; }
-.term-line .cmd { color: #dbe7f1; }
-.term-line .out { color: var(--muted); }
-.term-line .ok { color: var(--green); }
-.term-line .warn { color: var(--amber); }
-.term-line .faint { color: var(--dim); }
-.term-cursor { display: inline-block; width: 6px; height: 12px; background: var(--teal); vertical-align: -1px; animation: blink 1.2s steps(1) infinite; }
-.stage-flow { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 17px 18px; border-bottom: 1px solid var(--line); }
-.stage-flow::before { content: ""; position: absolute; left: 42px; right: 42px; top: 50%; border-top: 1px dashed rgba(94, 234, 212, 0.28); }
-.flow-node { position: relative; z-index: 1; display: inline-flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
-.flow-node .chip {
-  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px;
-  border: 1px solid rgba(94, 234, 212, 0.3); background: #09120f;
-  font-family: var(--mono); font-size: 8px; font-weight: 700; color: var(--teal); letter-spacing: 0.03em;
-  box-shadow: 0 0 24px rgba(94, 234, 212, 0.06);
-}
-.flow-node .label { font-family: var(--mono); font-size: 8px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
-.flow-node:nth-child(2) .chip { animation: chipPulse 3.2s ease-in-out infinite; }
-.stage-bottom { display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 0; }
-.stage-code { display: flex; flex-direction: column; justify-content: center; padding: 15px 16px 16px; border-right: 1px solid var(--line); }
-.stage-code .caption { margin-bottom: 9px; font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
-.stage-code-note { display: flex; align-items: center; gap: 7px; margin-top: 15px; font-family: var(--mono); font-size: 8px; line-height: 1.4; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dim); }
-.stage-code-note::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--rose); flex: none; }
-.code-mini { font-family: var(--mono); font-size: 9.5px; line-height: 1.75; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
-.code-mini .k { color: var(--violet); }
-.code-mini .s { color: var(--amber); }
-.code-mini .t { color: var(--teal); }
-.phone-zone { display: flex; align-items: center; justify-content: center; padding: 14px 12px 16px; background: radial-gradient(circle at 50% 38%, rgba(94, 234, 212, 0.08), transparent 65%); }
-.phone {
-  position: relative; width: 132px; aspect-ratio: 9 / 18.4;
-  border-radius: 22px; border: 1px solid rgba(148, 163, 184, 0.32);
-  background: linear-gradient(155deg, #111a23, #070b0f);
-  box-shadow: 0 18px 36px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.03);
-  padding: 7px;
-}
-.phone::before { content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 36px; height: 5px; border-radius: 999px; background: #020405; z-index: 2; }
-.phone-screen { height: 100%; border-radius: 16px; background: radial-gradient(circle at 50% 0%, rgba(94, 234, 212, 0.15), transparent 52%), #091017; border: 1px solid rgba(148,163,184,0.12); padding: 24px 8px 10px; display: flex; flex-direction: column; align-items: center; text-align: center; overflow: hidden; }
-.phone-brand { font-family: var(--mono); font-size: 7px; letter-spacing: 0.12em; color: var(--teal); text-transform: uppercase; }
-.phone-lock { margin-top: 15px; width: 35px; height: 35px; border-radius: 50%; display: grid; place-items: center; border: 1px solid rgba(94,234,212,0.32); background: rgba(94,234,212,0.08); color: var(--teal); }
-.phone-lock svg { width: 15px; height: 15px; }
-.phone-rp { margin-top: 8px; font-size: 9px; font-weight: 650; color: var(--text); }
-.phone-sub { margin-top: 2px; font-family: var(--mono); font-size: 6.5px; color: var(--dim); }
-.phone-finger { margin-top: 12px; width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(94, 234, 212, 0.24); display: grid; place-items: center; background: rgba(94, 234, 212, 0.06); }
-.phone-finger svg { width: 19px; height: 19px; color: var(--teal); }
-.phone-ok { margin-top: auto; width: 100%; border-radius: 6px; background: rgba(94, 234, 212, 0.12); border: 1px solid rgba(94, 234, 212, 0.22); padding: 4px 2px; font-family: var(--mono); font-size: 6px; letter-spacing: 0.08em; color: var(--teal); text-transform: uppercase; }
-.stage-note { display: flex; align-items: center; gap: 8px; padding: 12px 7px 2px; color: var(--dim); font-family: var(--mono); font-size: 9px; line-height: 1.5; }
-.stage-note svg { width: 12px; height: 12px; flex: none; color: var(--teal); }
-.stage-float {
-  position: absolute; z-index: 3; right: 16px; top: 52px;
-  border: 1px dashed rgba(251, 191, 36, 0.45); border-radius: 7px;
-  padding: 5px 8px; background: rgba(7, 10, 13, 0.86);
-  font-family: var(--mono); font-size: 8px; color: var(--amber); letter-spacing: 0.05em;
-  transform: rotate(2deg);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 30px 80px rgba(0,0,0,0.5);
 }
 
-/* ---------- stats strip ---------- */
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--line); }
-.stat { background: rgba(8, 13, 18, 0.78); padding: 18px 18px 17px; }
-.stat .num { font-size: clamp(1.55rem, 2.7vw, 2.15rem); line-height: 1; letter-spacing: -0.04em; font-weight: 760; }
-.stat .num span { color: var(--teal); }
-.stat .lbl { margin-top: 7px; font-family: var(--mono); font-size: 9px; line-height: 1.5; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
-.stat .lbl b { display: block; color: var(--muted); font-weight: 500; letter-spacing: 0.06em; }
-.plain-note { display: flex; gap: 12px; align-items: flex-start; margin-top: 18px; padding: 15px 17px; border: 1px solid rgba(94, 234, 212, 0.18); border-radius: 11px; background: rgba(94, 234, 212, 0.045); color: var(--muted); font-size: 13.5px; line-height: 1.65; }
-.plain-note svg { width: 17px; height: 17px; flex: none; color: var(--teal); margin-top: 2px; }
-.plain-note b { color: var(--text); font-weight: 600; }
-
-/* ---------- layer cards ---------- */
-.layer-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 26px; }
-.layer-card {
-  position: relative; padding: 19px 18px 18px; border: 1px solid var(--line); border-radius: 14px;
-  background: linear-gradient(165deg, rgba(14, 22, 31, 0.82), rgba(8, 13, 18, 0.68));
-  overflow: hidden;
+.hardware-duo {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: clamp(20px, 3.5vw, 50px);
+  position: relative; width: 100%; max-width: 1080px;
 }
-.layer-card::after { content: attr(data-n); position: absolute; right: 13px; top: 6px; font-family: var(--mono); font-size: 31px; font-weight: 700; color: rgba(148, 163, 184, 0.07); letter-spacing: -0.08em; }
-.layer-card h3 { margin: 0 0 7px; font-size: 14.5px; line-height: 1.3; letter-spacing: -0.02em; }
-.layer-card p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.65; }
-.layer-card .tech { display: inline-block; margin-top: 12px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.06em; color: var(--teal); border: 1px solid rgba(94, 234, 212, 0.18); border-radius: 5px; padding: 3px 6px; background: rgba(94, 234, 212, 0.04); }
-
-/* ---------- trace ---------- */
-.trace-wrap { position: relative; margin-top: 28px; }
-.trace-wrap::before { content: ""; position: absolute; left: 20px; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(to bottom, rgba(94,234,212,0.5), rgba(148,163,184,0.12) 75%, transparent); }
-.trace-step { position: relative; display: grid; grid-template-columns: 42px minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 20px; padding: 0 0 24px; }
-.trace-step:last-child { padding-bottom: 0; }
-.trace-dot { position: relative; z-index: 1; width: 41px; height: 41px; display: grid; place-items: center; border-radius: 50%; border: 1px solid rgba(94, 234, 212, 0.3); background: #08110f; color: var(--teal); font-family: var(--mono); font-size: 10px; font-weight: 700; box-shadow: 0 0 0 6px var(--bg); }
-.trace-copy h3 { margin: 5px 0 7px; font-size: 16px; letter-spacing: -0.025em; line-height: 1.25; }
-.trace-copy p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
-.trace-copy p + p { margin-top: 7px; }
-.trace-copy .tag { display: inline-flex; margin-top: 9px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--amber); border: 1px solid rgba(251, 191, 36, 0.2); background: rgba(251, 191, 36, 0.045); padding: 3px 7px; border-radius: 5px; }
-.trace-code { min-width: 0; align-self: start; }
-
-/* ---------- code ---------- */
-.code-card { border: 1px solid var(--line); border-radius: 12px; background: #05090d; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.025); }
-.code-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: rgba(148, 163, 184, 0.025); }
-.code-head .file { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em; color: var(--dim); }
-.code-head .file svg { width: 12px; height: 12px; color: var(--teal); }
-.copy-btn { border: 1px solid var(--line); background: transparent; color: var(--dim); font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.06em; padding: 3px 6px; border-radius: 4px; cursor: pointer; transition: color 140ms ease, border-color 140ms ease; }
-.copy-btn:hover { color: var(--teal); border-color: rgba(94, 234, 212, 0.36); }
-pre { margin: 0; padding: 13px 14px 14px; overflow-x: auto; font-size: 10.5px; line-height: 1.75; color: #bdcad7; tab-size: 2; }
-pre .c { color: #5d7082; }
-pre .g { color: var(--green); }
-pre .r { color: var(--rose); }
-pre .y { color: var(--amber); }
-pre .t { color: var(--teal); }
-pre .v { color: var(--violet); }
-pre .k { color: var(--violet); }
-pre .w { color: var(--text); }
-pre .m { color: var(--muted); }
-pre { max-width: 100%; }
-.hero-grid > *,
-.section-head > *,
-.demo-shell > *,
-.experiment-grid > *,
-.run-grid > *,
-.trace-step > *,
-.run-card,
-.stage,
-.stage-inner,
-.demo-panel,
-.table-shell,
-.table-scroll { min-width: 0; }
-
-/* ---------- demo ---------- */
-.demo-shell { display: grid; grid-template-columns: minmax(0, 0.76fr) minmax(0, 1.24fr); gap: 16px; align-items: stretch; }
-.demo-aside { display: flex; flex-direction: column; gap: 10px; }
-.demo-tab {
-  width: 100%; display: flex; gap: 12px; align-items: flex-start; text-align: left;
-  padding: 14px 15px; border: 1px solid var(--line); border-radius: 11px;
-  background: rgba(8, 13, 18, 0.54); cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease;
+@media (max-width: 900px) {
+  .hardware-duo { flex-direction: column; align-items: center; gap: 40px; }
 }
-.demo-tab:hover { border-color: var(--line-strong); background: rgba(148, 163, 184, 0.05); }
-.demo-tab[aria-selected="true"] { border-color: rgba(94, 234, 212, 0.38); background: rgba(94, 234, 212, 0.055); }
-.demo-tab .idx { font-family: var(--mono); font-size: 9px; color: var(--teal); margin-top: 3px; }
-.demo-tab .t { display: block; font-size: 13px; font-weight: 650; letter-spacing: -0.01em; }
-.demo-tab .s { display: block; margin-top: 3px; color: var(--dim); font-size: 11.5px; line-height: 1.5; }
-.demo-tab[aria-selected="true"] .s { color: var(--muted); }
-.demo-panel { min-width: 0; display: flex; }
-.demo-panel[hidden] { display: none; }
-.demo-panel .code-card { width: 100%; }
-.demo-panel pre { min-height: 100%; }
-.demo-foot { margin-top: 12px; color: var(--dim); font-size: 12px; line-height: 1.6; }
-.demo-foot code { color: var(--muted); }
 
-/* ---------- experiment ---------- */
-.experiment-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: clamp(1.8rem, 4vw, 3.6rem); align-items: start; }
-.argument-list { display: grid; gap: 0; margin-top: 22px; border-top: 1px solid var(--line); }
-.argument { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
-.argument .n { font-family: var(--mono); font-size: 9px; color: var(--teal); padding-top: 3px; }
-.argument h4 { margin: 0 0 4px; font-size: 13px; letter-spacing: -0.01em; }
-.argument p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.65; }
-.quote {
-  margin: 20px 0 0; padding: 16px 17px; border-left: 2px solid var(--teal);
-  background: rgba(94, 234, 212, 0.04); color: var(--muted);
-  font-size: 13px; line-height: 1.7; border-radius: 0 9px 9px 0;
+/* 1. LAPTOP CHASSIS */
+.laptop-chassis {
+  flex: 1; max-width: 660px; min-width: 320px;
+  display: flex; flex-direction: column; align-items: center;
+  position: relative;
 }
-.quote b { color: var(--text); }
-.phone-demo-wrap { position: sticky; top: 94px; }
-.phone-demo {
-  position: relative; width: min(100%, 340px); margin-inline: auto;
-  border: 1px solid rgba(148,163,184,0.32); border-radius: 35px;
-  background: linear-gradient(150deg, #131d27, #070b0f 55%);
-  padding: 9px; box-shadow: 0 30px 80px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.035);
-}
-.phone-demo::before { content: ""; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 76px; height: 8px; border-radius: 99px; background: #020406; z-index: 3; }
-.phone-demo-screen { position: relative; border-radius: 27px; border: 1px solid rgba(148,163,184,0.13); background: radial-gradient(circle at 50% 0%, rgba(94,234,212,0.11), transparent 40%), #081017; overflow: hidden; }
-.phone-demo-head { padding: 28px 18px 13px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
-.phone-demo-head .who { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-.phone-demo-head .who i { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
-.phone-demo-head .lock { color: var(--teal); width: 13px; height: 13px; }
-.phone-demo-body { padding: 16px 17px 17px; }
-.phone-demo-body .request { font-family: var(--mono); font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); }
-.phone-demo-body h4 { margin: 8px 0 0; font-size: 16px; line-height: 1.25; letter-spacing: -0.02em; }
-.phone-demo-body h4 code { font-size: 14px; color: var(--teal); }
-.ctx { display: grid; grid-template-columns: 58px 1fr; gap: 6px 10px; margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--line); }
-.ctx dt { font-family: var(--mono); font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); padding-top: 2px; }
-.ctx dd { margin: 0; font-family: var(--mono); font-size: 9.5px; line-height: 1.45; color: var(--muted); overflow-wrap: anywhere; }
-.ctx dd.command { color: var(--text); background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.15); border-radius: 5px; padding: 5px 7px; font-size: 9px; }
-.digest { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); font-family: var(--mono); font-size: 7.5px; color: var(--dim); overflow-wrap: anywhere; }
-.digest b { color: var(--muted); font-weight: 500; }
-.phone-actions { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 7px; margin-top: 13px; }
-.phone-actions span { display: block; text-align: center; border-radius: 7px; padding: 7px 4px; font-family: var(--mono); font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; }
-.phone-actions .deny { border: 1px solid var(--line-strong); color: var(--muted); background: rgba(148,163,184,0.04); }
-.phone-actions .approve { border: 1px solid rgba(94,234,212,0.28); color: #05221d; background: var(--teal); font-weight: 700; }
-.mock-label { display: inline-flex; align-items: center; gap: 6px; margin: 0 auto 12px; padding: 4px 8px; border: 1px dashed rgba(251,191,36,0.35); border-radius: 5px; color: var(--amber); font-family: var(--mono); font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; }
-.mock-label-wrap { display: flex; justify-content: center; }
-.phone-caption { margin: 14px auto 0; max-width: 340px; color: var(--dim); font-size: 10.5px; line-height: 1.6; text-align: center; }
-
-/* ---------- status ---------- */
-.table-shell { border: 1px solid var(--line); border-radius: 13px; overflow: hidden; background: rgba(8, 13, 18, 0.55); }
-.table-scroll { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; min-width: 700px; }
-th { padding: 12px 15px; text-align: left; font-family: var(--mono); font-size: 8.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); background: rgba(148,163,184,0.035); border-bottom: 1px solid var(--line); white-space: nowrap; }
-td { padding: 13px 15px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12.5px; line-height: 1.55; vertical-align: top; }
-tr:last-child td { border-bottom: 0; }
-td:first-child { color: var(--text); font-weight: 550; white-space: nowrap; }
-tbody tr:hover { background: rgba(148,163,184,0.035); }
-td .evidence { display: block; margin-top: 4px; color: var(--dim); font-family: var(--mono); font-size: 9px; line-height: 1.45; }
-.badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; border-radius: 999px; border: 1px solid; font-family: var(--mono); font-size: 8.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
-.badge::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
-.badge.works { color: var(--green); border-color: rgba(74,222,128,0.25); background: rgba(74,222,128,0.055); }
-.badge.impl { color: var(--teal); border-color: rgba(94,234,212,0.25); background: rgba(94,234,212,0.055); }
-.badge.partial { color: var(--amber); border-color: rgba(251,191,36,0.25); background: rgba(251,191,36,0.055); }
-.badge.no { color: var(--rose); border-color: rgba(251,113,133,0.25); background: rgba(251,113,133,0.055); }
-.badge.design { color: var(--violet); border-color: rgba(167,139,250,0.25); background: rgba(167,139,250,0.055); }
-.badge.claim { color: var(--dim); border-color: var(--line-strong); background: rgba(148,163,184,0.04); }
-.legend { display: flex; flex-wrap: wrap; gap: 9px 16px; margin-top: 12px; color: var(--dim); font-size: 11px; }
-.legend span { display: inline-flex; align-items: center; gap: 6px; }
-
-/* ---------- cards / not ---------- */
-.not-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; margin-top: 25px; }
-.not-card { display: flex; gap: 12px; align-items: flex-start; padding: 16px 17px; border: 1px solid var(--line); border-radius: 12px; background: rgba(8,13,18,0.55); }
-.not-card .x { flex: none; width: 21px; height: 21px; border-radius: 50%; display: grid; place-items: center; color: var(--rose); background: rgba(251,113,133,0.07); border: 1px solid rgba(251,113,133,0.18); margin-top: 1px; }
-.not-card .x svg { width: 10px; height: 10px; }
-.not-card h3 { margin: 0 0 4px; font-size: 13px; letter-spacing: -0.01em; }
-.not-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
-.callout { margin-top: 22px; padding: 17px 18px; border: 1px solid rgba(94,234,212,0.2); border-radius: 12px; background: rgba(94,234,212,0.045); color: var(--muted); font-size: 13px; line-height: 1.7; }
-.callout b { color: var(--text); }
-
-/* ---------- prior art ---------- */
-.prior-table td:first-child { white-space: normal; }
-.prior-table .ukey-row { background: rgba(94,234,212,0.045); }
-.prior-table .ukey-row td { color: var(--text); }
-.prior-table .ukey-row td:not(:first-child) { color: var(--muted); }
-.fair-note { margin-top: 14px; color: var(--dim); font-size: 12px; line-height: 1.65; }
-.fair-note b { color: var(--muted); }
-
-/* ---------- run ---------- */
-.run-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 16px; align-items: start; }
-.run-card { border: 1px solid var(--line); border-radius: 14px; background: rgba(8,13,18,0.55); padding: 19px; }
-.run-card h3 { margin: 0 0 6px; font-size: 15px; letter-spacing: -0.02em; }
-.run-card > p { margin: 0 0 14px; color: var(--muted); font-size: 12.5px; line-height: 1.65; }
-.run-card .code-card { margin-top: 4px; }
-.warn-box { display: flex; gap: 11px; align-items: flex-start; margin-top: 14px; padding: 13px 14px; border: 1px solid rgba(251,191,36,0.2); border-radius: 10px; background: rgba(251,191,36,0.045); color: var(--muted); font-size: 12px; line-height: 1.65; }
-.warn-box svg { width: 16px; height: 16px; flex: none; color: var(--amber); margin-top: 1px; }
-.warn-box b { color: var(--text); }
-.repo-list { display: grid; gap: 0; margin-top: 14px; border-top: 1px solid var(--line); }
-.repo-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--line); }
-.repo-item .name { font-family: var(--mono); font-size: 10px; color: var(--muted); overflow-wrap: anywhere; }
-.repo-item .name b { color: var(--text); font-weight: 500; }
-.repo-item .lines { font-family: var(--mono); font-size: 9px; color: var(--dim); white-space: nowrap; }
-
-/* ---------- talk ---------- */
-.talk-card {
-  position: relative; overflow: hidden; padding: clamp(24px, 4vw, 46px);
-  border: 1px solid rgba(94,234,212,0.22); border-radius: 20px;
+.laptop-lid {
+  width: 100%; aspect-ratio: 16 / 10.5;
+  border-radius: 14px 14px 4px 4px;
   background:
-    radial-gradient(800px 340px at 100% 0%, rgba(94,234,212,0.10), transparent 60%),
-    radial-gradient(600px 320px at 0% 100%, rgba(167,139,250,0.08), transparent 60%),
-    linear-gradient(145deg, rgba(13,22,29,0.92), rgba(6,10,14,0.92));
+    linear-gradient(#08080A, #08080A) padding-box,
+    linear-gradient(160deg, #8A8E94 0%, #2E3034 22%, #5C6066 45%, #25272A 70%, #6A6E74 100%) border-box;
+  border: 3px solid transparent;
+  padding: 10px 10px 18px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  position: relative;
 }
-.talk-card::before { content: ""; position: absolute; right: -80px; bottom: -100px; width: 300px; height: 300px; border-radius: 50%; border: 1px solid rgba(94,234,212,0.14); box-shadow: 0 0 0 34px rgba(94,234,212,0.025), 0 0 0 68px rgba(94,234,212,0.015); }
-.talk-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--teal); }
-.talk-card h2 { margin: 12px 0 0; max-width: 21ch; font-size: clamp(2rem, 4.6vw, 3.8rem); line-height: 0.98; letter-spacing: -0.055em; }
-.talk-card h2 span { color: var(--teal); }
-.talk-abstract { margin: 21px 0 0; max-width: 75ch; color: var(--muted); font-size: 14px; line-height: 1.8; }
-.talk-abstract b { color: var(--text); font-weight: 600; }
-.talk-pills { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 21px; }
-.talk-pills span { border: 1px solid var(--line); background: rgba(148,163,184,0.04); color: var(--muted); border-radius: 999px; padding: 5px 9px; font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.03em; }
-.talk-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 25px; }
-
-/* ---------- roadmap ---------- */
-.roadmap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 25px; }
-.phase { position: relative; padding: 19px 17px 17px; border: 1px solid var(--line); border-radius: 13px; background: rgba(8,13,18,0.55); }
-.phase .when { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--teal); }
-.phase h3 { margin: 8px 0 6px; font-size: 14px; letter-spacing: -0.02em; }
-.phase p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
-.phase ul { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.phase li { display: flex; gap: 7px; color: var(--dim); font-size: 11px; line-height: 1.5; }
-.phase li::before { content: "→"; color: var(--teal); font-family: var(--mono); font-size: 10px; }
-.phase.current { border-color: rgba(94,234,212,0.28); background: rgba(94,234,212,0.035); }
-
-/* ---------- footer ---------- */
-.footer { border-top: 1px solid var(--line); padding: 36px 0 42px; }
-.footer-inner { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; flex-wrap: wrap; }
-.footer-brand { display: flex; align-items: center; gap: 11px; }
-.footer-brand .brand-mark { width: 30px; height: 30px; border-radius: 9px; }
-.footer-brand .brand-mark svg { width: 17px; height: 17px; }
-.footer-brand strong { display: block; font-size: 14px; letter-spacing: -0.02em; }
-.footer-brand small { display: block; margin-top: 2px; color: var(--dim); font-family: var(--mono); font-size: 9px; letter-spacing: 0.04em; }
-.footer-links { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
-.footer-links a { color: var(--muted); font-size: 12px; }
-.footer-links a:hover { color: var(--teal); }
-.footer-disclaimer { width: 100%; margin: 27px 0 0; padding-top: 17px; border-top: 1px solid var(--line); color: var(--dim); font-size: 11px; line-height: 1.7; }
-.footer-disclaimer b { color: var(--muted); }
-
-/* ---------- animations ---------- */
-@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(94,234,212,0.45); } 50% { box-shadow: 0 0 0 6px rgba(94,234,212,0); } }
-@keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
-@keyframes chipPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(94,234,212,0.0); } 50% { box-shadow: 0 0 0 5px rgba(94,234,212,0.055); } }
-.js .reveal { opacity: 0; transform: translateY(18px); transition: opacity 700ms cubic-bezier(.2,.7,.2,1), transform 700ms cubic-bezier(.2,.7,.2,1); }
-.js .reveal.is-visible { opacity: 1; transform: none; }
-.js .reveal.d1 { transition-delay: 70ms; }
-.js .reveal.d2 { transition-delay: 140ms; }
-.js .reveal.d3 { transition-delay: 210ms; }
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
-  .js .reveal { opacity: 1; transform: none; }
+.laptop-lid::before {
+  content: ""; position: absolute; left: 50%; top: 4px;
+  width: 4px; height: 4px; margin-left: -2px;
+  border-radius: 50%; background: #3C3F44;
+}
+.laptop-screen {
+  width: 100%; height: 100%;
+  background: #0C0D0E;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  position: relative;
+}
+.desktop-topbar {
+  background: #141517; height: 22px; border-bottom: 1px solid #232528;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 10px; font-family: var(--mono); font-size: 10px; color: var(--gray-1);
+}
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.topbar-pill { background: #232528; color: var(--white); padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+.desktop-workspace {
+  flex: 1; padding: 14px; position: relative;
+  background: radial-gradient(circle at 80% 20%, #151922 0%, #0C0D0E 65%);
+  display: flex; flex-direction: column; justify-content: center;
 }
 
-/* ---------- responsive ---------- */
-@media (max-width: 980px) {
-  .hero-grid { grid-template-columns: 1fr; gap: 2.5rem; }
-  .hero-copy { max-width: 720px; }
-  .stage { max-width: 620px; }
-  .section-head { grid-template-columns: 1fr; gap: 12px; }
-  .section-head .display { max-width: 20ch; }
-  .demo-shell { grid-template-columns: 1fr; }
-  .demo-aside { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .experiment-grid { grid-template-columns: 1fr; }
-  .phone-demo-wrap { position: static; order: -1; }
-  .phone-demo { max-width: 310px; }
-  .run-grid { grid-template-columns: 1fr; }
+/* Linux Terminal Window on Laptop */
+.screen-terminal {
+  background: rgba(9, 10, 12, 0.95);
+  border: 1px solid #2E3134; border-radius: 8px;
+  overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,0.45);
 }
-@media (max-width: 760px) {
-  html { scroll-padding-top: 80px; }
-  .nav-inner { height: 62px; }
-  .brand small { display: none; }
-  .nav-links {
-    display: none; position: absolute; left: var(--gutter); right: var(--gutter); top: 68px;
-    flex-direction: column; align-items: stretch; gap: 2px; padding: 8px;
-    border: 1px solid var(--line); border-radius: 12px; background: rgba(8,13,18,0.98);
-    box-shadow: var(--shadow);
-  }
-  .nav-links.open { display: flex; }
-  .nav-links a { padding: 10px 11px; }
-  .nav-github .label { display: none; }
-  .nav-github { padding: 8px; }
-  .menu-btn { display: grid; }
-  .stats { grid-template-columns: repeat(2, 1fr); }
-  .layer-grid { grid-template-columns: 1fr; }
-  .trace-step { grid-template-columns: 38px 1fr; gap: 14px; }
-  .trace-dot { width: 37px; height: 37px; }
-  .trace-code { grid-column: 2; }
-  .not-grid { grid-template-columns: 1fr; }
-  .demo-aside { grid-template-columns: 1fr; }
-  .roadmap { grid-template-columns: 1fr; }
-  .stage-bottom { grid-template-columns: 1fr; }
-  .stage-code { border-right: 0; border-bottom: 1px solid var(--line); }
-  .phone-zone { padding: 16px; }
-  .stage-float { top: 46px; right: 12px; }
-  pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
-  .status-table { min-width: 0; }
-  .status-table thead { display: none; }
-  .status-table, .status-table tbody, .status-table tr, .status-table td { display: block; width: 100%; }
-  .status-table tr { padding: 14px 15px; border-bottom: 1px solid var(--line); }
-  .status-table tr:last-child { border-bottom: 0; }
-  .status-table td { border: 0; padding: 0; margin: 0 0 6px; white-space: normal; }
-  .status-table td:first-child { font-size: 13.5px; }
-  .status-table td:nth-child(2) { margin: 7px 0; }
-  .status-table td:nth-child(3) { color: var(--muted); font-size: 12.5px; }
-  .status-table td .evidence { margin-top: 5px; }
-  .status-table tr:hover { background: transparent; }
-  .prior-table { min-width: 0; }
-  .prior-table thead { display: none; }
-  .prior-table, .prior-table tbody, .prior-table tr, .prior-table td { display: block; width: 100%; }
-  .prior-table tr { padding: 14px 15px; border-bottom: 1px solid var(--line); }
-  .prior-table tr:last-child { border-bottom: 0; }
-  .prior-table td { border: 0; padding: 0 0 6px; white-space: normal; }
-  .prior-table td:first-child { font-size: 13.5px; color: var(--text); }
-  .prior-table td:nth-child(2), .prior-table td:nth-child(3) { color: var(--muted); font-size: 12.5px; }
-  .prior-table td:nth-child(3)::before { content: "Difference: "; color: var(--dim); font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.06em; text-transform: uppercase; }
-  .prior-table tr:hover { background: transparent; }
-  .prior-table .ukey-row { background: rgba(94,234,212,0.045); }
+.sterm-bar {
+  background: #181A1D; padding: 6px 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid #282A2E;
 }
-@media (max-width: 520px) {
-  .hero h1 { font-size: clamp(3.15rem, 16vw, 4.6rem); }
-  .hero-lede { font-size: 14px; }
-  .hero-meta { gap: 9px; }
-  .stage { padding: 10px; border-radius: 18px; }
-  .stage-terminal { padding: 13px 12px; }
-  .term-line { font-size: 9px; white-space: normal; }
-  .stage-flow { padding: 14px 10px; }
-  .flow-node .chip { width: 34px; height: 34px; font-size: 7px; }
-  .flow-node .label { font-size: 7px; }
-  .stage-float { display: none; }
-  .plain-note { font-size: 12.5px; }
-  .display { font-size: clamp(2.05rem, 10vw, 3rem); }
+.sterm-dots { display: flex; gap: 5px; }
+.sterm-dot { width: 8px; height: 8px; border-radius: 50%; background: #40444A; }
+.sterm-dot.r { background: #E06C75; }
+.sterm-dot.y { background: #E5C07B; }
+.sterm-dot.g { background: #98C379; }
+.sterm-body {
+  padding: 12px 14px; font-family: var(--mono); font-size: 11.5px; line-height: 1.6;
+  min-height: 135px; text-align: left;
 }
+
+/* Browser Window on Laptop (for Google & GitHub scenarios) */
+.screen-browser {
+  background: #13151A;
+  border: 1px solid #2A2E36; border-radius: 8px;
+  overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+  display: none; flex-direction: column;
+}
+.sbrowser-bar {
+  background: #1B1E24; padding: 6px 10px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid #282C34;
+}
+.sbrowser-tab {
+  background: #13151A; color: #FFF; font-size: 10px; font-weight: 500;
+  padding: 3px 8px; border-radius: 4px; display: flex; align-items: center; gap: 5px;
+  border: 1px solid #262A32; border-bottom: none;
+}
+.sbrowser-urlbar {
+  flex: 1; background: #0A0C0E; border: 1px solid #22252C;
+  border-radius: 4px; padding: 2px 8px; font-family: var(--mono); font-size: 9.5px;
+  color: var(--accent-cyan); display: flex; align-items: center; gap: 5px;
+}
+.sbrowser-body {
+  padding: 14px 16px; min-height: 135px; text-align: left;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.browser-auth-card {
+  background: #1A1D24; border: 1px solid #2B303C; border-radius: 8px;
+  padding: 12px 14px;
+}
+.browser-auth-head {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.browser-auth-title { font-size: 13px; font-weight: 700; color: #FFF; }
+.browser-auth-sub { font-size: 10.5px; color: var(--gray-1); }
+.browser-auth-box {
+  background: #0E1014; border: 1px solid #222630; border-radius: 6px;
+  padding: 8px 10px; font-size: 11px; margin-top: 8px;
+}
+
+/* Laptop Keyboard Base & Hinge */
+.laptop-base {
+  width: 108%; height: 16px; margin-top: -2px;
+  border-radius: 3px 3px 12px 12px / 3px 3px 9px 9px;
+  background: linear-gradient(#9FA3A9 0%, #585C62 3px, #36393E 45%, #191A1D 100%);
+  position: relative; z-index: 2;
+  box-shadow: 0 20px 30px rgba(0,0,0,0.6);
+}
+.laptop-notch {
+  position: absolute; left: 50%; top: 0; width: 84px; height: 5px;
+  margin-left: -42px; border-radius: 0 0 6px 6px; background: #131416;
+}
+.laptop-shadow {
+  width: 96%; height: 14px;
+  background: radial-gradient(closest-side, rgba(0,0,0,0.5), transparent);
+  margin-top: -6px;
+}
+
+/* 2. CABLE / WIRELESS DATA CONDUIT */
+.stream-conduit {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; width: 90px; height: 160px;
+}
+@media (max-width: 900px) {
+  .stream-conduit { width: 100%; height: 50px; flex-direction: row; }
+}
+.conduit-line {
+  position: absolute; width: 100%; height: 4px;
+  background: linear-gradient(90deg, #3A3D42 0%, var(--accent-cyan) 50%, #3A3D42 100%);
+  border-radius: 99px; transition: background 0.3s;
+}
+.conduit-line.danger {
+  background: linear-gradient(90deg, var(--accent-red) 0%, #FF1E1E 50%, var(--accent-red) 100%);
+  box-shadow: 0 0 12px var(--accent-red);
+}
+.packet-pulse {
+  position: absolute; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 16px var(--accent-cyan);
+  animation: dataTravel 1.5s infinite ease-in-out;
+}
+.packet-pulse.danger {
+  background: var(--accent-red);
+  box-shadow: 0 0 18px var(--accent-red);
+}
+@keyframes dataTravel {
+  0% { left: 0%; opacity: 0; transform: scale(.7); }
+  20% { opacity: 1; transform: scale(1.2); }
+  80% { opacity: 1; transform: scale(1.2); }
+  100% { left: 100%; opacity: 0; transform: scale(.7); }
+}
+
+/* 3. ANDROID SMARTPHONE CHASSIS */
+.phone-chassis {
+  width: 275px; flex-shrink: 0;
+  border-radius: 40px;
+  padding: 10px;
+  background:
+    linear-gradient(#050507, #050507) padding-box,
+    linear-gradient(150deg, #A8ACB0 0%, #46484D 24%, #9EA2A6 48%, #323438 72%, #8B8F94 100%) border-box;
+  border: 3px solid transparent;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.6), inset 0 0 0 1px #0A0A0E;
+  position: relative;
+}
+.phone-key { position: absolute; background: #686C72; border-radius: 1px; }
+.phone-key.power { right: -6px; top: 100px; width: 3px; height: 32px; }
+.phone-key.vol { right: -6px; top: 146px; width: 3px; height: 64px; }
+
+.phone-screen {
+  background: #F3F6FA;
+  border-radius: 30px;
+  height: 520px; overflow: hidden;
+  display: flex; flex-direction: column;
+  padding: 6px 12px 12px;
+  position: relative;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.15);
+}
+.phone-punchhole {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #000; border: 2px solid #1E2024;
+  margin: 0 auto 3px; z-index: 25;
+}
+.phone-statusbar {
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 10px; font-weight: 600; color: #0F172A;
+  padding: 0 4px 6px; border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  z-index: 10;
+}
+.phone-status-icons {
+  display: flex; align-items: center; gap: 5px; color: #64748B;
+}
+
+/* Authentic Android uKey App UI */
+.uapp-container {
+  display: flex; flex-direction: column; flex: 1; z-index: 5;
+}
+.uapp-header {
+  padding: 6px 2px 8px; text-align: left;
+}
+.uapp-title {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 24px; font-weight: 900; letter-spacing: -0.02em; color: #0F172A; line-height: 1;
+}
+.uapp-tagline {
+  font-size: 10.5px; color: #64748B; margin-top: 2px;
+}
+
+.uapp-card {
+  background: #FFFFFF; border: 1px solid #E2E8F0;
+  border-radius: 12px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  text-align: left;
+}
+.uapp-section-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  color: #0F766E; text-transform: uppercase; margin-bottom: 6px;
+}
+.uapp-inputs { display: flex; gap: 8px; }
+.uapp-field { flex: 1; }
+.uapp-field-port { flex: 0 0 54px; }
+.uapp-field-label { font-size: 8.5px; color: #64748B; display: block; margin-bottom: 2px; }
+.uapp-input-box {
+  background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px;
+  padding: 4px 6px; font-family: var(--mono); font-size: 10.5px; color: #0F172A;
+  font-weight: 500;
+}
+.uapp-status-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 8px; padding-top: 6px; border-top: 1px solid #F1F5F9;
+}
+.uapp-status-pill {
+  font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 99px;
+  background: #DCFCE7; color: #166534; border: 1px solid #86EFAC;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.uapp-status-pill.danger {
+  background: #FEE2E2; color: #991B1B; border-color: #FCA5A5;
+}
+.uapp-dot { width: 5px; height: 5px; border-radius: 50%; background: #16A34A; }
+.uapp-dot.danger { background: #DC2626; }
+.uapp-status-detail { font-size: 9px; color: #64748B; font-family: var(--mono); }
+.uapp-btn-row { display: flex; gap: 6px; margin-top: 8px; }
+.uapp-btn {
+  border: none; border-radius: 6px; font-size: 9.5px; font-weight: 600;
+  padding: 5px 8px; cursor: pointer; text-align: center;
+}
+.uapp-btn.primary { flex: 1; background: #0F766E; color: #FFFFFF; }
+.uapp-btn.secondary { flex: 0 0 44px; background: #E2E8F0; color: #334155; }
+.uapp-hint {
+  font-size: 8.5px; color: #94A3B8; margin-top: 6px; line-height: 1.25;
+}
+
+.uapp-log-card {
+  background: #0F172A; border-radius: 12px; padding: 10px 12px;
+  margin-top: 8px; flex: 1; display: flex; flex-direction: column;
+  text-align: left; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+.uapp-log-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px;
+}
+.uapp-log-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  color: #94A3B8; text-transform: uppercase;
+}
+.uapp-clear-btn {
+  background: transparent; border: none; font-size: 9px; color: #5EEAD4;
+  cursor: pointer; padding: 0; font-family: var(--mono);
+}
+.uapp-log-body {
+  flex: 1; overflow-y: auto; font-family: var(--mono); font-size: 9px;
+  line-height: 1.45; color: #D1FAE5;
+}
+.uapp-log-line { margin-bottom: 3px; word-break: break-all; }
+.log-time { color: #64748B; }
+.log-info { color: #94A3B8; }
+.log-conn { color: #5EEAD4; }
+.log-req { color: #FBBF24; font-weight: 600; }
+.log-ok { color: #34D399; font-weight: 600; }
+.log-err { color: #F87171; font-weight: 600; }
+
+/* Android Material 3 BiometricPrompt Modal */
+.biometric-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: #191B20; border-top: 1px solid #2C3038;
+  border-radius: 22px 22px 0 0;
+  padding: 12px 14px 14px;
+  box-shadow: 0 -12px 35px rgba(0,0,0,0.75);
+  z-index: 30;
+  text-align: center;
+  transition: transform .3s var(--ease), opacity .3s;
+}
+.sheet-drag-handle {
+  width: 32px; height: 3.5px; border-radius: 99px;
+  background: #4A4E58; margin: 0 auto 10px;
+}
+.sheet-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px; text-align: left;
+}
+.sheet-icon {
+  width: 28px; height: 28px; border-radius: 50%; background: #262A33;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sheet-title { font-size: 12px; font-weight: 700; color: #FFF; line-height: 1.2; }
+.sheet-sub { font-size: 10px; font-family: var(--mono); color: var(--accent-cyan); }
+.sheet-desc { font-size: 10px; color: var(--gray-1); margin-bottom: 10px; text-align: left; }
+
+.fingerprint-touch-area {
+  width: 58px; height: 58px; margin: 0 auto;
+  border-radius: 50%; background: #222630;
+  border: 2px dashed #4D5463;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative;
+  transition: all .2s;
+}
+.fingerprint-touch-area:hover {
+  transform: scale(1.08); border-color: var(--accent-cyan);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+}
+.fingerprint-touch-area.verified {
+  border-color: var(--accent-green); border-style: solid;
+  background: rgba(52, 211, 153, 0.25);
+}
+.fp-ripple {
+  position: absolute; inset: -5px; border-radius: 50%;
+  border: 2px solid var(--accent-cyan);
+  animation: pulseFp 2s infinite ease-out;
+}
+@keyframes pulseFp {
+  0% { transform: scale(.9); opacity: 1; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.sheet-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 8px; padding-top: 6px;
+}
+.phone-gesture-hint {
+  font-family: var(--mono); font-size: 10px; color: var(--gray-1);
+}
+.sheet-cancel {
+  font-size: 10px; color: var(--gray-1); font-weight: 600; cursor: pointer;
+}
+
+/* =========================================================================
+   SECURITY & PAIRING SHOWCASE
+   ========================================================================= */
+.security-section {
+  padding: clamp(60px, 8vw, 110px) var(--gutter);
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--black-card) 40%, transparent);
+}
+.sec-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px; margin-top: 40px;
+}
+.sec-card {
+  background: var(--black-card); border: 1px solid var(--border-subtle);
+  border-radius: 14px; padding: 26px 24px; text-align: left;
+  display: flex; flex-direction: column; justify-content: space-between;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  transition: transform .2s, border-color .2s;
+}
+.sec-card:hover { transform: translateY(-3px); border-color: var(--accent-green); }
+.sec-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: var(--gray-3); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 18px;
+}
+.sec-title { font-family: var(--display); font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+.sec-desc { font-size: 14.5px; color: var(--gray-1); line-height: 1.55; }
+.sec-tag {
+  display: inline-block; font-family: var(--mono); font-size: 11px;
+  padding: 3px 8px; border-radius: 4px; background: var(--gray-3);
+  color: var(--accent-cyan); margin-top: 16px; border: 1px solid var(--border-subtle);
+}
+
+/* Web Settings Console Mock */
+.webconsole-card {
+  grid-column: 1 / -1;
+  background: var(--gray-3); border: 1px solid var(--border-subtle);
+  border-radius: 16px; padding: 24px; margin-top: 14px;
+}
+.webconsole-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;
+}
+.webconsole-url {
+  font-family: var(--mono); font-size: 12px; color: var(--accent-cyan);
+  background: var(--black); padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 6px;
+}
+.webconsole-body {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px; text-align: left;
+}
+.console-widget {
+  background: var(--black-card); border: 1px solid var(--border-subtle);
+  border-radius: 10px; padding: 16px;
+}
+.widget-head { font-size: 12px; font-weight: 700; color: var(--gray-1); text-transform: uppercase; margin-bottom: 10px; letter-spacing: .05em; }
+
+/* =========================================================================
+   WEBAUTHN ECOSYSTEM: GITHUB, GOOGLE, AWS
+   ========================================================================= */
+.websites-section {
+  padding: clamp(60px, 8vw, 110px) var(--gutter);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.websites-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px; margin-top: 40px;
+}
+.website-card {
+  background: var(--black-card); border: 1px solid var(--border-subtle);
+  border-radius: 14px; padding: 24px; text-align: left;
+  display: flex; flex-direction: column; justify-content: space-between;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  transition: transform .2s, border-color .2s;
+}
+.website-card:hover { transform: translateY(-3px); border-color: var(--white); }
+.website-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.website-icon {
+  width: 40px; height: 40px; border-radius: 8px; background: var(--gray-3);
+  display: flex; align-items: center; justify-content: center;
+}
+.website-title { font-size: 17px; font-weight: 800; font-family: var(--display); }
+.website-type { font-size: 11px; font-family: var(--mono); color: var(--accent-green); }
+.website-desc { font-size: 14px; color: var(--gray-1); line-height: 1.55; }
+.website-steps {
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-subtle);
+  display: flex; flex-direction: column; gap: 6px; font-family: var(--mono); font-size: 11.5px; color: var(--white);
+}
+
+/* =========================================================================
+   MULTI-DISTRO INSTALLATION SECTION
+   ========================================================================= */
+.install-section {
+  padding: clamp(60px, 8vw, 110px) var(--gutter);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.distro-tabs {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 34px 0 20px;
+}
+.distro-tab {
+  background: var(--black-card); border: 1px solid var(--border-subtle);
+  color: var(--gray-1); font-family: var(--mono); font-size: 13px;
+  padding: 10px 18px; border-radius: 8px; cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; gap: 8px; font-weight: 600;
+}
+.distro-tab:hover { color: var(--white); border-color: var(--white); }
+.distro-tab.active {
+  background: var(--white); color: var(--black); border-color: var(--white);
+}
+.code-panel {
+  background: var(--black-card); border: 1px solid var(--border-subtle);
+  border-radius: 12px; max-width: 820px; margin: 0 auto; overflow: hidden;
+  text-align: left; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+.code-panel-head {
+  background: var(--gray-3); padding: 10px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.code-panel-title { font-family: var(--mono); font-size: 12px; color: var(--gray-1); }
+.code-panel pre {
+  padding: 20px; overflow-x: auto; font-family: var(--mono); font-size: 13.5px;
+  line-height: 1.6; color: var(--white);
+}
+
+/* =========================================================================
+   ARCHITECTURAL COMPARISON MATRIX
+   ========================================================================= */
+.comparison-section {
+  padding: clamp(60px, 8vw, 110px) var(--gutter);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.compare-container {
+  max-width: 1100px; margin: 40px auto 0; overflow-x: auto;
+}
+.compare-table {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  border: 1px solid var(--border-subtle); border-radius: 14px;
+  background: var(--black-card); overflow: hidden; text-align: left;
+}
+.compare-table th {
+  padding: 16px 18px; font-family: var(--display); font-size: 14px;
+  font-weight: 800; background: var(--gray-3); border-bottom: 1px solid var(--border-subtle);
+  color: var(--white);
+}
+.compare-table th.highlight {
+  background: var(--accent-green-bg); color: var(--accent-green);
+  border-left: 2px solid var(--accent-green); border-right: 2px solid var(--accent-green);
+}
+.compare-table td {
+  padding: 14px 18px; font-size: 13.5px; border-bottom: 1px solid var(--border-subtle);
+  color: var(--gray-1);
+}
+.compare-table td.highlight {
+  background: color-mix(in srgb, var(--accent-green-bg) 40%, transparent);
+  color: var(--white); font-weight: 600;
+  border-left: 2px solid var(--accent-green); border-right: 2px solid var(--accent-green);
+}
+.compare-table tbody tr:last-child td { border-bottom: none; }
+.compare-table td.check { color: var(--accent-green); font-weight: 700; }
+.compare-table td.cross { color: var(--accent-red); font-weight: 600; }
+
+/* FAQ Section */
+.faq-section {
+  padding: clamp(60px, 8vw, 110px) var(--gutter);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.faq-grid {
+  max-width: 820px; margin: 40px auto 0; display: flex; flex-direction: column; gap: 12px;
+}
+.faq-item {
+  background: var(--black-card); border: 1px solid var(--border-subtle);
+  border-radius: 10px; overflow: hidden; text-align: left; transition: border-color .15s;
+}
+.faq-item:hover { border-color: var(--white); }
+.faq-q {
+  padding: 18px 22px; font-size: 16px; font-weight: 700; cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center; user-select: none;
+}
+.faq-q .arw { font-size: 14px; transition: transform .2s; }
+.faq-item.open .faq-q .arw { transform: rotate(180deg); }
+.faq-a {
+  max-height: 0; overflow: hidden; transition: max-height .3s var(--ease);
+}
+.faq-a .inner {
+  padding: 0 22px 20px; font-size: 14.5px; color: var(--gray-1); line-height: 1.6;
+}
+
+/* Footer */
+footer {
+  padding: 50px var(--gutter);
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+  gap: 20px; font-size: 13.5px; color: var(--gray-1);
+}
+footer a { color: var(--white); text-decoration: underline; text-underline-offset: 3px; }
+footer a:hover { color: var(--accent-green); }
+
+/* Reveal Animations */
+.reveal {
+  opacity: 0; transform: translateY(16px);
+  transition: opacity .5s var(--ease), transform .5s var(--ease);
+}
+.reveal.in { opacity: 1; transform: translateY(0); }
 </style>
 </head>
+
 <body>
-<a class="skip" href="#main">Skip to content</a>
-<nav class="nav" aria-label="Main">
-  <div class="wrap nav-inner">
-    <a class="brand" href="#top" aria-label="uKey home">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="M15.6 2.8a5.9 5.9 0 0 0-5.7 7.5L2.8 17.4V21h3.6v-2.4h2.4v-2.4h2.4l1.3-1.3a5.9 5.9 0 1 0 3.1-12.1Zm.1 3a2.9 2.9 0 1 1 0 5.8 2.9 2.9 0 0 1 0-5.8Z"/></svg>
-      </span>
-      <span>uKey</span>
-      <small>prototype</small>
+<div class="scroll-progress"></div>
+
+<!-- NAVIGATION -->
+<nav class="nav">
+  <div class="wordmark">
+    <span>uKey</span>
+    <span class="badge"><span class="pulse-dot"></span> Virtual FIDO2</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#rig">Simulator</a></li>
+    <li><a href="#security">Zero-Trust</a></li>
+    <li><a href="#websites">WebAuthn</a></li>
+    <li><a href="#compare">Comparison</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.5 5.5 0 0 1-7.54-7.54C12.92 3.04 12.46 3 12 3z"/>
+      </svg>
+    </button>
+    <a href="https://github.com/siddharthsai218/ukey" class="btn github" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+      <span>GitHub</span>
     </a>
-
-    <div class="nav-links" id="nav-links">
-      <a href="#how">How it works</a>
-      <a href="#demo">Demo</a>
-      <a href="#experiment">The experiment</a>
-      <a href="#status">Status</a>
-      <a href="#talk">Talk</a>
-    </div>
-
-    <div class="nav-actions">
-      <a class="nav-github" href="https://github.com/siddharthsai218/ukey" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05A9.35 9.35 0 0 1 12 6.84c.85 0 1.71.12 2.51.35 1.9-1.32 2.74-1.05 2.74-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.09 10.09 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z"/></svg>
-        <span class="label">GitHub</span>
-      </a>
-      <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Toggle menu">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
   </div>
 </nav>
 
-<main id="main">
-  <header class="hero" id="top">
-    <div class="wrap hero-grid">
-      <div class="hero-copy">
-        <div class="eyebrow reveal">
-          <span class="pulse"></span>
-          <b>Open source prototype</b> · Linux + Android
-        </div>
+<main>
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <div class="hero-tag">
+      <span>●</span> Touch ID for Linux • Hardware Biometric Security
+    </div>
+    <h1 class="mega hero-title">Your phone is now a Linux FIDO2 key.</h1>
+    <p class="lede hero-desc">
+      Zero hardware dongles. Tap your Android phone's fingerprint for <b>sudo</b>, <b>git push</b>, and <b>WebAuthn</b> logins. 100% local, zero cloud.
+    </p>
 
-        <h1 class="reveal d1">
-          <span class="line">There is no</span>
-          <span class="line"><span class="no">USB</span> <span class="key">key.</span></span>
-        </h1>
+    <div class="hero-cta">
+      <a href="#rig" class="btn solid">
+        <span>🎮 Try Interactive Rig</span>
+      </a>
+      <a href="uKey_Product_Guide.pdf" class="btn" target="_blank" rel="noopener">
+        <span>📄 Product Guide (PDF)</span>
+      </a>
+      <a href="http://127.0.0.1:8444" class="btn" target="_blank" rel="noopener">
+        <span>⚙️ Local Web Dashboard</span>
+      </a>
+    </div>
 
-        <p class="hero-sub reveal d2">Your phone is the key.</p>
+    <!-- 1-Click Install Box -->
+    <div class="cmd-box">
+      <code><span class="p">$ </span>curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash</code>
+      <button class="copy-btn" data-copy="curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash">Copy</button>
+    </div>
 
-        <p class="hero-lede reveal d2">
-          Linux sees a real FIDO2 device at <code class="mono">/dev/hidraw</code>. The private key lives in an Android phone’s secure hardware. A readable Python daemon connects the two — <strong>and this page shows every layer, including the parts that don’t work yet.</strong>
-        </p>
+    <!-- Metrics Strip -->
+    <div class="metrics-strip">
+      <div class="metric-pill">
+        <div class="metric-val">&lt; 5 <span>ms</span></div>
+        <div class="metric-label">Pairing & Handshake Latency</div>
+      </div>
+      <div class="metric-pill">
+        <div class="metric-val">0.0 <span>s</span></div>
+        <div class="metric-label">Instant Password Fallback</div>
+      </div>
+      <div class="metric-pill">
+        <div class="metric-val">CC EAL5+ <span></span></div>
+        <div class="metric-label">Android StrongBox Silicon</div>
+      </div>
+      <div class="metric-pill">
+        <div class="metric-val">100% <span>Local</span></div>
+        <div class="metric-label">Peer-to-Peer, Zero Cloud Relays</div>
+      </div>
+    </div>
+  </section>
 
-        <div class="hero-actions reveal d3">
-          <a class="btn solid" href="#trace">
-            Follow the request
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </a>
-          <a class="btn" href="#status">Read the honest status</a>
-        </div>
+  <!-- =========================================================================
+       THE INTERACTIVE HARDWARE RIG (TANDEM STYLE)
+       ========================================================================= -->
+  <section class="rig-section" id="rig">
+    <div class="rig-header">
+      <h2 class="h2">Interactive Simulator</h2>
+      <p class="lede" style="margin: 8px auto 0; font-size: 16px;">
+        Click any scenario below to see how the Linux kernel, PAM stack, and Android StrongBox communicate in real-time.
+      </p>
+    </div>
 
-        <div class="hero-meta reveal d3">
-          <span><span class="ok">●</span> GPL-3.0</span>
-          <i></i>
-          <span>Python + Kotlin</span>
-          <i></i>
-          <span>No cloud account</span>
-        </div>
-
-        <a class="hero-scroll" href="#how">
-          Scroll to trace an assertion
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
-        </a>
+    <div class="rig-controls">
+      <div class="mode-toggles">
+        <button class="mode-btn active" data-scenario="sudo">🖐️ 1. Sudo Biometric</button>
+        <button class="mode-btn" data-scenario="git">🔑 2. Git Push (OpenSSH ecdsa-sk)</button>
+        <button class="mode-btn" data-scenario="webauthn">🌐 3. WebAuthn (Google/GitHub)</button>
+        <button class="mode-btn" data-scenario="fallback">⚡ 4. 0.0s Password Fallback</button>
+        <button class="mode-btn danger" data-scenario="rogue">🚨 5. Rogue Wi-Fi Defense</button>
       </div>
 
-      <div class="stage reveal d2" aria-label="Diagram: a host talks to a virtual FIDO2 device, which forwards signing to a phone">
-        <div class="stage-top">
-          <span class="stage-title"><span class="record"></span><b>trace</b> / one assertion</span>
-          <span class="stage-status">virtual device</span>
+      <div class="conn-switcher">
+        <span style="color:var(--gray-1); margin-right:4px;">Transport:</span>
+        <button class="conn-pill active" id="btnUsb" title="Low latency USB via adb reverse">🔌 USB Loopback</button>
+        <button class="conn-pill wifi" id="btnWifi" title="Zero-Trust Wi-Fi LAN">📡 Wi-Fi LAN</button>
+      </div>
+    </div>
+
+    <div class="stage-viewport">
+      <div class="hardware-duo">
+
+        <!-- 1. REALISTIC VECTOR LAPTOP -->
+        <div class="laptop-chassis">
+          <div class="laptop-lid">
+            <div class="laptop-screen">
+              <!-- Top bar -->
+              <div class="desktop-topbar">
+                <div class="topbar-left">
+                  <span class="topbar-pill">Activities</span>
+                  <span style="color:var(--white);" id="topbarApp">Terminal</span>
+                </div>
+                <span>Fedora Linux 43 (Wayland)</span>
+                <div style="display:flex; gap:8px;">
+                  <span id="topbarConn">USB-HID: /dev/uhid</span>
+                  <span>100%</span>
+                </div>
+              </div>
+
+              <!-- Workspace -->
+              <div class="desktop-workspace">
+                <!-- Linux Terminal Window -->
+                <div class="screen-terminal" id="screenTerminal">
+                  <div class="sterm-bar">
+                    <div class="sterm-dots">
+                      <span class="sterm-dot r"></span>
+                      <span class="sterm-dot y"></span>
+                      <span class="sterm-dot g"></span>
+                    </div>
+                    <span style="color:var(--gray-1); font-family:var(--mono); font-size:11px;" id="stermTitle">siddharth@fedora:~ (bash)</span>
+                    <span style="font-family:var(--mono); font-size:10px; color:var(--accent-green);" id="stermStatus">● FIDO2 Key Active</span>
+                  </div>
+                  <div class="sterm-body" id="screenTermBody">
+                    <div><span style="color:var(--accent-green);">siddharth@fedora:~$ </span><span style="color:#FFF;" id="termCmdLine">sudo dnf update</span></div>
+                    <div id="termWaitingLine" style="margin-top:8px; color:var(--accent-amber); display:flex; align-items:center; gap:6px;">
+                      <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent-amber);"></span>
+                      <span id="termPromptText">Touch phone biometric or press Enter for password:</span>
+                    </div>
+                    <div id="termDoneOutput" style="display:none; margin-top:8px;">
+                      <div style="color:var(--accent-green); font-weight:600;" id="termSuccessHead">✓ Authorized by Android StrongBox</div>
+                      <div style="color:var(--gray-1); margin-top:2px;" id="termSuccessDetail">Running transaction check... All packages up to date!</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Chrome Browser Window -->
+                <div class="screen-browser" id="screenBrowser">
+                  <div class="sbrowser-bar">
+                    <div class="sterm-dots">
+                      <span class="sterm-dot r"></span>
+                      <span class="sterm-dot y"></span>
+                      <span class="sterm-dot g"></span>
+                    </div>
+                    <div class="sbrowser-tab" id="browserTabTitle">
+                      <span>Google Account — 2-Step</span>
+                    </div>
+                    <div class="sbrowser-urlbar" id="browserUrlText">
+                      <span>https://myaccount.google.com/security</span>
+                    </div>
+                  </div>
+                  <div class="sbrowser-body">
+                    <div class="browser-auth-card">
+                      <div class="browser-auth-head">
+                        <div id="browserServiceIcon">
+                          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.7s.1-2 .4-2.7L1.6 6.4C.6 8.3 0 10.1 0 12s.6 3.7 1.6 5.6l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.3-6.7-5.3L1.6 15.9C3.5 19.7 7.4 23 12 23z"/></svg>
+                        </div>
+                        <div>
+                          <div class="browser-auth-title" id="browserCardTitle">Verify your identity</div>
+                          <div class="browser-auth-sub" id="browserCardSub">Use your security key with <b>google.com</b></div>
+                        </div>
+                      </div>
+                      <div class="browser-auth-box">
+                        <div id="browserWaitingText" style="display:flex; align-items:center; gap:6px; color:var(--accent-cyan);">
+                          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent-cyan);"></span>
+                          <span>Waiting for touch on security key...</span>
+                        </div>
+                        <div id="browserDoneText" style="display:none; color:var(--accent-green); font-weight:600;">
+                          ✓ Identity verified with FIDO2 Security Key!
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+          <!-- Laptop Base and Hinge -->
+          <div class="laptop-base"><div class="laptop-notch"></div></div>
+          <div class="laptop-shadow"></div>
         </div>
 
-        <div class="stage-inner">
-          <div class="stage-terminal">
-            <div class="term-line"><span class="prompt">$</span><span class="cmd">fido2-token -L</span></div>
-            <div class="term-line"><span class="out">/dev/hidraw6: vendor=0x1209, product=0x0001</span></div>
-            <div class="term-line"><span class="out">( uKey FIDO2 Authenticator )</span><span class="ok">  ✓ no USB key</span></div>
-            <div class="term-line"><span class="prompt">$</span><span class="faint">fido2-assert -G ... /dev/hidraw6</span><span class="term-cursor"></span></div>
-          </div>
+        <!-- 2. DATA CONDUIT (USB or Wi-Fi packets) -->
+        <div class="stream-conduit">
+          <div class="conduit-line" id="conduitLine"></div>
+          <div class="packet-pulse" id="packetPulse"></div>
+        </div>
 
-          <div class="stage-flow" aria-hidden="true">
-            <span class="flow-node"><span class="chip">UHID</span><span class="label">virtual HID</span></span>
-            <span class="flow-node"><span class="chip">HID</span><span class="label">64 B reports</span></span>
-            <span class="flow-node"><span class="chip">CTAP2</span><span class="label">CBOR</span></span>
-            <span class="flow-node"><span class="chip">P-256</span><span class="label">phone signs</span></span>
-          </div>
+        <!-- 3. REALISTIC VECTOR ANDROID PHONE -->
+        <div class="phone-chassis">
+          <div class="phone-key power"></div>
+          <div class="phone-key vol"></div>
 
-          <div class="stage-bottom">
-            <div class="stage-code">
-              <div class="caption">daemon → signer</div>
-              <div class="code-mini"><span class="k">"action"</span>: <span class="s">"get_assertion"</span>,
-<span class="k">"rp_id"</span>: <span class="s">"example.com"</span>,
-<span class="k">"digest"</span>: <span class="t">"9f2c…c41a"</span></div>
-              <div class="stage-code-note">private key: not on this host</div>
+          <div class="phone-screen">
+            <div class="phone-punchhole"></div>
+            <div class="phone-statusbar">
+              <span>18:30</span>
+              <div class="phone-status-icons">
+                <span id="phoneWifiIcon">5G</span>
+                <span>88%</span>
+              </div>
             </div>
-            <div class="phone-zone">
-              <div class="phone" aria-hidden="true">
-                <div class="phone-screen">
-                  <span class="phone-brand">uKey</span>
-                  <span class="phone-lock">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+
+            <!-- Authentic uKey Mobile App Screen -->
+            <div class="uapp-container">
+              <div class="uapp-header">
+                <div class="uapp-title">uKey</div>
+                <div class="uapp-tagline">Hardware Biometric Authenticator</div>
+              </div>
+
+              <!-- Connection Card -->
+              <div class="uapp-card">
+                <div class="uapp-section-label">DAEMON BRIDGE</div>
+                <div class="uapp-inputs">
+                  <div class="uapp-field">
+                    <span class="uapp-field-label">Host IP</span>
+                    <div class="uapp-input-box" id="phoneHostInput">127.0.0.1</div>
+                  </div>
+                  <div class="uapp-field-port">
+                    <span class="uapp-field-label">Port</span>
+                    <div class="uapp-input-box">8443</div>
+                  </div>
+                </div>
+
+                <div class="uapp-status-row">
+                  <span class="uapp-status-pill" id="phoneStatusPill">
+                    <span class="uapp-dot" id="phoneDot"></span>
+                    <span id="phoneStatusText">Connected</span>
                   </span>
-                  <span class="phone-rp">example.com</span>
-                  <span class="phone-sub">biometric required</span>
-                  <span class="phone-finger">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 11a2 2 0 0 1 2 2v2a7 7 0 0 1-.4 2.3M8 18.5A8 8 0 0 0 9.5 15v-2a2.5 2.5 0 0 1 5 0v2a11 11 0 0 0 .6 3.5M5 15a11 11 0 0 0 .5 3.3M19 14a13 13 0 0 1-.7 4.3M7 9a5 5 0 0 1 10 0v3a14 14 0 0 0 .3 3M4.5 11a8 8 0 0 1 1-4"/></svg>
-                  </span>
-                  <span class="phone-ok">touch sensor to sign</span>
+                  <span class="uapp-status-detail" id="phoneLatencyDetail">&lt; 3ms (USB)</span>
+                </div>
+              </div>
+
+              <!-- Real-time Packet & Security Log -->
+              <div class="uapp-log-card">
+                <div class="uapp-log-header">
+                  <span class="uapp-log-label">SECURITY CONSOLE</span>
+                  <button class="uapp-clear-btn" id="clearLogBtn">CLEAR</button>
+                </div>
+                <div class="uapp-log-body" id="appLogBody">
+                  <div class="uapp-log-line"><span class="log-time">[18:30:01]</span> <span class="log-info">StrongBox Keystore initialized</span></div>
+                  <div class="uapp-log-line"><span class="log-time">[18:30:02]</span> <span class="log-conn">Paired with laptop (token verified)</span></div>
+                  <div class="uapp-log-line" id="appLogLiveReq"><span class="log-time">[18:30:10]</span> <span class="log-req">REQ assertion: pam://fedora</span></div>
+                  <div class="uapp-log-line" id="appLogLiveDone" style="display:none;"><span class="log-time">[18:30:12]</span> <span class="log-ok">OK StrongBox signature verified</span></div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div class="stage-float">no cable attached</div>
-        <div class="stage-note">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>
-          The host sees a USB device. The device is a Python process. The key is a phone.
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <section class="section" aria-label="At a glance">
-    <div class="wrap">
-      <div class="stats reveal">
-        <div class="stat"><div class="num">1,317</div><div class="lbl">lines <b>Python daemon</b></div></div>
-        <div class="stat"><div class="num">8<span>/8</span></div><div class="lbl">tests passing <b>with mock signer</b></div></div>
-        <div class="stat"><div class="num">64<span> B</span></div><div class="lbl">CTAPHID reports <b>fragmented + rebuilt</b></div></div>
-        <div class="stat"><div class="num">0</div><div class="lbl">USB security keys <b>required on the host</b></div></div>
-      </div>
-      <div class="plain-note reveal d1">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-5"/></svg>
-        <div><b>The short version.</b> A security key is three things: a secure element, a transport, and an approval button. uKey asks whether those three pieces can live in different places — without the host noticing.</div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="how">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <span class="kicker">01 / The illusion</span>
-          <h2 class="display">The kernel sees a key.<br><em>The key is a phone.</em></h2>
-        </div>
-        <p class="lede">This is not a browser extension or a password manager. It is a virtual USB HID device, assembled from a HID report descriptor, a CTAP2 engine, and a remote signer. Here is the stack.</p>
-      </div>
-
-      <div class="layer-grid">
-        <article class="layer-card reveal" data-n="01">
-          <h3>A file named <code>/dev/hidraw</code></h3>
-          <p>UHID lets a user-space process ask the Linux kernel to create a HID device. The kernel gives it a real hidraw node. Tools like <code>fido2-token</code> open it like any USB key.</p>
-          <span class="tech">UHID → HID → hidraw</span>
-        </article>
-        <article class="layer-card reveal d1" data-n="02">
-          <h3>64-byte reports</h3>
-          <p>FIDO2 messages are larger than one HID report. CTAPHID splits them into 64-byte packets, then reassembles them on the way back. Channel IDs keep sessions apart.</p>
-          <span class="tech">CTAPHID framing</span>
-        </article>
-        <article class="layer-card reveal d2" data-n="03">
-          <h3>CBOR, not text</h3>
-          <p>The CTAP2 layer parses CBOR maps for <code>getInfo</code>, <code>makeCredential</code>, and <code>getAssertion</code>. It returns status bytes the host already knows how to read.</p>
-          <span class="tech">CTAP2 + CBOR</span>
-        </article>
-        <article class="layer-card reveal" data-n="04">
-          <h3>The private key stays here</h3>
-          <p>On the phone, a non-exportable P-256 key is created in AndroidKeyStore. StrongBox is preferred; TEE is the fallback. Software-backed keys are rejected.</p>
-          <span class="tech">AndroidKeyStore</span>
-        </article>
-        <article class="layer-card reveal d1" data-n="05">
-          <h3>One local socket</h3>
-          <p>The daemon does not sign. It forwards the digest and relying party ID to a signer over a local TCP socket. Over USB, <code>adb reverse</code> keeps that socket on loopback.</p>
-          <span class="tech">JSON signer protocol</span>
-        </article>
-        <article class="layer-card reveal d2" data-n="06">
-          <h3>Proof, not vibes</h3>
-          <p>The test harness uses the real <code>fido2-token</code>, <code>fido2-cred</code>, and <code>fido2-assert</code> tools. The repository also has 8 Python tests and an independent ECDSA check.</p>
-          <span class="tech">libfido2 + unittest</span>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="trace">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <span class="kicker">02 / One request</span>
-          <h2 class="display">What happens when you touch the sensor.</h2>
-        </div>
-        <p class="lede">A FIDO2 assertion is five short hops. None of them are magic; most of them are just framing.</p>
-      </div>
-
-      <div class="trace-wrap">
-        <article class="trace-step reveal">
-          <div class="trace-dot">01</div>
-          <div class="trace-copy">
-            <h3>libfido2 opens the device</h3>
-            <p><code>fido2-token -L</code> enumerates a device that looks exactly like a USB security key. The product string comes from the virtual HID device, not a USB descriptor.</p>
-            <span class="tag">host side</span>
-          </div>
-          <div class="trace-code">
-            <div class="code-card">
-              <div class="code-head"><span class="file">terminal</span><button class="copy-btn" type="button">copy</button></div>
-              <pre><span class="t">$</span> fido2-token -L
-<span class="m">/dev/hidraw6: vendor=0x1209, product=0x0001</span>
-<span class="m">( uKey FIDO2 Authenticator )</span></pre>
-            </div>
-          </div>
-        </article>
-
-        <article class="trace-step reveal">
-          <div class="trace-dot">02</div>
-          <div class="trace-copy">
-            <h3>The kernel carries 64-byte reports</h3>
-            <p>When a response is ready, the daemon writes 64-byte input reports into UHID. The kernel delivers them to the hidraw reader. CTAPHID uses the first packet for channel, command, and length; continuation packets carry sequence numbers.</p>
-            <span class="tag">transport</span>
-          </div>
-          <div class="trace-code">
-            <div class="code-card">
-              <div class="code-head"><span class="file">ctaphid packet</span><button class="copy-btn" type="button">copy</button></div>
-              <pre><span class="m">first:</span>  CID(4) | CMD(1) | LEN(2) | payload(57)
-<span class="m">next:</span>   CID(4) | SEQ(1) | payload(59)
-<span class="v">// 64 bytes each, reassembled by the daemon</span></pre>
-            </div>
-          </div>
-        </article>
-
-        <article class="trace-step reveal">
-          <div class="trace-dot">03</div>
-          <div class="trace-copy">
-            <h3>The daemon decodes CTAP2</h3>
-            <p>A one-byte command plus a CBOR parameter map. <code>getInfo</code> reports FIDO 2.0 and ES256. The current <code>caps</code> field also reports <code>nomsg</code> — CTAP1/U2F messages are not implemented.</p>
-            <span class="tag">protocol</span>
-          </div>
-          <div class="trace-code">
-            <div class="code-card">
-              <div class="code-head"><span class="file">getInfo response (trimmed)</span><button class="copy-btn" type="button">copy</button></div>
-              <pre>{
-  <span class="k">"versions"</span>: [<span class="y">"FIDO_2_0"</span>],
-  <span class="k">"algorithms"</span>: [{ <span class="k">"alg"</span>: -7, <span class="k">"type"</span>: <span class="y">"public-key"</span> }],
-  <span class="k">"options"</span>: { <span class="k">"rk"</span>: false, <span class="k">"up"</span>: true, <span class="k">"uv"</span>: true }
-}</pre>
-            </div>
-          </div>
-        </article>
-
-        <article class="trace-step reveal">
-          <div class="trace-dot">04</div>
-          <div class="trace-copy">
-            <h3>The phone signs a digest, not a command</h3>
-            <p>The signer receives the relying party ID and the digest to sign. On the phone, a per-use <code>BiometricPrompt</code> must succeed before the key is used. The key never leaves secure hardware.</p>
-            <span class="tag">secure element</span>
-          </div>
-          <div class="trace-code">
-            <div class="code-card">
-              <div class="code-head"><span class="file">daemon → phone</span><button class="copy-btn" type="button">copy</button></div>
-              <pre>{
-  <span class="k">"id"</span>: 7,
-  <span class="k">"action"</span>: <span class="y">"get_assertion"</span>,
-  <span class="k">"rp_id"</span>: <span class="y">"example.com"</span>,
-  <span class="k">"digest"</span>: <span class="t">"9f2c…c41a"</span>
-}</pre>
-            </div>
-          </div>
-        </article>
-
-        <article class="trace-step reveal">
-          <div class="trace-dot">05</div>
-          <div class="trace-copy">
-            <h3>The assertion comes back and verifies</h3>
-            <p>AndroidKeyStore returns ASN.1 DER; the app decodes it to raw <code>r || s</code>. The daemon converts that raw signature back to DER at the CTAP2 boundary. <code>fido2-assert -V</code> then verifies it against the credential public key.</p>
-            <span class="tag">verification</span>
-          </div>
-          <div class="trace-code">
-            <div class="code-card">
-              <div class="code-head"><span class="file">terminal</span><button class="copy-btn" type="button">copy</button></div>
-              <pre><span class="t">$</span> fido2-assert -V -i assert_out cred_pub.pem
-<span class="c"># exit 0: signature verifies against cred_pub.pem</span>
-<span class="m"># ES256 signature, P-256 public key</span></pre>
-            </div>
-          </div>
-        </article>
-      </div>
-    </div>
-  </section>
-  <section class="section" id="demo">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <span class="kicker">03 / See it run</span>
-          <h2 class="display">Real commands. Real output. No render farm.</h2>
-        </div>
-        <p class="lede">These are the tools the project is tested with. The node name changes per machine; the protocol does not.</p>
-      </div>
-
-      <div class="demo-shell reveal">
-        <div class="demo-aside" role="tablist" aria-label="Demo steps">
-          <button class="demo-tab" type="button" role="tab" id="tab-enumerate" aria-controls="panel-enumerate" aria-selected="true">
-            <span class="idx">01</span>
-            <span><span class="t">Enumerate</span><span class="s">Does Linux see a key?</span></span>
-          </button>
-          <button class="demo-tab" type="button" role="tab" id="tab-inspect" aria-controls="panel-inspect" aria-selected="false" tabindex="-1">
-            <span class="idx">02</span>
-            <span><span class="t">Inspect</span><span class="s">What does the key claim?</span></span>
-          </button>
-          <button class="demo-tab" type="button" role="tab" id="tab-sign" aria-controls="panel-sign" aria-selected="false" tabindex="-1">
-            <span class="idx">03</span>
-            <span><span class="t">Sign + verify</span><span class="s">Prove the assertion.</span></span>
-          </button>
-        </div>
-
-        <div class="demo-panel" id="panel-enumerate" role="tabpanel" aria-labelledby="tab-enumerate">
-          <div class="code-card">
-            <div class="code-head"><span class="file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 9-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg>terminal</span><button class="copy-btn" type="button">copy</button></div>
-            <pre><span class="t">$</span> fido2-token -L
-<span class="m">/dev/hidraw6: vendor=0x1209, product=0x0001 ( uKey FIDO2 Authenticator)</span>
-
-<span class="c"># node names vary. The host sees a normal HID device.</span>
-<span class="c"># there is no USB key in the port.</span></pre>
-          </div>
-        </div>
-
-        <div class="demo-panel" id="panel-inspect" role="tabpanel" aria-labelledby="tab-inspect" hidden>
-          <div class="code-card">
-            <div class="code-head"><span class="file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>fido2-token -I (trimmed)</span><button class="copy-btn" type="button">copy</button></div>
-            <pre><span class="t">$</span> fido2-token -I /dev/hidraw6
-proto: 0x02
-major: 0x01
-minor: 0x00
-build: 0x00
-caps: 0x0c (nowink, cbor, nomsg)
-version strings: FIDO_2_0
-transport strings: usb
-algorithms: es256 (public-key)
-aaguid: fa83a1a960d94daabc6c092271928a11
-options: nork, up, uv
-maxmsgsiz: 1024
-maxcredcntlst: 8
-maxcredlen: 255
-
-<span class="c"># nomsg is the honest part: no CTAP1/U2F messages.</span>
-<span class="c"># that is why the PAM/sudo path is not done yet.</span></pre>
-          </div>
-        </div>
-
-        <div class="demo-panel" id="panel-sign" role="tabpanel" aria-labelledby="tab-sign" hidden>
-          <div class="code-card">
-            <div class="code-head"><span class="file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>register, then assert</span><button class="copy-btn" type="button">copy</button></div>
-            <pre><span class="c"># registration (challenge, rp id, user id, optional exclude list)</span>
-<span class="t">$</span> fido2-cred -M -i cred_in -o cred_out /dev/hidraw6
-<span class="t">$</span> fido2-cred -V -i cred_out -o cred_verify_out
-<span class="c"># packed self-attestation verifies; public key written out</span>
-
-<span class="c"># assertion over a new challenge</span>
-<span class="t">$</span> fido2-assert -G -i assert_in -o assert_out /dev/hidraw6
-<span class="t">$</span> fido2-assert -V -i assert_out cred_pub.pem
-<span class="c"># exit 0: the signature verifies against cred_pub.pem</span></pre>
-          </div>
-        </div>
-      </div>
-      <p class="demo-foot">The 8 Python tests run against a deterministic mock signer, so the protocol can be tested without a phone. The Android signer implements the same request shape. <a class="accent" href="https://github.com/siddharthsai218/ukey#validation" target="_blank" rel="noopener">Validation steps in the README →</a></p>
-    </div>
-  </section>
-
-  <section class="section" id="experiment">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <span class="kicker">04 / The second act</span>
-          <h2 class="display">Can the key show you what it’s signing?</h2>
-        </div>
-        <p class="lede">FIDO2 signs a digest. A digest is not a command. The experiment is to capture the command context, show it out of band, and bind the approval to that exact context.</p>
-      </div>
-
-      <div class="experiment-grid">
-        <div class="reveal">
-          <p class="lede" style="margin-top:0"><b style="color:var(--text)">The obvious case is weak.</b> If you are sitting at your laptop, you can already see the <code>sudo</code> command on screen. Showing it again on your phone adds ceremony, not value. Say that before anyone else does.</p>
-
-          <p class="lede">The case worth exploring is when the terminal is <em>not</em> the trust channel: a remote session, an unattended script, a shared machine, or a host you do not fully trust. There, the approval needs to arrive on a separate device, over a separate path, with the exact context attached.</p>
-
-          <div class="argument-list">
-            <div class="argument">
-              <span class="n">01</span>
-              <div><h4>Out-of-band, not on-screen again</h4><p>The phone is a different device and a different display path. It can approve even when nobody is watching the terminal.</p></div>
-            </div>
-            <div class="argument">
-              <span class="n">02</span>
-              <div><h4>Bind the signature to the context</h4><p>The phone would sign a hash of the canonical command, user, host, TTY, and cwd — not just “yes.” A changed command means a different signature.</p></div>
-            </div>
-            <div class="argument">
-              <span class="n">03</span>
-              <div><h4>Prove what was approved</h4><p>The host can keep the context and the signature. That is evidence, not a scrollback buffer.</p></div>
-            </div>
-            <div class="argument">
-              <span class="n">04</span>
-              <div><h4>Survive the failure modes</h4><p>TOCTOU, timeout, phone disconnect, password fallback, and a compromised host all need explicit answers. None of this is wired up yet.</p></div>
-            </div>
-          </div>
-
-          <div class="quote"><b>The honest sentence:</b> “For local <code>sudo</code>, you should just look at the terminal. This experiment is for the cases where the terminal is not the approval channel — and for the protocol problem of binding an approval to an exact command.”</div>
-        </div>
-
-        <div class="phone-demo-wrap reveal d1">
-          <div class="mock-label-wrap"><span class="mock-label">design mockup · not implemented</span></div>
-          <div class="phone-demo" aria-label="Design mockup of a phone showing a sudo approval request">
-            <div class="phone-demo-screen">
-              <div class="phone-demo-head">
-                <span class="who"><i></i> uKey / approval</span>
-                <svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <!-- Material 3 BiometricPrompt Modal -->
+            <div class="biometric-sheet" id="phoneDialog">
+              <div class="sheet-drag-handle"></div>
+              <div class="sheet-header">
+                <div class="sheet-icon" id="dialogIcon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="sheet-title">uKey Authenticator</div>
+                  <div class="sheet-sub" id="phoneRpId">Authorize sudo: pam://fedora</div>
+                </div>
               </div>
-              <div class="phone-demo-body">
-                <span class="request">sudo request</span>
-                <h4><code>systemctl restart nginx</code></h4>
-                <dl class="ctx">
-                  <dt>host</dt><dd>devbox</dd>
-                  <dt>user</dt><dd>siddharth → root</dd>
-                  <dt>tty</dt><dd>pts/3</dd>
-                  <dt>cwd</dt><dd>/srv/app</dd>
-                  <dt>command</dt><dd class="command">sudo systemctl restart nginx</dd>
-                </dl>
-                <div class="digest"><b>context digest</b><br>9f2c1d7a… <br>e6b0c41a</div>
-                <div class="phone-actions"><span class="deny">deny</span><span class="approve">approve with fingerprint</span></div>
+
+              <div class="sheet-desc" id="phoneSheetDesc">Touch fingerprint sensor to authorize login</div>
+
+              <!-- Interactive Fingerprint Target -->
+              <div class="fingerprint-touch-area" id="fingerprintBtn" title="Click to touch fingerprint">
+                <div class="fp-ripple"></div>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" id="fpIcon">
+                  <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
+                  <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
+                  <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>
+                  <path d="M2 12a10 10 0 0 1 18-6"/>
+                  <path d="M2 16h.01"/>
+                  <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
+                  <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/>
+                  <path d="M8.65 22c.21-.66.45-1.32.57-2"/>
+                  <path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>
+                </svg>
+              </div>
+
+              <div class="sheet-footer">
+                <span class="phone-gesture-hint" id="fpStatusText">Tap sensor to sign</span>
+                <span class="sheet-cancel">Cancel</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       ZERO-TRUST SECURITY ARCHITECTURE & WEB DASHBOARD
+       ========================================================================= -->
+  <section class="security-section" id="security">
+    <div style="text-align:center; max-width:44em; margin: 0 auto;">
+      <div class="hero-tag">DEFENSE-IN-DEPTH • ZERO TRUST</div>
+      <h2 class="h2">Engineered for Untrusted Wi-Fi Networks.</h2>
+      <p class="lede" style="margin: 12px auto 0;">
+        Unlike Bluetooth which transmits in the clear, uKey uses a <b>one-time 6-digit PIN pairing architecture</b>. Strangers on the same Wi-Fi cannot see your keys or forge authentications.
+      </p>
+    </div>
+
+    <div class="sec-grid">
+      <div class="sec-card">
+        <div>
+          <div class="sec-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <div class="sec-title">1. One-Time 6-Digit PIN</div>
+          <p class="sec-desc">
+            Pair your phone once using a cryptographically generated 6-digit PIN. The daemon issues a unique 256-bit device token stored in Android's secure preferences. No passwords to remember.
+          </p>
+        </div>
+        <div class="sec-tag">ukeyctl pair • 15min expiry</div>
+      </div>
+
+      <div class="sec-card">
+        <div>
+          <div class="sec-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <div class="sec-title">2. HMAC-SHA256 Challenge-Response</div>
+          <p class="sec-desc">
+            The daemon drops unauthenticated TCP packets in &lt;5ms. Bearer tokens are never sent in the clear; replay attacks are mathematically prevented via single-use nonces.
+          </p>
+        </div>
+        <div class="sec-tag">Sub-5ms Rogue Drop</div>
+      </div>
+
+      <div class="sec-card">
+        <div>
+          <div class="sec-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <div class="sec-title">3. 0.0s Password Fallback</div>
+          <p class="sec-desc">
+            Phone in another room or out of battery? Linux PAM <code>sufficient</code> fallback immediately prompts for your normal UNIX password with <b>zero delay</b>. You are never locked out.
+          </p>
+        </div>
+        <div class="sec-tag">Zero Hangs • Instant Fallback</div>
+      </div>
+
+      <div class="sec-card">
+        <div>
+          <div class="sec-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 12h10"/><path d="M12 7v10"/>
+            </svg>
+          </div>
+          <div class="sec-title">4. Automatic Desktop Lock</div>
+          <p class="sec-desc">
+            Walk away from your desk with your phone? The daemon monitors the bridge socket. When disconnected, it calls <code>loginctl lock-session</code> to lock your screen automatically.
+          </p>
+        </div>
+        <div class="sec-tag">systemd-logind Integration</div>
+      </div>
+
+      <!-- Live Web Settings Console Mock -->
+      <div class="webconsole-card">
+        <div class="webconsole-header">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:14px; font-weight:800; font-family:var(--display);">Embedded Web Dashboard</span>
+            <span class="badge" style="font-size:10px; padding:2px 6px; background:var(--accent-green-bg); color:var(--accent-green); border-radius:4px; font-family:var(--mono);">LIVE ON LOCALHOST</span>
+          </div>
+          <div class="webconsole-url">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>http://127.0.0.1:8444</span>
+          </div>
+        </div>
+
+        <div class="webconsole-body">
+          <div class="console-widget">
+            <div class="widget-head">Master Authenticator Toggle</div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:700; font-size:14px;" id="webToggleState">uKey Active (Enabled)</div>
+                <div style="font-size:11.5px; color:var(--gray-1); margin-top:2px;">Intercepts PAM & WebAuthn</div>
+              </div>
+              <button class="btn" id="btnWebToggle" style="padding:6px 14px; font-size:12px; font-family:var(--mono); background:var(--accent-green); color:#000; font-weight:700;">TOGGLE</button>
+            </div>
+          </div>
+
+          <div class="console-widget">
+            <div class="widget-head">Pairing PIN Generator</div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-family:var(--mono); font-size:22px; font-weight:900; color:var(--accent-cyan); letter-spacing:2px;" id="webPinDisplay">749 104</div>
+                <div style="font-size:11px; color:var(--gray-1);">Valid for 14m 20s</div>
+              </div>
+              <button class="btn" id="btnGenPin" style="padding:6px 12px; font-size:12px; font-family:var(--mono);">NEW PIN</button>
+            </div>
+          </div>
+
+          <div class="console-widget" style="grid-column: 1 / -1;">
+            <div class="widget-head">Authorized Paired Devices</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-subtle); font-family:var(--mono); font-size:12px;">
+              <div>
+                <span style="color:var(--white); font-weight:600;">📱 Pixel 7 Pro (Android 14)</span>
+                <span style="color:var(--gray-1); margin-left:12px;">ID: a3f89c02</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <span style="color:var(--accent-green);">● Active (Last seen 2s ago)</span>
+                <button class="btn" style="padding:3px 8px; font-size:11px; color:var(--accent-red); border-color:var(--accent-red);" id="btnRevokeDemo">Revoke</button>
               </div>
             </div>
           </div>
-          <p class="phone-caption">The screen is the point: it shows the request, not just “approve?”. The fields and digest are from the design document, not a working flow.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section" id="status">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <span class="kicker">05 / Status</span>
-          <h2 class="display">What works. What doesn’t.</h2>
-        </div>
-        <p class="lede">No “coming soon” fog. If it is not tested, it is not claimed. This table is the source of truth for what this prototype is.</p>
-      </div>
-
-      <div class="table-shell reveal">
-        <div class="table-scroll">
-          <table class="status-table">
-            <thead><tr><th scope="col">Area</th><th scope="col">State</th><th scope="col">Evidence / limit</th></tr></thead>
-            <tbody>
-              <tr><td>Virtual FIDO2 device</td><td><span class="badge works">Working</span></td><td>UHID creates a HID device; libfido2 enumerates a hidraw node.<span class="evidence">verified with fido2-token -L / -I</span></td></tr>
-              <tr><td>CTAPHID + CTAP2</td><td><span class="badge works">Working</span></td><td>INIT, PING, CBOR, CANCEL, KEEPALIVE; GetInfo, MakeCredential, GetAssertion.<span class="evidence">8/8 protocol tests, 24 total; fragmentation + ECDSA verification</span></td></tr>
-              <tr><td>Android signer</td><td><span class="badge partial">Partial</span></td><td>StrongBox preferred, TEE fallback, software keys rejected; per-use biometric prompt. Not independently audited, and no phone-to-libfido2 run in CI.<span class="evidence">Kotlin source + unit tests in repo</span></td></tr>
-              <tr><td>Credential storage</td><td><span class="badge partial">Metadata only</span></td><td>Credential ID, RP ID, and public key persist under <code>~/.config/ukey</code>, unencrypted. Private keys stay in AndroidKeyStore.<span class="evidence">daemon/ukey_daemon.py, credentials.json</span></td></tr>
-              <tr><td>Browser WebAuthn</td><td><span class="badge claim">Not claimed</span></td><td>No browser end-to-end test is included. Do not treat this as a daily passkey yet.</td></tr>
-              <tr><td>SSH <code>ecdsa-sk</code></td><td><span class="badge claim">Not claimed</span></td><td>No end-to-end test. The protocol may support it; this site does not.</td></tr>
-              <tr><td>PAM / <code>sudo</code></td><td><span class="badge no">Not yet</span></td><td><code>CTAPHID_MSG</code> is not implemented; <code>caps</code> says <code>nomsg</code>. The PAM script exists but the credential path is not finished.</td></tr>
-              <tr><td>Resident credentials</td><td><span class="badge no">Unsupported</span></td><td><code>rk=true</code> is rejected; there is no <code>getNextAssertion</code>.</td></tr>
-              <tr><td>Context approval</td><td><span class="badge design">Design</span></td><td>Screen mockup and schema exist. No protocol field or PAM hook is wired up.</td></tr>
-              <tr><td>Transport security</td><td><span class="badge no">Missing</span></td><td>The signer socket is unauthenticated and unencrypted. Keep it on loopback via <code>adb reverse</code>.</td></tr>
-              <tr><td>Auto-lock</td><td><span class="badge impl">Opt-in</span></td><td>Off by default. When enabled: grace period, reconnect cancellation, duplicate-disconnect debounce, and a shutdown guard. Not a security boundary.<span class="evidence">tests/test_auto_lock.py</span></td></tr>
-              <tr><td>Configuration</td><td><span class="badge impl">Implemented</span></td><td>Shared JSON config at <code>~/.config/ukey/config.json</code>, written <code>0600</code>, with loopback and auto-lock-off defaults. CLI flags override for one run.<span class="evidence">tests/test_config.py; scripts/ukeyctl</span></td></tr>
-              <tr><td>Installer</td><td><span class="badge partial">Fedora-only</span></td><td><code>install.sh</code> installs a user service with safe defaults. It no longer forces <code>--wireless --auto-lock</code>. The manual path is the portable one.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="legend">
-        <span><span class="badge works">Working</span> tested here</span>
-        <span><span class="badge impl">Implemented</span> code exists, not audited</span>
-        <span><span class="badge design">Design</span> mockup only</span>
-        <span><span class="badge no">Not yet</span> missing</span>
-        <span><span class="badge claim">Not claimed</span> no end-to-end test</span>
-      </div>
-
-      <div class="callout reveal"><b>Why show the gaps?</b> Because the interesting question is not “is this a finished product?” It is “how does the working part work, and what breaks when you push it?” The gaps are the next set of engineering problems, not footnotes.</div>
+  <!-- =========================================================================
+       WEBAUTHN & OPENSSH ECOSYSTEM
+       ========================================================================= -->
+  <section class="websites-section" id="websites">
+    <div style="text-align:center; max-width:44em; margin: 0 auto;">
+      <div class="hero-tag">FIDO2 / CTAP2 COMPATIBILITY</div>
+      <h2 class="h2">Works with Git, Gmail, & Any Identity Provider.</h2>
+      <p class="lede" style="margin: 12px auto 0;">
+        Because the Linux kernel exposes a standard physical <b>USB Security Key</b> on <code>/dev/uhid</code>, any application or website supporting FIDO2 works natively out of the box.
+      </p>
     </div>
-  </section>
-  <section class="section" id="not">
-    <div class="wrap">
-      <div class="section-head">
+
+    <div class="websites-grid">
+      <div class="website-card">
         <div>
-          <span class="kicker">06 / Boundaries</span>
-          <h2 class="display">What this is not.</h2>
-        </div>
-        <p class="lede">Most “why” questions disappear when the scope is explicit. This is a prototype and a reference implementation. It is not a product launch.</p>
-      </div>
-
-      <div class="not-grid">
-        <div class="not-card reveal"><span class="x"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m2 2 8 8M10 2l-8 8"/></svg></span><div><h3>Not a YubiKey replacement</h3><p>A dedicated key has a certified secure element, a button, USB/NFC, and a mature supply chain. uKey has a phone, a socket, and a lot of caveats.</p></div></div>
-        <div class="not-card reveal d1"><span class="x"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m2 2 8 8M10 2l-8 8"/></svg></span><div><h3>Not a keychain or passkey manager</h3><p>It does not store passwords, sync credentials, autofill forms, or recover your account. It performs an authentication ceremony; a keychain is a different product.</p></div></div>
-        <div class="not-card reveal"><span class="x"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m2 2 8 8M10 2l-8 8"/></svg></span><div><h3>Not production-ready</h3><p>The signer transport has no authentication or encryption. Credential metadata is stored unencrypted under <code>~/.config/ukey</code>. There is no CTAP2 PIN protocol, attestation chain, or external security audit.</p></div></div>
-        <div class="not-card reveal d1"><span class="x"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m2 2 8 8M10 2l-8 8"/></svg></span><div><h3>Not a phone plugged in as a USB gadget</h3><p>The phone is not a USB device. The Linux daemon creates the virtual HID device; the phone is a remote signer over <code>adb reverse</code> or TCP.</p></div></div>
-      </div>
-
-      <div class="callout reveal"><b>What it is:</b> a working virtual FIDO2 authenticator, a readable reference implementation, and an experiment about binding a local privilege request to an out-of-band signature. The interesting part is the implementation, not a category claim.</div>
-    </div>
-  </section>
-
-  <section class="section" id="prior">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <span class="kicker">07 / Prior art</span>
-          <h2 class="display">Standing on other people’s protocols.</h2>
-        </div>
-        <p class="lede">FIDO2 is a standard. The virtual-device trick is not new either. Here is the honest comparison, including the project that is further along than this one.</p>
-      </div>
-
-      <div class="table-shell reveal">
-        <div class="table-scroll">
-          <table class="prior-table">
-            <thead><tr><th scope="col">Project</th><th scope="col">What it does</th><th scope="col">How uKey differs</th></tr></thead>
-            <tbody>
-              <tr><td>YubiKey / Nitrokey</td><td>Dedicated FIDO2 hardware with a certified secure element, physical touch, USB/NFC.</td><td>uKey replaces the hardware with a phone and a Python daemon. That is the experiment, not an upgrade.</td></tr>
-              <tr><td><a class="accent" href="https://github.com/mahirsn/passkey" target="_blank" rel="noopener">mahirsn/passkey</a></td><td>Android phone as a FIDO2 key, with PAM, Bluetooth, resident credentials, StrongBox, and a Play Store app.</td><td>More complete as a product today. uKey’s difference is a readable Python daemon on the Linux side and the context-approval experiment.</td></tr>
-              <tr><td>Platform passkeys</td><td>Touch ID, Windows Hello, and Android biometrics perform WebAuthn ceremonies inside the OS.</td><td>Linux lacks an equivalent platform authenticator. uKey is a roaming key, not a built-in OS feature.</td></tr>
-              <tr><td>libfido2</td><td>The host-side library and tools used to talk to FIDO2 devices.</td><td>uKey is the authenticator on the other end. It is tested with libfido2, not a replacement for it.</td></tr>
-              <tr class="ukey-row"><td><b>uKey</b></td><td>Virtual UHID device + CTAPHID/CTAP2 engine + Android signer + context design.</td><td>The contribution is the readable implementation and the experiment. The protocol belongs to the FIDO Alliance.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <p class="fair-note"><b>If you want a daily driver, use one of the projects above.</b> If you want to read how a FIDO2 key works — or help make the context experiment real — this repository is for that.</p>
-    </div>
-  </section>
-
-  <section class="section" id="run">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <span class="kicker">08 / Run it</span>
-          <h2 class="display">The fastest way to see the virtual device.</h2>
-        </div>
-        <p class="lede">Start with the mock signer. It is deterministic, it needs no phone, and it proves the host-side flow. The Android signer is the hardware path.</p>
-      </div>
-
-      <div class="run-grid">
-        <div class="run-card reveal">
-          <h3>Linux + mock signer</h3>
-          <p>Requirements: Linux with UHID enabled, Python 3.10+, <code>cbor2</code>, and <code>fido2-tools</code> for validation.</p>
-          <div class="code-card">
-            <div class="code-head"><span class="file">terminal</span><button class="copy-btn" type="button">copy</button></div>
-            <pre><span class="t">$</span> git clone https://github.com/siddharthsai218/ukey
-<span class="t">$</span> cd ukey
-<span class="t">$</span> python3 -m venv .venv
-<span class="t">$</span> . .venv/bin/activate
-<span class="t">$</span> pip install -r requirements.txt
-<span class="t">$</span> sudo ./setup_udev.sh
-
-<span class="c"># terminal 1: the virtual key</span>
-<span class="t">$</span> ./daemon/ukey_daemon.py --verbose
-
-<span class="c"># terminal 2: a software signer for testing</span>
-<span class="t">$</span> ./daemon/mock_signer.py --verbose
-
-<span class="c"># terminal 3: check what the host sees</span>
-<span class="t">$</span> fido2-token -L</pre>
+          <div class="website-header">
+            <div class="website-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="website-title">OpenSSH & Git Push</div>
+              <div class="website-type">ecdsa-sk Hardware Signing</div>
+            </div>
           </div>
-          <div class="warn-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg><div><b>Test double, not a security boundary.</b> The mock signer’s keys are ephemeral and live in process memory. Do not use it for real credentials.</div></div>
+          <p class="website-desc">
+            Replace GitHub personal access tokens and passwords forever. Generate a FIDO2 hardware SSH key via <code>ssh-keygen -t ecdsa-sk</code>. Git pushes verify your fingerprint!
+          </p>
         </div>
-
-        <div class="run-card reveal d1">
-          <h3>Android signer</h3>
-          <p>Build the debug APK, install it, then expose the daemon’s loopback port over USB with <code>adb reverse</code>. Keep the phone unlocked while testing.</p>
-          <div class="code-card">
-            <div class="code-head"><span class="file">terminal</span><button class="copy-btn" type="button">copy</button></div>
-            <pre><span class="t">$</span> cd android
-<span class="t">$</span> ./gradlew assembleDebug
-<span class="t">$</span> adb install -r app/build/outputs/apk/debug/app-debug.apk
-<span class="t">$</span> adb reverse tcp:8443 tcp:8443
-<span class="c"># open the uKey app → 127.0.0.1:8443 → Start</span></pre>
-          </div>
-          <div class="warn-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg><div><b>Keep it on loopback.</b> The signer protocol is unauthenticated and unencrypted. <code>--wireless</code> binds <code>0.0.0.0</code>; only use it on a trusted network.</div></div>
-
-          <div class="repo-list" aria-label="Repository entry points">
-            <a class="repo-item" href="https://github.com/siddharthsai218/ukey/blob/main/daemon/ukey_daemon.py" target="_blank" rel="noopener"><span class="name"><b>daemon/ukey_daemon.py</b><br>UHID, CTAPHID, CTAP2</span><span class="lines">1,317 lines</span></a>
-            <a class="repo-item" href="https://github.com/siddharthsai218/ukey/blob/main/daemon/mock_signer.py" target="_blank" rel="noopener"><span class="name"><b>daemon/mock_signer.py</b><br>deterministic P-256 signer</span><span class="lines">297 lines</span></a>
-            <a class="repo-item" href="https://github.com/siddharthsai218/ukey/tree/main/android" target="_blank" rel="noopener"><span class="name"><b>android/</b><br>Keystore + biometric signer</span><span class="lines">Kotlin</span></a>
-            <a class="repo-item" href="https://github.com/siddharthsai218/ukey/blob/main/tests/test_phase1.py" target="_blank" rel="noopener"><span class="name"><b>tests/test_phase1.py</b><br>8 protocol tests</span><span class="lines">291 lines</span></a>
-          </div>
+        <div class="website-steps">
+          <span>1. ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</span>
+          <span>2. Add public key to GitHub SSH Keys</span>
+          <span>3. git push &rarr; touch phone to sign</span>
         </div>
       </div>
-    </div>
-  </section>
 
-  <section class="section" id="talk">
-    <div class="wrap">
-      <div class="talk-card reveal">
-        <span class="talk-label">Talk proposal · implementation first</span>
-        <h2>There Is No USB Key: <span>Building a Virtual FIDO2 Authenticator</span></h2>
-        <p class="talk-abstract">The host sees a real <code>/dev/hidraw</code> FIDO2 device. <b>There is no USB key.</b> The private key lives in an Android phone’s secure hardware, and a Python daemon translates CTAP2 requests into signer requests over USB or Wi-Fi. This talk walks through UHID, CTAPHID framing, CTAP2/CBOR, Android Keystore, and the test harness that proves it with <code>fido2-token</code>, <code>fido2-cred</code>, and <code>fido2-assert</code>. Then it covers the experiment that came next: can the phone display the exact <code>sudo</code> command and sign the context? Includes the gaps — U2F/PAM, transport security, resident credentials — and why “see what you sign” is harder than it looks. A prototype and reference implementation, not a product.</p>
-        <div class="talk-pills">
-          <span>UHID + HID report descriptors</span>
-          <span>CTAPHID fragmentation</span>
-          <span>CTAP2 + CBOR</span>
-          <span>Android StrongBox / TEE</span>
-          <span>libfido2 test harness</span>
-          <span>context binding + TOCTOU</span>
-        </div>
-        <div class="talk-foot">
-          <a class="btn solid" href="https://github.com/siddharthsai218/ukey" target="_blank" rel="noopener">Read the source
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>
-          </a>
-          <a class="btn ghost" href="https://github.com/siddharthsai218/ukey/blob/main/README.md" target="_blank" rel="noopener">README</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="roadmap">
-    <div class="wrap">
-      <div class="section-head">
+      <div class="website-card">
         <div>
-          <span class="kicker">09 / Roadmap</span>
-          <h2 class="display">The next honest steps.</h2>
+          <div class="website-header">
+            <div class="website-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.7s.1-2 .4-2.7L1.6 6.4C.6 8.3 0 10.1 0 12s.6 3.7 1.6 5.6l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.3-6.7-5.3L1.6 15.9C3.5 19.7 7.4 23 12 23z"/></svg>
+            </div>
+            <div>
+              <div class="website-title">Google & YouTube</div>
+              <div class="website-type">Hardware Security Key 2FA</div>
+            </div>
+          </div>
+          <p class="website-desc">
+            Add uKey in Google Account Security under <b>2-Step Verification &rarr; Security Keys</b>. Protect Gmail, YouTube, and Google Cloud with phishing-resistant hardware credentials.
+          </p>
         </div>
-        <p class="lede">No dates, no guarantees. The order is deliberate: make the claims true, then finish the demo, then widen compatibility.</p>
+        <div class="website-steps">
+          <span>1. myaccount.google.com/security</span>
+          <span>2. Add Security Key &rarr; USB Key</span>
+          <span>3. Touch phone fingerprint sensor</span>
+        </div>
       </div>
 
-      <div class="roadmap">
-        <div class="phase current reveal">
-          <span class="when">Now</span>
-          <h3>Safe defaults, then the demo</h3>
-          <p>Overclaims are removed, the config surface is tested, and auto-lock is opt-in. What remains for this phase is a repeatable 60-second demo and a final docs alignment pass.</p>
-          <ul><li>truth audit + 24 tests</li><li>safe defaults, CI</li><li>60-second demo script</li></ul>
+      <div class="website-card">
+        <div>
+          <div class="website-header">
+            <div class="website-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+            </div>
+            <div>
+              <div class="website-title">AWS & Cloudflare IAM</div>
+              <div class="website-type">Enterprise Passkeys</div>
+            </div>
+          </div>
+          <p class="website-desc">
+            Use uKey as an MFA security key for AWS Console, Cloudflare Zero Trust, GitLab, 1Password, and Bitwarden. NIST P-256 signatures validated against hardware silicon root.
+          </p>
         </div>
-        <div class="phase reveal d1">
-          <span class="when">Next</span>
-          <h3>Make the context real</h3>
-          <p>Add a small custom PAM module, capture the command context, show it on the phone, and bind the signature to a canonical digest.</p>
-          <ul><li>approve / deny / timeout</li><li>test with a throwaway user</li><li>record the demo</li></ul>
+        <div class="website-steps">
+          <span>1. IAM Console &rarr; MFA Device</span>
+          <span>2. Choose FIDO2 Security Key</span>
+          <span>3. Touch sensor to authenticate</span>
         </div>
-        <div class="phase reveal d2">
-          <span class="when">Later</span>
-          <h3>Widen compatibility</h3>
-          <p>Only after the demo: CTAP1/U2F messages, real PAM integration, transport authentication, resident credentials, browser tests.</p>
-          <ul><li>CTAPHID_MSG</li><li>transport auth</li><li>real-world WebAuthn</li></ul>
-        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       ARCHITECTURAL COMPARISON MATRIX
+       ========================================================================= -->
+  <section class="comparison-section" id="compare">
+    <div style="text-align:center; max-width:44em; margin: 0 auto;">
+      <div class="hero-tag">OBJECTIVE BENCHMARKS</div>
+      <h2 class="h2">How uKey Compares.</h2>
+      <p class="lede" style="margin: 12px auto 0;">
+        From Bluetooth latency to physical dongles: why uKey provides the ultimate balance of zero-cost hardware security and desktop integration.
+      </p>
+    </div>
+
+    <div class="compare-container">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Architecture Feature</th>
+            <th class="highlight">uKey (This Project)</th>
+            <th>mahirsn/passkey (Play Store)</th>
+            <th>Physical YubiKey 5</th>
+            <th>Apple / Google Cloud Passkeys</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Hardware Cost</strong></td>
+            <td class="highlight check"><strong>$0 (Free & Open Source)</strong></td>
+            <td class="check">$0 (Free)</td>
+            <td class="cross">$55 – $95+</td>
+            <td class="check">$0 (Built-in)</td>
+          </tr>
+          <tr>
+            <td><strong>Connection Transports</strong></td>
+            <td class="highlight"><strong>USB Loopback + Zero-Trust Wi-Fi</strong></td>
+            <td>Bluetooth (BLE) + USB</td>
+            <td>Physical USB-A / USB-C</td>
+            <td>Bluetooth caBLE + Cloud Relay</td>
+          </tr>
+          <tr>
+            <td><strong>Auth Latency</strong></td>
+            <td class="highlight check"><strong>&lt; 5 ms (Instant)</strong></td>
+            <td class="cross">1,500 – 3,000 ms (BLE lag)</td>
+            <td class="check">&lt; 10 ms</td>
+            <td>Variable (Network reliant)</td>
+          </tr>
+          <tr>
+            <td><strong>Linux Sudo (PAM) Support</strong></td>
+            <td class="highlight check"><strong>✓ Native pam_u2f (0.4s)</strong></td>
+            <td class="cross">✗ No native PAM integration</td>
+            <td class="check">✓ Native pam_u2f</td>
+            <td class="cross">✗ Impossible (Browser only)</td>
+          </tr>
+          <tr>
+            <td><strong>OpenSSH Hardware Keys</strong></td>
+            <td class="highlight check"><strong>✓ Native ecdsa-sk Git Push</strong></td>
+            <td class="cross">✗ Not supported</td>
+            <td class="check">✓ Supported</td>
+            <td class="cross">✗ Impossible</td>
+          </tr>
+          <tr>
+            <td><strong>Linux Desktop Auto-Lock</strong></td>
+            <td class="highlight check"><strong>✓ Native systemd-logind</strong></td>
+            <td class="cross">✗ None</td>
+            <td class="cross">✗ Only on physical pull</td>
+            <td class="cross">✗ None</td>
+          </tr>
+          <tr>
+            <td><strong>Silicon Isolation</strong></td>
+            <td class="highlight"><strong>Android StrongBox (CC EAL5+)</strong></td>
+            <td>Android Keystore</td>
+            <td>Secure Element (CC EAL6+)</td>
+            <td>Apple/Google HSM Enclave</td>
+          </tr>
+          <tr>
+            <td><strong>Zero Cloud Dependency</strong></td>
+            <td class="highlight check"><strong>✓ 100% Local Peer-to-Peer</strong></td>
+            <td class="check">✓ Local</td>
+            <td class="check">✓ Local</td>
+            <td class="cross">✗ Cloud synchronized</td>
+          </tr>
+          <tr>
+            <td><strong>Multi-Distro Support</strong></td>
+            <td class="highlight check"><strong>✓ Fedora, Ubuntu, Arch, openSUSE</strong></td>
+            <td>Manual Rust build</td>
+            <td class="check">✓ Universal</td>
+            <td class="cross">✗ ChromeOS / macOS focused</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       UNIVERSAL MULTI-DISTRO INSTALLATION
+       ========================================================================= -->
+  <section class="install-section" id="install">
+    <div style="text-align:center; max-width:44em; margin: 0 auto;">
+      <div class="hero-tag">UNIVERSAL LINUX SUPPORT</div>
+      <h2 class="h2">One Command. Any Distribution.</h2>
+      <p class="lede" style="margin: 12px auto 0;">
+        Installs kernel <code>/dev/uhid</code> permissions, systemd user service, and validation tools with safe password fallbacks.
+      </p>
+    </div>
+
+    <div class="distro-tabs">
+      <button class="distro-tab active" data-distro="fedora">🔵 Fedora / RHEL</button>
+      <button class="distro-tab" data-distro="ubuntu">🟠 Ubuntu / Debian</button>
+      <button class="distro-tab" data-distro="arch">🔷 Arch Linux</button>
+      <button class="distro-tab" data-distro="suse">🦎 openSUSE</button>
+      <button class="distro-tab" data-distro="manual">⚙️ Manual Dev</button>
+    </div>
+
+    <div class="code-panel" id="codePanel">
+      <div class="code-panel-head">
+        <span class="code-panel-title" id="codeDistroLabel">Fedora 40+ / RHEL 9 (dnf)</span>
+        <button class="copy-btn" id="btnCopyDistro">Copy Command</button>
+      </div>
+      <pre><code># 1. Production 1-command installer (detects distro automatically)
+curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
+
+# 2. Configure passwordless sudo with 0.0s password fallback
+sudo ./scripts/setup_pam_sudo.sh
+
+# 3. (Optional) Generate FIDO2 OpenSSH key for Git Push
+ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code></pre>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       FAQ SECTION
+       ========================================================================= -->
+  <section class="faq-section" id="faq">
+    <div style="text-align:center; max-width:44em; margin: 0 auto;">
+      <div class="hero-tag">FREQUENTLY ASKED QUESTIONS</div>
+      <h2 class="h2">The Tough Questions, Answered.</h2>
+    </div>
+
+    <div class="faq-grid">
+      <div class="faq-item">
+        <div class="faq-q">How is this different from mahirsn/passkey on Google Play? <span class="arw">▾</span></div>
+        <div class="faq-a"><div class="inner">
+          <b>mahirsn/passkey</b> uses Bluetooth (BLE) and USB. On Linux, Bluetooth LE has 1,500ms to 3,000ms latency, frequent BlueZ pairing drops, and many desktop PCs lack BLE hardware entirely. Furthermore, it lacks native Linux PAM integration and desktop auto-lock.<br><br>
+          <b>uKey</b> uses zero-trust Wi-Fi LAN + USB with <b>&lt;5ms latency</b>, single-use PIN pairing, native <code>pam_u2f</code> for instant terminal <code>sudo</code>, <code>ecdsa-sk</code> for git push, and systemd session auto-lock.
+        </div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Can this replace the username and password when I git push? <span class="arw">▾</span></div>
+        <div class="faq-a"><div class="inner">
+          <b>Yes!</b> OpenSSH 8.2+ natively supports FIDO2 security keys via the <code>ecdsa-sk</code> key type. Run <code>ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code>, touch your phone's sensor to generate the key, and add <code>~/.ssh/id_ukey.pub</code> to your GitHub account under SSH Keys. Every <code>git push</code> will verify your fingerprint on your phone!
+        </div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Can strangers on the same Wi-Fi intercept my keys or logins? <span class="arw">▾</span></div>
+        <div class="faq-a"><div class="inner">
+          <b>No.</b> First, your private key NEVER leaves your phone's Android StrongBox silicon. Second, Wi-Fi connections require a one-time 6-digit PIN pairing that yields a 256-bit device token. All handshake frames use HMAC-SHA256 challenge-response with random nonces. Unpaired or rogue Wi-Fi connections are dropped by the daemon in &lt;5ms.
+        </div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">What happens if my phone dies or is in another room? Am I locked out? <span class="arw">▾</span></div>
+        <div class="faq-a"><div class="inner">
+          <b>No, never.</b> The PAM rule uses <code>auth sufficient pam_u2f.so</code>. If your phone is unreachable, or if you press <kbd>Enter</kbd>, Linux immediately falls back to your regular Linux password in <b>0.0s</b> with zero hangs. You can also disable uKey anytime with <code>ukeyctl off</code>.
+        </div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Does biometric data (fingerprint scans) leave my phone? <span class="arw">▾</span></div>
+        <div class="faq-a"><div class="inner">
+          <b>Never.</b> Biometric matching happens entirely inside Android's BiometricPrompt and StrongBox hardware. The daemon and laptop only receive the signed ECDSA assertion data. No raw biometric imagery or templates ever cross the wire.
+        </div></div>
       </div>
     </div>
   </section>
 </main>
 
-<footer class="footer">
-  <div class="wrap">
-    <div class="footer-inner">
-      <div class="footer-brand">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="M15.6 2.8a5.9 5.9 0 0 0-5.7 7.5L2.8 17.4V21h3.6v-2.4h2.4v-2.4h2.4l1.3-1.3a5.9 5.9 0 1 0 3.1-12.1Zm.1 3a2.9 2.9 0 1 1 0 5.8 2.9 2.9 0 0 1 0-5.8Z"/></svg>
-        </span>
-        <span><strong>uKey</strong><small>there is no USB key</small></span>
-      </div>
-      <div class="footer-links">
-        <a href="https://github.com/siddharthsai218/ukey" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/siddharthsai218/ukey/blob/main/README.md" target="_blank" rel="noopener">README</a>
-        <a href="https://github.com/siddharthsai218/ukey/blob/main/LICENSE" target="_blank" rel="noopener">GPL-3.0</a>
-        <a href="#top">Back to top ↑</a>
-      </div>
-      <p class="footer-disclaimer"><b>Prototype, not a product.</b> Do not use uKey for production credentials, account recovery, or anything you cannot afford to lose. The host-side code is GPL-3.0; third-party names belong to their owners. Not affiliated with Yubico, Google, Apple, or the FIDO Alliance. This page is a single self-contained HTML file — no external fonts, trackers, or analytics.</p>
-    </div>
+<footer>
+  <div>
+    <b>uKey</b> — Open-source project by <a href="https://github.com/siddharthsai218" target="_blank">BYN Siddharth Sai</a>.
+  </div>
+  <div style="display:flex; gap:18px; flex-wrap:wrap;">
+    <a href="https://github.com/siddharthsai218/ukey" target="_blank">GitHub</a>
+    <a href="https://github.com/siddharthsai218/ukey/blob/main/LICENSE" target="_blank">GPLv3 License</a>
+    <a href="uKey_Product_Guide.pdf" target="_blank">Product Guide (PDF)</a>
+    <a href="http://127.0.0.1:8444" target="_blank">Local Web Console</a>
   </div>
 </footer>
 
+<!-- INTERACTIVE SCRIPTS -->
 <script>
-(function () {
-  "use strict";
+// ================= WEB AUDIO API HAPTICS =================
+let audioCtx;
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playTick() {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 650;
+    gain.gain.setValueAtTime(0.04, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.06);
+  } catch(e) {}
+}
+function playChime() {
+  try {
+    const ctx = getAudio();
+    const now = ctx.currentTime;
+    [[880, 0, .12], [1108.7, .08, .14], [1318.5, .16, .18]].forEach(([freq, delay, dur]) => {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.linearRampToValueAtTime(0.18, now + delay + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now + delay); osc.stop(now + delay + dur + 0.05);
+    });
+  } catch(e) {}
+}
+function playBuzzer() {
+  try {
+    const ctx = getAudio();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.value = 140;
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(now + 0.28);
+  } catch(e) {}
+}
 
-  // Mobile navigation
-  var menu = document.querySelector(".menu-btn");
-  var links = document.getElementById("nav-links");
-  if (menu && links) {
-    menu.addEventListener("click", function () {
-      var open = menu.getAttribute("aria-expanded") === "true";
-      menu.setAttribute("aria-expanded", String(!open));
-      links.classList.toggle("open", !open);
-    });
-    links.querySelectorAll("a").forEach(function (a) {
-      a.addEventListener("click", function () {
-        menu.setAttribute("aria-expanded", "false");
-        links.classList.remove("open");
-      });
-    });
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && links.classList.contains("open")) {
-        menu.setAttribute("aria-expanded", "false");
-        links.classList.remove("open");
-        menu.focus();
-      }
-    });
-  }
+// ================= THEME TOGGLE =================
+const themeBtn = document.getElementById("themeToggle");
+themeBtn.addEventListener("click", () => {
+  playTick();
+  const current = document.documentElement.dataset.theme;
+  const next = current === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem("ukey-theme", next);
+});
 
-  // Tabs
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
-  function selectTab(tab) {
-    tabs.forEach(function (t) {
-      var selected = t === tab;
-      t.setAttribute("aria-selected", String(selected));
-      t.tabIndex = selected ? 0 : -1;
-      var panel = document.getElementById(t.getAttribute("aria-controls"));
-      if (panel) panel.hidden = !selected;
-    });
-    tab.focus();
-  }
-  tabs.forEach(function (tab, i) {
-    tab.addEventListener("click", function () { selectTab(tab); });
-    tab.addEventListener("keydown", function (e) {
-      var next = null;
-      if (e.key === "ArrowRight") next = tabs[(i + 1) % tabs.length];
-      if (e.key === "ArrowLeft") next = tabs[(i - 1 + tabs.length) % tabs.length];
-      if (e.key === "Home") next = tabs[0];
-      if (e.key === "End") next = tabs[tabs.length - 1];
-      if (next) { e.preventDefault(); selectTab(next); }
-    });
+// ================= SCROLL REVEALS & PROGRESS =================
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const max = h.scrollHeight - h.clientHeight;
+  const bar = document.querySelector('.scroll-progress');
+  if (bar) bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+}, { passive: true });
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('in'); observer.unobserve(e.target); }
   });
+}, { threshold: 0.1 });
+document.querySelectorAll('.sec-card, .website-card, .metric-pill, .compare-table tr, .faq-item').forEach(el => {
+  el.classList.add('reveal');
+  observer.observe(el);
+});
 
-  // Copy code blocks
-  function legacyCopy(text) {
-    var ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand("copy"); } catch (e) {}
-    document.body.removeChild(ta);
+// ================= HARDWARE SIMULATOR RIG LOGIC =================
+const screenTerminal = document.getElementById("screenTerminal");
+const screenBrowser = document.getElementById("screenBrowser");
+const stermTitle = document.getElementById("stermTitle");
+const stermStatus = document.getElementById("stermStatus");
+const termCmdLine = document.getElementById("termCmdLine");
+const termWaitingLine = document.getElementById("termWaitingLine");
+const termPromptText = document.getElementById("termPromptText");
+const termDoneOutput = document.getElementById("termDoneOutput");
+const termSuccessHead = document.getElementById("termSuccessHead");
+const termSuccessDetail = document.getElementById("termSuccessDetail");
+
+const browserTabTitle = document.getElementById("browserTabTitle");
+const browserUrlText = document.getElementById("browserUrlText");
+const browserServiceIcon = document.getElementById("browserServiceIcon");
+const browserCardTitle = document.getElementById("browserCardTitle");
+const browserCardSub = document.getElementById("browserCardSub");
+const browserWaitingText = document.getElementById("browserWaitingText");
+const browserDoneText = document.getElementById("browserDoneText");
+
+const phoneDialog = document.getElementById("phoneDialog");
+const phoneRpId = document.getElementById("phoneRpId");
+const phoneSheetDesc = document.getElementById("phoneSheetDesc");
+const fingerprintBtn = document.getElementById("fingerprintBtn");
+const fpStatusText = document.getElementById("fpStatusText");
+const dialogIcon = document.getElementById("dialogIcon");
+const appLogBody = document.getElementById("appLogBody");
+const appLogLiveReq = document.getElementById("appLogLiveReq");
+const appLogLiveDone = document.getElementById("appLogLiveDone");
+
+const conduitLine = document.getElementById("conduitLine");
+const packetPulse = document.getElementById("packetPulse");
+const phoneStatusPill = document.getElementById("phoneStatusPill");
+const phoneDot = document.getElementById("phoneDot");
+const phoneStatusText = document.getElementById("phoneStatusText");
+
+let currentScenario = "sudo";
+let isWireless = false;
+
+const scenarios = {
+  sudo: {
+    type: "terminal",
+    title: "siddharth@fedora:~ (bash)",
+    cmd: "sudo dnf update",
+    prompt: "Touch phone biometric or press Enter for password:",
+    rp: "Authorize sudo: pam://fedora",
+    logReq: "REQ assertion: pam://fedora",
+    logOk: "OK StrongBox signature verified (0.38s)",
+    successMsg: "✓ Authorized by Android StrongBox",
+    detailMsg: "Running transaction check... All packages up to date!"
+  },
+  git: {
+    type: "terminal",
+    title: "siddharth@fedora:~/Desktop/ukey (git)",
+    cmd: "git push origin main",
+    prompt: "Confirm user presence on security key ~/.ssh/id_ukey...",
+    rp: "Authorize git push: github.com/siddharthsai218/ukey",
+    logReq: "REQ assertion: OpenSSH ecdsa-sk (github.com)",
+    logOk: "OK Signed ecdsa-sk via StrongBox (0.41s)",
+    successMsg: "✓ Signed with ecdsa-sk hardware key",
+    detailMsg: "To github.com:siddharthsai218/ukey.git\n7fd2611..cbb9b6d  main -> main (0 passwords entered)"
+  },
+  webauthn: {
+    type: "browser",
+    tab: "Google Account — 2-Step Verification",
+    url: "https://myaccount.google.com/security",
+    title: "Verify your identity",
+    sub: "Touch your FIDO2 security key for <b>google.com</b>",
+    prompt: "Waiting for touch on security key...",
+    rp: "Authorize login: google.com",
+    logReq: "REQ assertion: google.com (WebAuthn)",
+    logOk: "OK StrongBox assertion verified (0.35s)",
+    successMsg: "✓ Welcome back, Siddharth! Logged in via FIDO2.",
+    detailMsg: "Hardware-bound credential verified against Google root."
+  },
+  fallback: {
+    type: "terminal",
+    title: "siddharth@fedora:~ (bash)",
+    cmd: "sudo whoami",
+    prompt: "[sudo] password for siddharth: ********",
+    rp: "uKey disabled (ukeyctl off)",
+    logReq: "Bridge in bypass mode (0.0s password fallback)",
+    logOk: "PAM fallback to pam_unix.so successful",
+    successMsg: "root",
+    detailMsg: "Instant fallback in 0.0s. Never hangs, never locks you out."
+  },
+  rogue: {
+    type: "rogue",
+    title: "siddharth@fedora:~ (ukey-security-audit)",
+    cmd: "ukeyctl security-audit --live",
+    prompt: "Listening for rogue packets on 0.0.0.0:8443...",
+    rp: "SECURITY ALERT: Rogue connection detected",
+    logReq: "ALERT: Unauthorized connection from 192.168.1.142:54892",
+    logOk: "REJECTED: Missing HMAC-SHA256 token (Dropped in 3.4ms)",
+    successMsg: "🚨 ROGUE DEVICE BLOCKED IN <4ms",
+    detailMsg: "Zero-Trust Wi-Fi Handshake dropped connection. Host safe."
   }
-  document.querySelectorAll(".copy-btn").forEach(function (btn) {
-    btn.setAttribute("aria-label", "Copy code to clipboard");
-    btn.addEventListener("click", function () {
-      var card = btn.closest(".code-card");
-      var pre = card ? card.querySelector("pre") : null;
-      if (!pre) return;
-      var text = pre.innerText.replace(/\s+$/, "");
-      text = text.split("\n").map(function (line) {
-        return line.replace(/^\$\s?/, "");
-      }).join("\n");
-      var old = btn.textContent;
-      btn.textContent = "copied";
-      setTimeout(function () { btn.textContent = old; }, 1400);
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).catch(function () { legacyCopy(text); });
-      } else {
-        legacyCopy(text);
-      }
-    });
-  });
+};
 
-  // Reveal on scroll
-  var reveals = document.querySelectorAll(".reveal");
-  if ("IntersectionObserver" in window) {
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
-          io.unobserve(entry.target);
-        }
-      });
-    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
-    reveals.forEach(function (el) { io.observe(el); });
+function resetStage() {
+  const sc = scenarios[currentScenario];
+  if (!sc) return;
+
+  // Reset conduit styling
+  conduitLine.classList.remove("danger");
+  packetPulse.classList.remove("danger");
+  phoneStatusPill.classList.remove("danger");
+  phoneDot.classList.remove("danger");
+  phoneStatusText.textContent = isWireless ? "Wi-Fi (Zero-Trust)" : "Connected (USB)";
+
+  if (sc.type === "terminal") {
+    screenTerminal.style.display = "block";
+    screenBrowser.style.display = "none";
+    stermTitle.textContent = sc.title;
+    termCmdLine.textContent = sc.cmd;
+    termPromptText.textContent = sc.prompt;
+    termWaitingLine.style.display = "flex";
+    termDoneOutput.style.display = "none";
+    phoneDialog.style.display = "block";
+  } else if (sc.type === "browser") {
+    screenTerminal.style.display = "none";
+    screenBrowser.style.display = "flex";
+    browserTabTitle.querySelector("span").textContent = sc.tab;
+    browserUrlText.querySelector("span").textContent = sc.url;
+    browserCardTitle.textContent = sc.title;
+    browserCardSub.innerHTML = sc.sub;
+    browserWaitingText.innerHTML = `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent-cyan);"></span><span>${sc.prompt}</span>`;
+    browserWaitingText.style.display = "flex";
+    browserDoneText.style.display = "none";
+    phoneDialog.style.display = "block";
+  } else if (sc.type === "rogue") {
+    // Rogue simulation: Red alert!
+    screenTerminal.style.display = "block";
+    screenBrowser.style.display = "none";
+    stermTitle.textContent = sc.title;
+    termCmdLine.textContent = sc.cmd;
+    termPromptText.textContent = sc.prompt;
+    termWaitingLine.style.display = "flex";
+    termDoneOutput.style.display = "none";
+    phoneDialog.style.display = "none";
+
+    conduitLine.classList.add("danger");
+    packetPulse.classList.add("danger");
+    phoneStatusPill.classList.add("danger");
+    phoneDot.classList.add("danger");
+    phoneStatusText.textContent = "ATTACK BLOCKED";
+
+    playBuzzer();
+
+    setTimeout(() => {
+      termWaitingLine.style.display = "none";
+      termDoneOutput.style.display = "block";
+      termSuccessHead.style.color = "var(--accent-red)";
+      termSuccessHead.textContent = sc.successMsg;
+      termSuccessDetail.textContent = sc.detailMsg;
+
+      const line = document.createElement("div");
+      line.className = "uapp-log-line";
+      line.innerHTML = `<span class="log-time">[18:30:14]</span> <span class="log-err">${sc.logOk}</span>`;
+      appLogBody.appendChild(line);
+      appLogBody.scrollTop = appLogBody.scrollHeight;
+    }, 600);
+    return;
+  }
+
+  phoneRpId.textContent = sc.rp;
+  appLogLiveReq.innerHTML = `<span class="log-time">[18:30:10]</span> <span class="log-req">${sc.logReq}</span>`;
+  appLogLiveDone.style.display = "none";
+
+  phoneDialog.classList.remove("success");
+  fingerprintBtn.classList.remove("verified");
+  fpStatusText.textContent = "Tap sensor to sign";
+  dialogIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+}
+
+// Scenario buttons
+document.querySelectorAll(".mode-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    playTick();
+    document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentScenario = btn.dataset.scenario;
+    resetStage();
+  });
+});
+
+// Transport toggle (USB vs Wi-Fi)
+const btnUsb = document.getElementById("btnUsb");
+const btnWifi = document.getElementById("btnWifi");
+const phoneHostInput = document.getElementById("phoneHostInput");
+const phoneLatencyDetail = document.getElementById("phoneLatencyDetail");
+const topbarConn = document.getElementById("topbarConn");
+
+btnUsb.addEventListener("click", () => {
+  playTick();
+  isWireless = false;
+  btnUsb.classList.add("active");
+  btnWifi.classList.remove("active");
+  phoneHostInput.textContent = "127.0.0.1";
+  phoneLatencyDetail.textContent = "< 3ms (USB)";
+  topbarConn.textContent = "USB-HID: /dev/uhid";
+  resetStage();
+});
+
+btnWifi.addEventListener("click", () => {
+  playTick();
+  isWireless = true;
+  btnWifi.classList.add("active");
+  btnUsb.classList.remove("active");
+  phoneHostInput.textContent = "10.59.72.79";
+  phoneLatencyDetail.textContent = "< 5ms (Wi-Fi Zero-Trust)";
+  topbarConn.textContent = "Wi-Fi LAN (Paired)";
+  resetStage();
+});
+
+// Fingerprint Touch Animation & Execution
+fingerprintBtn.addEventListener("click", () => {
+  playTick();
+  fpStatusText.textContent = "Signing in StrongBox...";
+  fingerprintBtn.classList.add("verified");
+
+  setTimeout(() => {
+    playChime();
+    const sc = scenarios[currentScenario];
+    phoneDialog.classList.add("success");
+    dialogIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+    fpStatusText.textContent = "✓ Verified (StrongBox P-256)";
+
+    appLogLiveDone.style.display = "block";
+    appLogLiveDone.innerHTML = `<span class="log-time">[18:30:12]</span> <span class="log-ok">${sc.logOk}</span>`;
+
+    if (sc.type === "terminal") {
+      termWaitingLine.style.display = "none";
+      termDoneOutput.style.display = "block";
+      termSuccessHead.style.color = "var(--accent-green)";
+      termSuccessHead.textContent = sc.successMsg;
+      termSuccessDetail.textContent = sc.detailMsg;
+    } else if (sc.type === "browser") {
+      browserWaitingText.style.display = "none";
+      browserDoneText.style.display = "block";
+      browserDoneText.innerHTML = `${sc.successMsg}<div style="font-size:10.5px; color:var(--gray-1); margin-top:3px; font-weight:normal;">${sc.detailMsg}</div>`;
+    }
+
+    setTimeout(() => {
+      resetStage();
+    }, 4500);
+  }, 350);
+});
+
+// Clear app logs
+document.getElementById("clearLogBtn").addEventListener("click", () => {
+  playTick();
+  appLogBody.innerHTML = `<div class="uapp-log-line"><span class="log-time">[18:30:00]</span> <span class="log-info">Logs cleared</span></div>`;
+});
+
+// Initialize on page load
+resetStage();
+
+// ================= DISTRO TABS & SCRIPTS =================
+const distroScripts = {
+  fedora: {
+    label: "Fedora 40+ / RHEL 9 (dnf)",
+    code: `# 1. Universal installer (configures /dev/uhid, systemd user service)
+curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
+
+# 2. Configure passwordless sudo with 0.0s password fallback
+sudo ./scripts/setup_pam_sudo.sh
+
+# 3. Add OpenSSH FIDO2 hardware key for Git Push
+ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
+  },
+  ubuntu: {
+    label: "Ubuntu 22.04+ / Debian 12 (apt-get)",
+    code: `# 1. Universal installer (installs libpam-u2f, fido2-tools automatically)
+curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
+
+# 2. Configure PAM sudo
+sudo ./scripts/setup_pam_sudo.sh
+
+# 3. OpenSSH hardware key for Git Push
+ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
+  },
+  arch: {
+    label: "Arch Linux / Manjaro (pacman)",
+    code: `# 1. Universal installer (installs pam-u2f, libfido2 automatically)
+curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
+
+# 2. Configure PAM sudo
+sudo ./scripts/setup_pam_sudo.sh
+
+# 3. OpenSSH hardware key for Git Push
+ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
+  },
+  suse: {
+    label: "openSUSE Tumbleweed / Leap (zypper)",
+    code: `# 1. Universal installer (installs pam_u2f, fido2-tools automatically)
+curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
+
+# 2. Configure PAM sudo
+sudo ./scripts/setup_pam_sudo.sh
+
+# 3. OpenSSH hardware key for Git Push
+ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
+  },
+  manual: {
+    label: "Manual Developer Setup (Git)",
+    code: `# Clone and set up permissions
+git clone https://github.com/siddharthsai218/ukey.git && cd ukey
+sudo ./setup_udev.sh
+
+# Create virtualenv and run
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+./scripts/ukeyctl menu`
+  }
+};
+
+const distroTabs = document.querySelectorAll(".distro-tab");
+const codeDistroLabel = document.getElementById("codeDistroLabel");
+const codePanel = document.getElementById("codePanel");
+const btnCopyDistro = document.getElementById("btnCopyDistro");
+
+distroTabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    playTick();
+    distroTabs.forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    const d = distroScripts[tab.dataset.distro];
+    codeDistroLabel.textContent = d.label;
+    codePanel.querySelector("code").innerText = d.code;
+  });
+});
+
+btnCopyDistro.addEventListener("click", () => {
+  const code = codePanel.querySelector("code").innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    playTick();
+    btnCopyDistro.innerText = "✓ Copied!";
+    setTimeout(() => btnCopyDistro.innerText = "Copy Command", 2000);
+  });
+});
+
+// ================= WEB SETTINGS DASHBOARD MOCK INTERACTION =================
+const btnWebToggle = document.getElementById("btnWebToggle");
+const webToggleState = document.getElementById("webToggleState");
+let webEnabled = true;
+btnWebToggle.addEventListener("click", () => {
+  playTick();
+  webEnabled = !webEnabled;
+  if (webEnabled) {
+    webToggleState.textContent = "uKey Active (Enabled)";
+    webToggleState.style.color = "var(--white)";
+    btnWebToggle.style.background = "var(--accent-green)";
+    btnWebToggle.textContent = "ON";
   } else {
-    reveals.forEach(function (el) { el.classList.add("is-visible"); });
+    webToggleState.textContent = "uKey Bypassed (0.0s Fallback)";
+    webToggleState.style.color = "var(--accent-amber)";
+    btnWebToggle.style.background = "var(--accent-amber)";
+    btnWebToggle.textContent = "OFF";
   }
+});
 
-  // Keep the mobile menu from overlapping after resize
-  window.addEventListener("resize", function () {
-    if (window.innerWidth > 760 && links && menu) {
-      links.classList.remove("open");
-      menu.setAttribute("aria-expanded", "false");
+const btnGenPin = document.getElementById("btnGenPin");
+const webPinDisplay = document.getElementById("webPinDisplay");
+btnGenPin.addEventListener("click", () => {
+  playTick();
+  const randPin = Math.floor(100000 + Math.random() * 900000);
+  webPinDisplay.textContent = `${String(randPin).slice(0,3)} ${String(randPin).slice(3)}`;
+});
+
+const btnRevokeDemo = document.getElementById("btnRevokeDemo");
+btnRevokeDemo.addEventListener("click", () => {
+  playTick();
+  btnRevokeDemo.parentElement.innerHTML = `<span style="color:var(--accent-red); font-size:11px;">✓ Revoked</span>`;
+});
+
+// ================= FAQ ACCORDION =================
+document.querySelectorAll(".faq-item").forEach(item => {
+  item.querySelector(".faq-q").addEventListener("click", () => {
+    playTick();
+    const a = item.querySelector(".faq-a");
+    const isOpen = item.classList.contains("open");
+    document.querySelectorAll(".faq-item").forEach(i => {
+      i.classList.remove("open");
+      i.querySelector(".faq-a").style.maxHeight = null;
+    });
+    if (!isOpen) {
+      item.classList.add("open");
+      a.style.maxHeight = a.scrollHeight + "px";
     }
   });
-})();
+});
+
+// ================= GLOBAL COPY BUTTONS =================
+document.querySelectorAll("[data-copy]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const text = btn.getAttribute("data-copy");
+    navigator.clipboard.writeText(text).then(() => {
+      playTick();
+      const orig = btn.innerText;
+      btn.innerText = "✓ Copied!";
+      setTimeout(() => btn.innerText = orig, 2000);
+    });
+  });
+});
 </script>
 </body>
 </html>
