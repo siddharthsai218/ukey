@@ -13,6 +13,9 @@ import os
 import shutil
 import subprocess
 import sys
+import time
+import urllib.request
+import webbrowser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +33,7 @@ if VENV_PYTHON.exists() and Path(sys.executable) != VENV_PYTHON:
 sys.path.insert(0, str(ROOT / "daemon"))
 
 import ukey_config  # noqa: E402
+from ukey_pairing import PairingManager  # noqa: E402
 
 VERSION = "0.1.0"
 
@@ -85,6 +89,208 @@ def cmd_status(_args: argparse.Namespace) -> int:
     print("config:")
     print(json.dumps(config.to_dict(), indent=2, sort_keys=True))
     return 0
+
+
+def _api_call(endpoint: str, method: str = "GET", data: dict | None = None) -> dict | None:
+    url = f"http://127.0.0.1:8444{endpoint}"
+    req = urllib.request.Request(url, method=method)
+    if data is not None:
+        body = json.dumps(data).encode("utf-8")
+        req.add_header("Content-Type", "application/json")
+        req.data = body
+    try:
+        with urllib.request.urlopen(req, timeout=1.0) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return None
+
+
+def cmd_on(_args: argparse.Namespace) -> int:
+    _api_call("/api/toggle", method="POST", data={"enabled": True})
+    try:
+        cfg = ukey_config.load_config()
+        data = cfg.to_dict()
+        data["enabled"] = True
+        ukey_config.save_config(data)
+    except ukey_config.ConfigError as exc:
+        print(f"ukeyctl: {exc}", file=sys.stderr)
+        return 2
+    print("[ok] uKey biometric interception: ACTIVE")
+    print("     sudo and WebAuthn will authenticate via your Android StrongBox bridge.")
+    return 0
+
+
+def cmd_off(_args: argparse.Namespace) -> int:
+    _api_call("/api/toggle", method="POST", data={"enabled": False})
+    try:
+        cfg = ukey_config.load_config()
+        data = cfg.to_dict()
+        data["enabled"] = False
+        ukey_config.save_config(data)
+    except ukey_config.ConfigError as exc:
+        print(f"ukeyctl: {exc}", file=sys.stderr)
+        return 2
+    print("[ok] uKey biometric interception: PAUSED (Password Mode)")
+    print("     sudo falls back to password instantly with 0.0s delay.")
+    return 0
+
+
+def _get_lan_ip() -> str:
+    import socket
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+
+
+def cmd_pair(args: argparse.Namespace) -> int:
+    force_new = getattr(args, "new", False)
+    pin = None
+    if force_new:
+        resp = _api_call("/api/pin/new", method="POST")
+        if resp and resp.get("status") == "ok":
+            pin = resp.get("pin")
+
+    if pin is None:
+        mgr = PairingManager()
+        pin = mgr.get_or_create_pin(force_new=force_new)
+
+    cfg = ukey_config.load_config()
+    lan_ip = _get_lan_ip() if cfg.wireless else "127.0.0.1"
+    port = cfg.port
+
+    print("┌────────────────────────────────────────────────────────────┐")
+    print("│                uKey One-Time Phone Pairing                 │")
+    print("├────────────────────────────────────────────────────────────┤")
+    print(f"│  Pairing PIN:  {' '.join(list(pin))}                                 │")
+    print(f"│  Host Target:  {lan_ip}:{port:<43} │")
+    print("│  Validity:     15 minutes (single-use)                     │")
+    print("├────────────────────────────────────────────────────────────┤")
+    print("│  Instructions:                                             │")
+    print("│  1. Open uKey on your Android phone.                       │")
+    print(f"│  2. Ensure Host is set to {lan_ip}:{port}.                │")
+    print(f"│  3. Enter the 6-digit PIN: {pin}                           │")
+    print("│  4. Tap 'Pair with Laptop'.                                │")
+    print("│                                                            │")
+    print("│  Once paired, your phone receives a 256-bit token and will │")
+    print("│  auto-connect in <5ms forever after with ZERO PIN prompts! │")
+    print("└────────────────────────────────────────────────────────────┘")
+    return 0
+
+
+def cmd_devices(args: argparse.Namespace) -> int:
+    action = getattr(args, "devices_action", "list")
+    mgr = PairingManager()
+
+    if action == "revoke":
+        dev_id = getattr(args, "device_id", "")
+        if not dev_id:
+            print("ukeyctl: device ID required to revoke", file=sys.stderr)
+            return 1
+        _api_call("/api/devices/revoke", method="POST", data={"id": dev_id})
+        ok = mgr.revoke_device(dev_id)
+        if ok:
+            print(f"[ok] Revoked authorization for device with ID prefix {dev_id!r}")
+        else:
+            print(f"[warn] Device {dev_id!r} not found or already revoked")
+        return 0
+
+    devices = mgr.list_devices()
+    if not devices:
+        print("No paired devices found. Run `ukeyctl pair` to pair an Android phone.")
+        return 0
+
+    print(f"Authorized devices ({len(devices)}):")
+    print(f"  {'DEVICE NAME':<26} {'ID':<14} {'LAST SEEN'}")
+    print(f"  {'-'*24} {'-'*12} {'-'*20}")
+    for dev in devices:
+        last = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(dev["last_seen_at"])) if dev["last_seen_at"] else "Never"
+        print(f"  {dev['device_name']:<26} {dev['id']:<14} {last}")
+    return 0
+
+
+def cmd_web(_args: argparse.Namespace) -> int:
+    url = "http://127.0.0.1:8444"
+    print(f"Opening uKey Web Dashboard: {url}")
+    try:
+        webbrowser.open(url)
+    except Exception as exc:
+        print(f"Could not open browser automatically: {exc}")
+        print(f"Please open {url} in your browser.")
+    return 0
+
+
+def cmd_menu(_args: argparse.Namespace) -> int:
+    while True:
+        cfg = ukey_config.load_config()
+        mgr = PairingManager()
+        api_data = _api_call("/api/status")
+
+        is_active = api_data.get("enabled", cfg.enabled) if api_data else cfg.enabled
+        is_conn = api_data.get("connected", False) if api_data else False
+        peer = api_data.get("peer_ip", "") if api_data else ""
+        pin = api_data.get("active_pin", mgr.get_or_create_pin()) if api_data else mgr.get_or_create_pin()
+        paired_count = len(api_data.get("paired_devices", [])) if api_data else mgr.paired_count
+        service_st = _service_state()
+        hid = find_hidraw(cfg.device_name) or "Not created"
+
+        status_str = "ACTIVE (Biometric on)" if is_active else "PAUSED (Password mode)"
+        conn_str = f"CONNECTED ({peer})" if is_conn else "Waiting for phone"
+
+        print("\033[2J\033[H", end="")
+        print("╔══════════════════════════════════════════════════════════════════════╗")
+        print("║                     uKey System Control Center                       ║")
+        print("╠══════════════════════════════════════════════════════════════════════╣")
+        print(f"║  Biometric Interception: {status_str:<44}║")
+        print(f"║  Daemon Service:         {service_st:<44}║")
+        print(f"║  Phone Connection:       {conn_str:<44}║")
+        print(f"║  Virtual HID Node:       {hid:<44}║")
+        print(f"║  Active Pairing PIN:     {pin} (1-time use)                          ║")
+        print(f"║  Paired Phones:          {paired_count} authorized                                ║")
+        print("╠══════════════════════════════════════════════════════════════════════╣")
+        print("║  [1] Turn ON biometric interception (Active)                         ║")
+        print("║  [2] Turn OFF biometric interception (Pause -> 0.0s password mode)   ║")
+        print("║  [3] Generate new pairing PIN                                        ║")
+        print("║  [4] List paired devices & revoke                                    ║")
+        print("║  [5] Open Web Settings Dashboard (http://127.0.0.1:8444)             ║")
+        print("║  [6] View live service logs                                          ║")
+        print("║  [7] Run system diagnostics (doctor)                                 ║")
+        print("║  [q] Quit                                                            ║")
+        print("╚══════════════════════════════════════════════════════════════════════╝")
+        try:
+            choice = input("\nSelect option [1-7, q]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("\nExiting.")
+            return 0
+
+        if choice in ("q", "quit", "exit"):
+            return 0
+        elif choice == "1":
+            cmd_on(argparse.Namespace())
+            time.sleep(1.2)
+        elif choice == "2":
+            cmd_off(argparse.Namespace())
+            time.sleep(1.2)
+        elif choice == "3":
+            cmd_pair(argparse.Namespace(new=True))
+            input("\nPress Enter to return to menu...")
+        elif choice == "4":
+            cmd_devices(argparse.Namespace(devices_action="list"))
+            sub = input("\nEnter device ID to revoke (or Enter to go back): ").strip()
+            if sub:
+                cmd_devices(argparse.Namespace(devices_action="revoke", device_id=sub))
+                time.sleep(1.5)
+        elif choice == "5":
+            cmd_web(argparse.Namespace())
+            time.sleep(1.2)
+        elif choice == "6":
+            cmd_logs(argparse.Namespace())
+            input("\nPress Enter to return to menu...")
+        elif choice == "7":
+            cmd_doctor(argparse.Namespace())
+            input("\nPress Enter to return to menu...")
 
 
 def cmd_config_get(_args: argparse.Namespace) -> int:
@@ -201,7 +407,32 @@ def cmd_logs(_args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ukeyctl", description="Inspect and configure uKey")
     parser.add_argument("--version", action="version", version=f"ukeyctl {VERSION}")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command", required=False)
+
+    menu = subparsers.add_parser("menu", help="interactive terminal control center")
+    menu.set_defaults(func=cmd_menu)
+
+    on_cmd = subparsers.add_parser("on", help="activate biometric interception")
+    on_cmd.set_defaults(func=cmd_on)
+
+    off_cmd = subparsers.add_parser("off", help="pause biometric interception (direct password fallback)")
+    off_cmd.set_defaults(func=cmd_off)
+
+    pair_cmd = subparsers.add_parser("pair", help="show or generate one-time phone pairing PIN")
+    pair_cmd.add_argument("--new", action="store_true", help="generate a fresh PIN")
+    pair_cmd.set_defaults(func=cmd_pair)
+
+    devices_cmd = subparsers.add_parser("devices", help="list or revoke authorized phones")
+    dev_sub = devices_cmd.add_subparsers(dest="devices_action", required=False)
+    dev_list = dev_sub.add_parser("list", help="list authorized devices")
+    dev_list.set_defaults(func=cmd_devices)
+    dev_revoke = dev_sub.add_parser("revoke", help="revoke device authorization")
+    dev_revoke.add_argument("device_id", help="device ID or prefix to revoke")
+    dev_revoke.set_defaults(func=cmd_devices)
+    devices_cmd.set_defaults(func=cmd_devices)
+
+    web_cmd = subparsers.add_parser("web", help="open web settings dashboard in browser")
+    web_cmd.set_defaults(func=cmd_web)
 
     status = subparsers.add_parser("status", help="show service, hidraw node, and effective config")
     status.set_defaults(func=cmd_status)
@@ -224,7 +455,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if not getattr(args, "command", None):
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            return cmd_menu(args)
+        parser.print_help()
+        return 0
     return args.func(args)
 
 
