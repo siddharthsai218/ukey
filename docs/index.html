@@ -1,19 +1,19 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>uKey — Touch ID for Linux</title>
-<meta name="description" content="Turn your Android phone's biometric hardware into a native USB FIDO2 security key for Linux. Fingerprint for sudo, git push, and WebAuthn. 100% local, zero cloud.">
-<meta name="theme-color" content="#090A0F">
+<title>uKey: turn your Android phone into a USB FIDO2 security key for Linux</title>
+<meta name="description" content="uKey turns your Android phone into a real, hardware-backed USB FIDO2 security key for Linux. Use your fingerprint for sudo, OpenSSH git push, and WebAuthn logins. Free and open source. Works on Fedora, Ubuntu, Arch, and openSUSE over USB or Wi-Fi.">
+<meta name="theme-color" content="#000000">
 
-<!-- Open Graph / Twitter Cards -->
+<!-- Link previews -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="uKey">
-<meta property="og:title" content="uKey: Touch ID for Linux">
-<meta property="og:description" content="Your Android phone's biometric enclave as a native USB FIDO2 security key for Linux. Fingerprint for sudo, git push, and WebAuthn logins. 100% local, zero cloud.">
+<meta property="og:title" content="uKey: your phone as a USB FIDO2 key for Linux">
+<meta property="og:description" content="A real, low-latency FIDO2 security key from the phone in your pocket. Native on Fedora, Ubuntu, Arch, and openSUSE over USB or Wi-Fi. Free and open source.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="uKey: Touch ID for Linux">
+<meta name="twitter:title" content="uKey: your phone as a USB FIDO2 key for Linux">
 <meta name="twitter:description" content="Your phone as a native USB FIDO2 security key. Fingerprint for sudo, git push, and WebAuthn. Free and open source.">
 
 <script>
@@ -25,1150 +25,728 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Geist:wght@300..800&family=Geist+Mono:wght@400..700&display=swap" rel="stylesheet">
 
 <style>
+/* Black and white. Grays only where something needs to step back. */
 :root {
-  --black: #090A0F;
-  --black-card: #11131A;
+  --black: #000000;
   --white: #F8FAFD;
-  --gray-1: #94A3B8;
-  --gray-2: #232733;
-  --gray-3: #161822;
-  --accent-green: #34D399;
-  --accent-green-bg: rgba(52, 211, 153, 0.12);
-  --accent-cyan: #38BDF8;
-  --accent-cyan-bg: rgba(56, 189, 248, 0.12);
-  --accent-amber: #FBBF24;
-  --accent-red: #F87171;
-  --gutter: clamp(18px, 4.5vw, 72px);
+  --gray-1: #8E918F;   /* secondary text */
+  --gray-2: #3C3F41;   /* rules, inactive borders */
+  --gray-3: #161718;   /* dark fills, grid lines */
+  --live: #81C995;     /* status green */
+  --red: #E5161B;      /* Tandem claim highlight red */
+  --gutter: clamp(16px, 4vw, 64px);
   --text: "Geist", system-ui, -apple-system, sans-serif;
   --display: "Archivo", system-ui, sans-serif;
   --mono: "Geist Mono", ui-monospace, monospace;
-  --ease: cubic-bezier(.16, 1, .3, 1);
-  --border-subtle: rgba(255, 255, 255, 0.08);
+  --ease: cubic-bezier(.2, 0, 0, 1);
 }
 
 :root[data-theme="light"] {
   --black: #F8FAFD;
-  --black-card: #FFFFFF;
-  --white: #0B0E14;
-  --gray-1: #64748B;
-  --gray-2: #E2E8F0;
-  --gray-3: #F1F5F9;
-  --accent-green: #059669;
-  --accent-green-bg: rgba(5, 150, 105, 0.12);
-  --accent-cyan: #0284C7;
-  --accent-cyan-bg: rgba(2, 132, 199, 0.12);
-  --accent-amber: #D97706;
-  --accent-red: #DC2626;
-  --border-subtle: rgba(0, 0, 0, 0.09);
+  --white: #000000;
+  --gray-1: #5F6368;
+  --gray-2: #C4C7C5;
+  --gray-3: #E8EAED;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; background: var(--black); }
+html { -webkit-text-size-adjust: 100%; background: var(--black); scroll-behavior: smooth; }
 body {
   background: var(--black);
   color: var(--white);
   font-family: var(--text);
-  font-size: 16.5px;
-  line-height: 1.55;
+  font-size: 17px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  line-height: 1.5;
   overflow-x: hidden;
-  transition: background 0.25s var(--ease), color 0.25s var(--ease);
 }
 
 a { color: inherit; text-decoration: none; }
+img, svg, canvas { display: block; }
+:focus-visible { outline: 2px solid var(--white); outline-offset: 3px; }
 ::selection { background: var(--white); color: var(--black); }
-:focus-visible { outline: 2px solid var(--accent-green); outline-offset: 3px; }
 
-/* Scroll Progress Bar */
-.scroll-progress {
-  position: fixed; top: 0; left: 0; height: 3px;
-  background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan));
-  z-index: 200; width: 0; transition: width .1s ease-out;
-}
+main, footer { position: relative; z-index: 1; }
 
-/* Navigation */
-.nav {
-  position: sticky; top: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px var(--gutter);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  background: color-mix(in srgb, var(--black) 88%, transparent);
-  border-bottom: 1px solid var(--border-subtle);
-}
-.wordmark {
-  font-family: var(--display);
-  font-weight: 900;
-  font-size: 24px;
-  letter-spacing: -.03em;
-  display: flex; align-items: center; gap: 8px;
-}
-.wordmark .badge {
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 99px;
-  background: var(--accent-green-bg);
-  border: 1px solid color-mix(in srgb, var(--accent-green) 40%, transparent);
-  color: var(--accent-green);
-  font-weight: 600;
-  display: flex; align-items: center; gap: 5px;
-}
-.pulse-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--accent-green);
-  box-shadow: 0 0 8px var(--accent-green);
-  animation: pulse-glow 2s infinite;
-}
-@keyframes pulse-glow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
-}
-
-.nav-links { display: flex; align-items: center; gap: 24px; list-style: none; }
-.nav-links a { font-size: 14.5px; color: var(--gray-1); transition: color .15s; font-weight: 500; }
-.nav-links a:hover { color: var(--white); }
-@media (max-width: 820px) { .nav-links { display: none; } }
-
-.nav-actions { display: flex; align-items: center; gap: 12px; }
-
-.theme-toggle {
-  background: var(--gray-3); border: 1px solid var(--border-subtle);
-  color: var(--white); width: 38px; height: 38px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all .15s;
-}
-.theme-toggle:hover { border-color: var(--white); transform: scale(1.05); }
-
-/* Typography & General */
-.wrap { padding-inline: var(--gutter); }
-.mega {
-  font-family: var(--display);
-  font-weight: 900;
-  line-height: .92;
-  letter-spacing: -.035em;
-  font-variation-settings: "wdth" 115;
-}
+/* Shared type ---------------------------------------------------------- */
+.mega { font-weight: 900; line-height: .86; letter-spacing: -.02em; font-variation-settings: "wdth" 125; }
 .h2 {
-  font-family: var(--display);
-  font-size: clamp(34px, 5.2vw, 76px);
-  font-weight: 900;
-  line-height: 1.02;
-  letter-spacing: -.03em;
+  font-size: clamp(40px, 6.6vw, 112px);
+  font-weight: 600;
+  line-height: .98;
+  letter-spacing: -.045em;
 }
-.lede {
-  font-size: clamp(17px, 1.6vw, 21px);
-  line-height: 1.5;
-  color: var(--gray-1);
-  max-width: 36em;
-}
-.lede b { color: var(--white); }
+.lede { font-size: clamp(19px, 1.7vw, 23px); line-height: 1.45; max-width: 32em; color: var(--gray-1); }
+.lede b { color: var(--white); font-weight: 600; }
+.lede a { color: var(--white); text-decoration: underline; text-underline-offset: .18em; }
 .mono { font-family: var(--mono); }
+.wrap { padding-inline: var(--gutter); }
 
-/* Buttons */
+/* Buttons: square, flat, no rounded AI slop ---------------------------- */
 .btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 13px 22px;
-  font: 600 14.5px/1 var(--text);
-  border: 1px solid var(--border-subtle);
-  background: var(--gray-3);
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 15px 22px;
+  font: 500 15px/1 var(--text);
+  letter-spacing: -.01em;
+  text-decoration: none;
+  border: 1px solid var(--white);
+  background: transparent;
   color: var(--white);
   cursor: pointer;
-  border-radius: 8px;
-  transition: all .18s var(--ease);
+  border-radius: 0;
+  transition: background-color .15s, color .15s;
 }
-.btn:hover { background: var(--white); color: var(--black); border-color: var(--white); transform: translateY(-1px); }
-.btn.solid { background: var(--white); color: var(--black); border-color: var(--white); }
-.btn.solid:hover { background: transparent; color: var(--white); }
-.btn.github { background: #24292F; color: #FFF; border-color: #383E47; }
-.btn.github:hover { background: #323842; color: #FFF; }
+.btn:hover, .btn.solid { background: var(--white); color: var(--black); }
+.btn.solid:hover { background: var(--black); color: var(--white); }
+.light .btn { border-color: var(--black); color: var(--black); }
+.light .btn:hover { background: var(--black); color: var(--white); }
 
-/* Hero Section */
-.hero {
-  padding: clamp(50px, 7vw, 100px) var(--gutter) 30px;
-  text-align: center;
-  display: flex; flex-direction: column; align-items: center;
-  position: relative;
+/* Navigation ------------------------------------------------------------ */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px var(--gutter);
+  --nav-bg: var(--black); --nav-ink: var(--white);
+  background: var(--nav-bg); color: var(--nav-ink);
+  transition: transform .45s var(--ease), background-color .25s, color .25s;
 }
-.hero-tag {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-family: var(--mono); font-size: 12.5px;
-  padding: 6px 16px;
-  border-radius: 99px;
-  background: var(--accent-green-bg);
-  border: 1px solid color-mix(in srgb, var(--accent-green) 35%, transparent);
-  color: var(--accent-green);
-  margin-bottom: 24px;
-  font-weight: 600;
+.wordmark {
+  font: 800 22px/1 var(--display);
+  font-variation-settings: "wdth" 110;
+  letter-spacing: -.01em;
+  display: flex; align-items: center; gap: 8px;
 }
+.wordmark .live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--live);
+  box-shadow: 0 0 8px var(--live);
+}
+.nav ul { display: flex; gap: clamp(16px, 3vw, 36px); list-style: none; font: 500 15px var(--text); letter-spacing: -.01em; align-items: center; }
+.nav ul a { text-decoration: none; color: color-mix(in srgb, var(--nav-ink) 62%, var(--nav-bg)); transition: color .15s; }
+.nav ul a:hover { color: var(--nav-ink); }
+@media (max-width: 820px) { .nav ul li.opt { display: none; } }
+.theme-btn {
+  font: 500 14px var(--text); color: inherit; background: transparent;
+  border: 1px solid color-mix(in srgb, var(--nav-ink) 35%, var(--nav-bg));
+  padding: 6px 12px; cursor: pointer; border-radius: 0;
+}
+.theme-btn:hover { border-color: var(--nav-ink); }
+
+/* Hero ------------------------------------------------------------------ */
+.hero { min-height: calc(100vh - 65px); display: flex; flex-direction: column; justify-content: space-between; }
+.hero-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 7.5fr) minmax(0, 5fr);
+  gap: 32px clamp(24px, 3vw, 48px);
+  align-items: center;
+  padding: clamp(32px, 6vh, 72px) var(--gutter);
+}
+@media (max-width: 900px) {
+  .hero-main { grid-template-columns: 1fr; }
+}
+
 .hero-title {
-  font-size: clamp(44px, 7.5vw, 105px);
-  margin-bottom: 20px;
-  max-width: 16ch;
+  font-size: clamp(40px, 4.8vw, 88px);
+  font-weight: 600;
+  line-height: .98;
+  letter-spacing: -.05em;
 }
-.hero-desc {
-  max-width: 38em; text-align: center; margin-bottom: 34px;
+.hero-title > span { display: block; }
+.claim {
+  font-style: normal; position: relative; display: inline-block;
+  padding: 0 .12em; margin-left: -.12em; z-index: 0;
 }
-.hero-cta {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 14px;
-  margin-bottom: 32px;
+.claim::before {
+  content: ""; position: absolute; inset: .06em 0 .02em;
+  background: var(--red); z-index: -1;
+  transform: scaleX(1); transform-origin: left;
 }
-.cmd-box {
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--gray-3); border: 1px solid var(--border-subtle);
-  border-radius: 10px; padding: 12px 18px;
-  font-family: var(--mono); font-size: 13px;
-  max-width: 660px; width: 100%;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-}
-.cmd-box code { color: var(--white); overflow-x: auto; white-space: nowrap; margin-right: 12px; }
-.cmd-box code span.p { color: var(--gray-1); }
-.copy-btn {
-  background: var(--gray-2); border: 1px solid var(--border-subtle); color: var(--white);
-  font-size: 12px; font-family: var(--mono); padding: 7px 14px;
-  border-radius: 6px; cursor: pointer; transition: all .15s;
-  white-space: nowrap; font-weight: 600;
-}
-.copy-btn:hover { background: var(--accent-green); color: #000; border-color: var(--accent-green); }
+.claim { color: #fff; }
 
-/* Live Metrics Strip */
-.metrics-strip {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px; max-width: 980px; width: 100%; margin: 34px auto 0;
+.hero-sub { margin-top: 24px; }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+
+/* Flat terminal command bar */
+.cmd { display: flex; align-items: stretch; border: 1px solid var(--white); margin-top: 18px; }
+.cmd code {
+  flex: 1; min-width: 0; padding: 16px; font: 400 14px/1.5 var(--mono);
+  overflow-x: auto; white-space: nowrap; scrollbar-width: none;
 }
-.metric-pill {
-  background: var(--black-card); border: 1px solid var(--border-subtle);
-  border-radius: 10px; padding: 14px 18px; text-align: left;
-  display: flex; flex-direction: column; gap: 4px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+.cmd code::-webkit-scrollbar { display: none; }
+.cmd button {
+  flex: none; border: 0; border-left: 1px solid var(--white);
+  background: var(--white); color: var(--black); padding: 0 20px;
+  font: 500 15px var(--text); cursor: pointer; border-radius: 0;
+  transition: background-color .15s, color .15s;
 }
-.metric-val {
-  font-family: var(--display); font-size: 26px; font-weight: 900;
-  color: var(--white); line-height: 1; display: flex; align-items: baseline; gap: 4px;
+.cmd button:hover { background: var(--black); color: var(--white); }
+.cmd .prompt { color: var(--gray-1); user-select: none; }
+.hero-cmd { margin-top: 28px; max-width: 44em; }
+.hero-cmd p { font-size: 15px; color: var(--gray-1); }
+.hero-cmd .cmd { margin-top: 10px; }
+
+/* Facts Row (Pure border-separated grid, NO AI cards) ------------------- */
+.facts {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--gray-2);
+  border-bottom: 1px solid var(--gray-2);
 }
-.metric-val span { font-size: 13px; font-family: var(--mono); color: var(--accent-green); }
-.metric-label { font-size: 12px; color: var(--gray-1); font-weight: 500; }
+.facts > div {
+  padding: 24px 20px 30px;
+  border-right: 1px solid var(--gray-2);
+}
+.facts > div:last-child { border-right: none; }
+.facts > div:first-child { padding-left: var(--gutter); }
+.facts b { display: block; font: 600 17px var(--text); letter-spacing: -.02em; margin-bottom: 6px; }
+.facts span { color: var(--gray-1); font-size: 15px; line-height: 1.45; }
+@media (max-width: 900px) {
+  .facts { grid-template-columns: repeat(2, 1fr); }
+  .facts > div:nth-child(2) { border-right: none; }
+  .facts > div:nth-child(3) { border-top: 1px solid var(--gray-2); }
+  .facts > div:nth-child(4) { border-top: 1px solid var(--gray-2); }
+}
+
+/* Statement: words widen as you read ------------------------------------ */
+.statement {
+  padding: clamp(90px, 14vh, 160px) var(--gutter);
+  border-bottom: 1px solid var(--gray-2);
+}
+.st-line {
+  white-space: nowrap;
+  font-weight: 900; line-height: .92; letter-spacing: -.02em;
+  font-variation-settings: "wdth" 62;
+  color: var(--gray-2);
+  transition: font-variation-settings .3s var(--ease), color .3s;
+}
+.st-line:hover, .st-line.on {
+  font-variation-settings: "wdth" 125;
+  color: var(--white);
+}
+.st-note { margin-top: 40px; max-width: 38em; font-size: 19px; }
 
 /* =========================================================================
-   HARDWARE RIG: LAPTOP TO MOBILE INTERACTIVE STAGE
+   DEVICE RIG (THE INTERACTIVE SIMULATOR)
+   Brushed metal laptop + titanium phone slab with authentic screens.
    ========================================================================= */
-.rig-section {
-  padding: 30px var(--gutter) 90px;
-  border-bottom: 1px solid var(--border-subtle);
+.demo-section {
+  padding: clamp(70px, 10vh, 130px) var(--gutter);
+  border-bottom: 1px solid var(--gray-2);
 }
-.rig-header {
-  text-align: center; max-width: 44em; margin: 0 auto 28px;
+.demo-head {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end;
+  gap: 24px; margin-bottom: 32px;
 }
-.rig-controls {
-  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-  gap: 14px; margin-bottom: 24px;
-  padding: 12px 18px; background: var(--black-card);
-  border: 1px solid var(--border-subtle); border-radius: 12px;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.15);
-}
-.mode-toggles { display: flex; flex-wrap: wrap; gap: 8px; }
-.mode-btn {
-  background: transparent; border: 1px solid var(--border-subtle);
-  color: var(--gray-1); font-family: var(--mono); font-size: 12.5px;
-  padding: 8px 14px; border-radius: 7px; cursor: pointer;
-  transition: all .15s; display: flex; align-items: center; gap: 6px;
-}
-.mode-btn:hover { color: var(--white); border-color: var(--white); }
-.mode-btn.active {
-  background: var(--white); color: var(--black); border-color: var(--white); font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-.mode-btn.danger.active {
-  background: var(--accent-red); color: #FFF; border-color: var(--accent-red);
-}
-
-.conn-switcher {
-  display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px;
-}
-.conn-pill {
-  padding: 6px 12px; border-radius: 99px; background: var(--gray-3);
-  border: 1px solid var(--border-subtle); color: var(--white);
-  cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px;
-}
-.conn-pill.active {
-  border-color: var(--accent-green); background: var(--accent-green-bg); color: var(--accent-green);
+.caption {
+  font-size: clamp(26px, 3.8vw, 56px);
   font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -.04em;
+  max-width: 20em;
 }
-.conn-pill.wifi.active {
-  border-color: var(--accent-cyan); background: var(--accent-cyan-bg); color: var(--accent-cyan);
-}
-.conn-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green);
-  box-shadow: 0 0 8px var(--accent-green);
-  animation: pulse-glow 2s infinite ease-in-out;
-}
+.caption.swap { animation: swap .25s ease-out; }
+@keyframes swap { from { opacity: 0; transform: translateY(6px); } }
 
-/* The Physical Stage */
+.scenarios-nav {
+  display: flex; flex-wrap: wrap; gap: 0;
+  border: 1px solid var(--white); width: fit-content;
+}
+.sc-btn {
+  border: 0; background: transparent; color: var(--white);
+  padding: 12px 16px; font: 500 14px var(--text); cursor: pointer;
+  border-radius: 0; transition: background .15s, color .15s;
+}
+.sc-btn + .sc-btn { border-left: 1px solid var(--white); }
+.sc-btn.active { background: var(--white); color: var(--black); font-weight: 600; }
+.sc-btn.danger.active { background: var(--red); color: #FFF; }
+
 .stage-viewport {
   position: relative;
-  background: radial-gradient(circle at 50% 25%, #181B24 0%, #080A0E 75%);
-  border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  padding: clamp(28px, 4vw, 50px) 24px 44px;
-  min-height: 570px;
+  background: #000;
+  border: 1px solid var(--gray-2);
+  padding: clamp(30px, 5vw, 60px) 24px;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 30px 80px rgba(0,0,0,0.5);
 }
 
 .hardware-duo {
   display: flex; align-items: flex-end; justify-content: center;
-  gap: clamp(20px, 3.5vw, 50px);
-  position: relative; width: 100%; max-width: 1080px;
+  gap: clamp(20px, 4vw, 60px);
+  width: 100%; max-width: 1100px;
 }
 @media (max-width: 900px) {
   .hardware-duo { flex-direction: column; align-items: center; gap: 40px; }
 }
 
-/* 1. LAPTOP CHASSIS */
-.laptop-chassis {
+/* 1. Brushed Gunmetal Laptop */
+.laptop-wrap {
   flex: 1; max-width: 660px; min-width: 320px;
   display: flex; flex-direction: column; align-items: center;
-  position: relative;
 }
-.laptop-lid {
+.lid {
   width: 100%; aspect-ratio: 16 / 10.5;
-  border-radius: 14px 14px 4px 4px;
+  border-radius: 16px 16px 4px 4px;
+  padding: 10px 10px 22px;
+  border: 2px solid transparent;
   background:
     linear-gradient(#08080A, #08080A) padding-box,
-    linear-gradient(160deg, #8A8E94 0%, #2E3034 22%, #5C6066 45%, #25272A 70%, #6A6E74 100%) border-box;
-  border: 3px solid transparent;
-  padding: 10px 10px 18px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    linear-gradient(160deg, #8A8E94 0%, #2E3034 20%, #5C6066 45%, #25272A 70%, #6A6E74 100%) border-box;
   position: relative;
 }
-.laptop-lid::before {
-  content: ""; position: absolute; left: 50%; top: 4px;
-  width: 4px; height: 4px; margin-left: -2px;
-  border-radius: 50%; background: #3C3F44;
+.lid::before {
+  content: ""; position: absolute; left: 50%; top: 3px;
+  width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #23262B;
 }
-.laptop-screen {
-  width: 100%; height: 100%;
-  background: #0C0D0E;
-  border-radius: 6px;
-  overflow: hidden;
-  display: flex; flex-direction: column;
-  position: relative;
+.screen {
+  width: 100%; height: 100%; background: #000; overflow: hidden;
+  position: relative; border-radius: 4px;
 }
-.desktop-topbar {
-  background: #141517; height: 22px; border-bottom: 1px solid #232528;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 10px; font-family: var(--mono); font-size: 10px; color: var(--gray-1);
-}
-.topbar-left { display: flex; align-items: center; gap: 10px; }
-.topbar-pill { background: #232528; color: var(--white); padding: 1px 6px; border-radius: 3px; font-weight: 600; }
-.desktop-workspace {
-  flex: 1; padding: 14px; position: relative;
-  background: radial-gradient(circle at 80% 20%, #151922 0%, #0C0D0E 65%);
-  display: flex; flex-direction: column; justify-content: center;
+/* Subtle glass reflection */
+.screen::after {
+  content: ""; position: absolute; inset: 0; z-index: 7; pointer-events: none;
+  background: linear-gradient(118deg, rgba(255, 255, 255, .06) 0%, rgba(255, 255, 255, .01) 34%, transparent 34.2%);
 }
 
-/* Linux Terminal Window on Laptop */
-.screen-terminal {
-  background: rgba(9, 10, 12, 0.95);
-  border: 1px solid #2E3134; border-radius: 8px;
-  overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+/* Waybar top bar (Hyprland / GNOME style) */
+.waybar {
+  height: 22px; background: rgba(13, 14, 22, .9); border-bottom: 1px solid #23252E;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 10px; font: 500 10px var(--mono); color: var(--gray-1);
 }
-.sterm-bar {
-  background: #181A1D; padding: 6px 10px;
-  display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid #282A2E;
-}
-.sterm-dots { display: flex; gap: 5px; }
-.sterm-dot { width: 8px; height: 8px; border-radius: 50%; background: #40444A; }
-.sterm-dot.r { background: #E06C75; }
-.sterm-dot.y { background: #E5C07B; }
-.sterm-dot.g { background: #98C379; }
-.sterm-body {
-  padding: 12px 14px; font-family: var(--mono); font-size: 11.5px; line-height: 1.6;
-  min-height: 135px; text-align: left;
-}
+.waybar-left { display: flex; align-items: center; gap: 8px; }
+.waybar-ws { background: #252834; color: #FFF; padding: 1px 6px; border-radius: 3px; }
 
-/* Browser Window on Laptop (for Google & GitHub scenarios) */
-.screen-browser {
-  background: #13151A;
-  border: 1px solid #2A2E36; border-radius: 8px;
-  overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,0.45);
-  display: none; flex-direction: column;
+/* Kitty / Ghostty Terminal Window */
+.term-window {
+  background: #0B0D13; padding: 14px 16px;
+  height: calc(100% - 22px); font: 400 11.5px/1.65 var(--mono);
+  color: #CDD6F4; text-align: left; overflow: hidden;
 }
-.sbrowser-bar {
-  background: #1B1E24; padding: 6px 10px;
-  display: flex; align-items: center; gap: 8px;
-  border-bottom: 1px solid #282C34;
+.term-prompt { color: var(--live); }
+.term-waiting { color: #F9E2AF; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+.term-waiting-dot { width: 5px; height: 5px; border-radius: 50%; background: #F9E2AF; animation: blink 1.2s infinite; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.term-done { margin-top: 8px; }
+.term-done.ok { color: var(--live); font-weight: 600; }
+.term-done.err { color: var(--red); font-weight: 600; }
+
+/* Browser Window inside screen (for Google/GitHub passkey scenario) */
+.browser-window {
+  display: none; height: calc(100% - 22px);
+  background: #111318; flex-direction: column;
 }
-.sbrowser-tab {
-  background: #13151A; color: #FFF; font-size: 10px; font-weight: 500;
-  padding: 3px 8px; border-radius: 4px; display: flex; align-items: center; gap: 5px;
-  border: 1px solid #262A32; border-bottom: none;
+.browser-tabs {
+  background: #181A20; border-bottom: 1px solid #272A32;
+  height: 26px; display: flex; align-items: center; padding: 0 8px; gap: 8px;
 }
-.sbrowser-urlbar {
-  flex: 1; background: #0A0C0E; border: 1px solid #22252C;
-  border-radius: 4px; padding: 2px 8px; font-family: var(--mono); font-size: 9.5px;
-  color: var(--accent-cyan); display: flex; align-items: center; gap: 5px;
+.browser-tab {
+  background: #111318; color: #FFF; font: 500 10px var(--text);
+  padding: 3px 8px; border: 1px solid #272A32; border-bottom: none;
 }
-.sbrowser-body {
-  padding: 14px 16px; min-height: 135px; text-align: left;
-  display: flex; flex-direction: column; justify-content: center;
+.browser-body {
+  flex: 1; padding: 18px; display: flex; flex-direction: column; justify-content: center; text-align: left;
 }
-.browser-auth-card {
-  background: #1A1D24; border: 1px solid #2B303C; border-radius: 8px;
-  padding: 12px 14px;
-}
-.browser-auth-head {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
-}
-.browser-auth-title { font-size: 13px; font-weight: 700; color: #FFF; }
-.browser-auth-sub { font-size: 10.5px; color: var(--gray-1); }
 .browser-auth-box {
-  background: #0E1014; border: 1px solid #222630; border-radius: 6px;
-  padding: 8px 10px; font-size: 11px; margin-top: 8px;
+  border: 1px solid var(--white); padding: 14px 16px; background: #000;
 }
 
 /* Laptop Keyboard Base & Hinge */
-.laptop-base {
+.base {
   width: 108%; height: 16px; margin-top: -2px;
   border-radius: 3px 3px 12px 12px / 3px 3px 9px 9px;
-  background: linear-gradient(#9FA3A9 0%, #585C62 3px, #36393E 45%, #191A1D 100%);
-  position: relative; z-index: 2;
-  box-shadow: 0 20px 30px rgba(0,0,0,0.6);
+  background: linear-gradient(#A3A7AD 0, #5E6268 1.5px, #3E4146 45%, #1E1F22 100%);
+  position: relative;
 }
-.laptop-notch {
-  position: absolute; left: 50%; top: 0; width: 84px; height: 5px;
-  margin-left: -42px; border-radius: 0 0 6px 6px; background: #131416;
+.base::before {
+  content: ""; position: absolute; left: 50%; top: 0; width: 118px; height: 5px;
+  margin-left: -59px; border-radius: 0 0 8px 8px; background: #1B1C1F;
 }
-.laptop-shadow {
+.floor {
   width: 96%; height: 14px;
-  background: radial-gradient(closest-side, rgba(0,0,0,0.5), transparent);
+  background: radial-gradient(closest-side, rgba(0, 0, 0, .4), transparent);
   margin-top: -6px;
 }
 
-/* 2. CABLE / WIRELESS DATA CONDUIT */
-.stream-conduit {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  position: relative; width: 90px; height: 160px;
-}
-@media (max-width: 900px) {
-  .stream-conduit { width: 100%; height: 50px; flex-direction: row; }
-}
-.conduit-line {
-  position: absolute; width: 100%; height: 4px;
-  background: linear-gradient(90deg, #3A3D42 0%, var(--accent-cyan) 50%, #3A3D42 100%);
-  border-radius: 99px; transition: background 0.3s;
-}
-.conduit-line.danger {
-  background: linear-gradient(90deg, var(--accent-red) 0%, #FF1E1E 50%, var(--accent-red) 100%);
-  box-shadow: 0 0 12px var(--accent-red);
-}
-.packet-pulse {
-  position: absolute; width: 14px; height: 14px; border-radius: 50%;
-  background: var(--accent-cyan);
-  box-shadow: 0 0 16px var(--accent-cyan);
-  animation: dataTravel 1.5s infinite ease-in-out;
-}
-.packet-pulse.danger {
-  background: var(--accent-red);
-  box-shadow: 0 0 18px var(--accent-red);
-}
-@keyframes dataTravel {
-  0% { left: 0%; opacity: 0; transform: scale(.7); }
-  20% { opacity: 1; transform: scale(1.2); }
-  80% { opacity: 1; transform: scale(1.2); }
-  100% { left: 100%; opacity: 0; transform: scale(.7); }
-}
-
-/* 3. ANDROID SMARTPHONE CHASSIS */
-.phone-chassis {
+/* 2. Titanium Phone Slab */
+.phone-wrap {
   width: 275px; flex-shrink: 0;
-  border-radius: 40px;
-  padding: 10px;
-  background:
-    linear-gradient(#050507, #050507) padding-box,
-    linear-gradient(150deg, #A8ACB0 0%, #46484D 24%, #9EA2A6 48%, #323438 72%, #8B8F94 100%) border-box;
+  border-radius: 38px; padding: 10px;
   border: 3px solid transparent;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.6), inset 0 0 0 1px #0A0A0E;
+  background:
+    linear-gradient(#030304, #030304) padding-box,
+    linear-gradient(150deg, #B2B5B9 0%, #4A4D52 22%, #A4A8AC 46%, #393C40 70%, #8E9296 100%) border-box;
   position: relative;
 }
-.phone-key { position: absolute; background: #686C72; border-radius: 1px; }
-.phone-key.power { right: -6px; top: 100px; width: 3px; height: 32px; }
-.phone-key.vol { right: -6px; top: 146px; width: 3px; height: 64px; }
-
 .phone-screen {
-  background: #F3F6FA;
-  border-radius: 30px;
-  height: 520px; overflow: hidden;
+  background: #F3F6FA; border-radius: 28px;
+  height: 500px; overflow: hidden;
   display: flex; flex-direction: column;
-  padding: 6px 12px 12px;
   position: relative;
-  box-shadow: inset 0 0 8px rgba(0,0,0,0.15);
 }
-.phone-punchhole {
-  width: 9px; height: 9px; border-radius: 50%;
-  background: #000; border: 2px solid #1E2024;
-  margin: 0 auto 3px; z-index: 25;
+.phone-cam {
+  width: 8px; height: 8px; border-radius: 50%; background: #000;
+  border: 2px solid #1E2024; margin: 4px auto 2px; z-index: 10;
 }
-.phone-statusbar {
-  display: flex; justify-content: space-between; align-items: center;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 10px; font-weight: 600; color: #0F172A;
-  padding: 0 4px 6px; border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-  z-index: 10;
-}
-.phone-status-icons {
-  display: flex; align-items: center; gap: 5px; color: #64748B;
+.phone-status {
+  display: flex; justify-content: space-between; padding: 0 12px 4px;
+  font: 600 10px var(--text); color: #0F172A; border-bottom: 1px solid #E2E8F0;
 }
 
-/* Authentic Android uKey App UI */
-.uapp-container {
-  display: flex; flex-direction: column; flex: 1; z-index: 5;
-}
-.uapp-header {
-  padding: 6px 2px 8px; text-align: left;
-}
-.uapp-title {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 24px; font-weight: 900; letter-spacing: -0.02em; color: #0F172A; line-height: 1;
-}
-.uapp-tagline {
-  font-size: 10.5px; color: #64748B; margin-top: 2px;
-}
+/* Android uKey App UI */
+.uapp { padding: 10px 12px; flex: 1; display: flex; flex-direction: column; text-align: left; }
+.uapp-title { font: 900 22px/1 var(--text); letter-spacing: -.03em; color: #0F172A; }
+.uapp-sub { font: 400 10.5px var(--text); color: #64748B; margin-top: 2px; }
 
-.uapp-card {
-  background: #FFFFFF; border: 1px solid #E2E8F0;
-  border-radius: 12px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  text-align: left;
+.uapp-bridge-box {
+  background: #FFF; border: 1px solid #E2E8F0; margin-top: 10px; padding: 8px 10px;
 }
-.uapp-section-label {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
-  color: #0F766E; text-transform: uppercase; margin-bottom: 6px;
-}
-.uapp-inputs { display: flex; gap: 8px; }
-.uapp-field { flex: 1; }
-.uapp-field-port { flex: 0 0 54px; }
-.uapp-field-label { font-size: 8.5px; color: #64748B; display: block; margin-bottom: 2px; }
-.uapp-input-box {
-  background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px;
-  padding: 4px 6px; font-family: var(--mono); font-size: 10.5px; color: #0F172A;
-  font-weight: 500;
-}
-.uapp-status-row {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-top: 8px; padding-top: 6px; border-top: 1px solid #F1F5F9;
-}
-.uapp-status-pill {
-  font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 99px;
-  background: #DCFCE7; color: #166534; border: 1px solid #86EFAC;
-  display: inline-flex; align-items: center; gap: 4px;
-}
-.uapp-status-pill.danger {
-  background: #FEE2E2; color: #991B1B; border-color: #FCA5A5;
-}
-.uapp-dot { width: 5px; height: 5px; border-radius: 50%; background: #16A34A; }
-.uapp-dot.danger { background: #DC2626; }
-.uapp-status-detail { font-size: 9px; color: #64748B; font-family: var(--mono); }
-.uapp-btn-row { display: flex; gap: 6px; margin-top: 8px; }
-.uapp-btn {
-  border: none; border-radius: 6px; font-size: 9.5px; font-weight: 600;
-  padding: 5px 8px; cursor: pointer; text-align: center;
-}
-.uapp-btn.primary { flex: 1; background: #0F766E; color: #FFFFFF; }
-.uapp-btn.secondary { flex: 0 0 44px; background: #E2E8F0; color: #334155; }
-.uapp-hint {
-  font-size: 8.5px; color: #94A3B8; margin-top: 6px; line-height: 1.25;
-}
+.uapp-bridge-label { font: 700 8.5px var(--mono); color: #0F766E; letter-spacing: .08em; text-transform: uppercase; }
+.uapp-bridge-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font: 500 11px var(--mono); color: #0F172A; }
+.uapp-bridge-pill { font: 700 9px var(--mono); color: #166534; background: #DCFCE7; padding: 1px 6px; border: 1px solid #86EFAC; }
+.uapp-bridge-pill.err { color: #991B1B; background: #FEE2E2; border-color: #FCA5A5; }
 
-.uapp-log-card {
-  background: #0F172A; border-radius: 12px; padding: 10px 12px;
-  margin-top: 8px; flex: 1; display: flex; flex-direction: column;
-  text-align: left; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+.uapp-logs {
+  background: #0F172A; margin-top: 8px; flex: 1; padding: 8px 10px;
+  font: 400 9px/1.5 var(--mono); color: #D1FAE5; overflow-y: auto;
 }
-.uapp-log-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 6px;
-}
-.uapp-log-label {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
-  color: #94A3B8; text-transform: uppercase;
-}
-.uapp-clear-btn {
-  background: transparent; border: none; font-size: 9px; color: #5EEAD4;
-  cursor: pointer; padding: 0; font-family: var(--mono);
-}
-.uapp-log-body {
-  flex: 1; overflow-y: auto; font-family: var(--mono); font-size: 9px;
-  line-height: 1.45; color: #D1FAE5;
-}
-.uapp-log-line { margin-bottom: 3px; word-break: break-all; }
-.log-time { color: #64748B; }
-.log-info { color: #94A3B8; }
-.log-conn { color: #5EEAD4; }
-.log-req { color: #FBBF24; font-weight: 600; }
-.log-ok { color: #34D399; font-weight: 600; }
-.log-err { color: #F87171; font-weight: 600; }
+.uapp-log-time { color: #64748B; }
 
-/* Android Material 3 BiometricPrompt Modal */
-.biometric-sheet {
+/* Android BiometricPrompt Bottom Sheet */
+.bio-sheet {
   position: absolute; left: 0; right: 0; bottom: 0;
-  background: #191B20; border-top: 1px solid #2C3038;
-  border-radius: 22px 22px 0 0;
-  padding: 12px 14px 14px;
-  box-shadow: 0 -12px 35px rgba(0,0,0,0.75);
-  z-index: 30;
-  text-align: center;
-  transition: transform .3s var(--ease), opacity .3s;
+  background: #181A20; border-top: 1px solid #2B2E38;
+  border-radius: 20px 20px 0 0;
+  padding: 12px 14px 16px;
+  box-shadow: 0 -12px 30px rgba(0,0,0,0.7);
+  z-index: 20; text-align: center;
 }
-.sheet-drag-handle {
-  width: 32px; height: 3.5px; border-radius: 99px;
-  background: #4A4E58; margin: 0 auto 10px;
-}
-.sheet-header {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 6px; text-align: left;
-}
-.sheet-icon {
-  width: 28px; height: 28px; border-radius: 50%; background: #262A33;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.sheet-title { font-size: 12px; font-weight: 700; color: #FFF; line-height: 1.2; }
-.sheet-sub { font-size: 10px; font-family: var(--mono); color: var(--accent-cyan); }
-.sheet-desc { font-size: 10px; color: var(--gray-1); margin-bottom: 10px; text-align: left; }
+.sheet-handle { width: 32px; height: 3px; background: #444854; margin: 0 auto 10px; border-radius: 99px; }
+.sheet-head { font: 700 12px var(--text); color: #FFF; text-align: left; }
+.sheet-rp { font: 500 10px var(--mono); color: #38BDF8; text-align: left; margin-top: 2px; }
+.sheet-desc { font: 400 10px var(--text); color: var(--gray-1); text-align: left; margin: 8px 0 12px; }
 
-.fingerprint-touch-area {
-  width: 58px; height: 58px; margin: 0 auto;
+.fp-target {
+  width: 54px; height: 54px; margin: 0 auto;
   border-radius: 50%; background: #222630;
-  border: 2px dashed #4D5463;
+  border: 1px dashed #4D5463;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; position: relative;
-  transition: all .2s;
+  cursor: pointer; transition: all .15s;
 }
-.fingerprint-touch-area:hover {
-  transform: scale(1.08); border-color: var(--accent-cyan);
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+.fp-target:hover { transform: scale(1.08); border-color: #38BDF8; border-style: solid; }
+.fp-target.verified { background: rgba(52, 211, 153, 0.2); border-color: var(--live); border-style: solid; }
+.fp-hint { font: 500 10px var(--mono); color: var(--gray-1); margin-top: 8px; display: block; }
+
+/* Pipeline --------------------------------------------------------------- */
+.pipe { padding: clamp(80px, 13vh, 150px) 0; border-bottom: 1px solid var(--gray-2); }
+.ms { font-size: clamp(90px, 18vw, 300px); font-variant-numeric: tabular-nums; white-space: nowrap; line-height: .9; }
+.ms small { font-size: .3em; font-variation-settings: "wdth" 62; letter-spacing: 0; margin-left: .1em; color: var(--gray-1); }
+.pipe .lede { margin-top: 24px; }
+
+.stages {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  border-top: 1px solid var(--gray-2);
+  margin-top: clamp(48px, 8vh, 84px);
 }
-.fingerprint-touch-area.verified {
-  border-color: var(--accent-green); border-style: solid;
-  background: rgba(52, 211, 153, 0.25);
-}
-.fp-ripple {
-  position: absolute; inset: -5px; border-radius: 50%;
-  border: 2px solid var(--accent-cyan);
-  animation: pulseFp 2s infinite ease-out;
-}
-@keyframes pulseFp {
-  0% { transform: scale(.9); opacity: 1; }
-  100% { transform: scale(1.4); opacity: 0; }
-}
-.sheet-footer {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-top: 8px; padding-top: 6px;
-}
-.phone-gesture-hint {
-  font-family: var(--mono); font-size: 10px; color: var(--gray-1);
-}
-.sheet-cancel {
-  font-size: 10px; color: var(--gray-1); font-weight: 600; cursor: pointer;
+.stage-col { padding: 24px 16px 28px; border-right: 1px solid var(--gray-2); }
+.stage-col:last-child { border-right: none; }
+.stage-col:first-child { padding-left: 0; }
+.stage-col .n { font: 500 13px var(--mono); color: var(--gray-1); }
+.stage-col h3 { font-size: clamp(17px, 1.6vw, 24px); font-weight: 600; letter-spacing: -.03em; margin: 10px 0 6px; }
+.stage-col p { font-size: 14.5px; color: var(--gray-1); line-height: 1.5; }
+@media (max-width: 900px) {
+  .stages { grid-template-columns: 1fr; }
+  .stage-col { border-right: none; border-bottom: 1px solid var(--gray-2); padding-left: 0; }
 }
 
-/* =========================================================================
-   SECURITY & PAIRING SHOWCASE
-   ========================================================================= */
-.security-section {
-  padding: clamp(60px, 8vw, 110px) var(--gutter);
-  border-bottom: 1px solid var(--border-subtle);
-  background: color-mix(in srgb, var(--black-card) 40%, transparent);
+/* Ways in ------------------------------------------------------------------ */
+.ways { padding: clamp(80px, 13vh, 150px) 0; border-bottom: 1px solid var(--gray-2); }
+.ways-list { margin-top: clamp(32px, 6vh, 64px); border-top: 1px solid var(--gray-2); }
+.way {
+  display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px 48px;
+  padding: 36px 0; border-bottom: 1px solid var(--gray-2); align-items: center;
 }
-.sec-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px; margin-top: 40px;
+.way h3 {
+  font-size: clamp(36px, 5.5vw, 92px); line-height: .95; letter-spacing: -.03em; font-weight: 800;
+  font-variation-settings: "wdth" 62; transition: font-variation-settings .3s var(--ease);
 }
-.sec-card {
-  background: var(--black-card); border: 1px solid var(--border-subtle);
-  border-radius: 14px; padding: 26px 24px; text-align: left;
-  display: flex; flex-direction: column; justify-content: space-between;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-  transition: transform .2s, border-color .2s;
-}
-.sec-card:hover { transform: translateY(-3px); border-color: var(--accent-green); }
-.sec-icon {
-  width: 44px; height: 44px; border-radius: 10px;
-  background: var(--gray-3); border: 1px solid var(--border-subtle);
-  display: flex; align-items: center; justify-content: center; margin-bottom: 18px;
-}
-.sec-title { font-family: var(--display); font-size: 20px; font-weight: 800; margin-bottom: 8px; }
-.sec-desc { font-size: 14.5px; color: var(--gray-1); line-height: 1.55; }
-.sec-tag {
-  display: inline-block; font-family: var(--mono); font-size: 11px;
-  padding: 3px 8px; border-radius: 4px; background: var(--gray-3);
-  color: var(--accent-cyan); margin-top: 16px; border: 1px solid var(--border-subtle);
-}
+.way:hover h3 { font-variation-settings: "wdth" 110; }
+.way p { color: var(--gray-1); max-width: 32em; }
+.way .speed { display: block; font: 500 14px var(--mono); color: var(--white); margin-top: 10px; }
+@media (max-width: 820px) { .way { grid-template-columns: 1fr; gap: 12px; } }
 
-/* Web Settings Console Mock */
-.webconsole-card {
-  grid-column: 1 / -1;
-  background: var(--gray-3); border: 1px solid var(--border-subtle);
-  border-radius: 16px; padding: 24px; margin-top: 14px;
+/* Security: THE INVERTED SECTION (White on black / Black on white) -------- */
+.secure {
+  background: var(--white); color: var(--black);
+  padding: clamp(80px, 13vh, 150px) 0; position: relative;
 }
-.webconsole-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;
+.secure .h2 { max-width: 12em; }
+.secure-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 32px clamp(24px, 4vw, 64px);
+  margin-top: clamp(40px, 7vh, 80px);
+  border-top: 1px solid var(--gray-2);
+  padding-top: 32px;
 }
-.webconsole-url {
-  font-family: var(--mono); font-size: 12px; color: var(--accent-cyan);
-  background: var(--black); padding: 4px 10px; border-radius: 6px;
-  border: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 6px;
-}
-.webconsole-body {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px; text-align: left;
-}
-.console-widget {
-  background: var(--black-card); border: 1px solid var(--border-subtle);
-  border-radius: 10px; padding: 16px;
-}
-.widget-head { font-size: 12px; font-weight: 700; color: var(--gray-1); text-transform: uppercase; margin-bottom: 10px; letter-spacing: .05em; }
+.secure-col .num { font: 500 13px var(--mono); opacity: .6; }
+.secure-col h3 { font-size: 22px; font-weight: 600; letter-spacing: -.025em; margin: 8px 0 10px; }
+.secure-col p { opacity: .75; font-size: 15.5px; line-height: 1.55; }
+@media (max-width: 820px) { .secure-grid { grid-template-columns: 1fr; } }
 
-/* =========================================================================
-   WEBAUTHN ECOSYSTEM: GITHUB, GOOGLE, AWS
-   ========================================================================= */
-.websites-section {
-  padding: clamp(60px, 8vw, 110px) var(--gutter);
-  border-bottom: 1px solid var(--border-subtle);
+/* Install ----------------------------------------------------------------- */
+.install { padding: clamp(80px, 13vh, 150px) 0; border-bottom: 1px solid var(--gray-2); }
+.install-steps { list-style: none; margin-top: clamp(40px, 7vh, 80px); counter-reset: s; }
+.install-steps > li {
+  display: grid; grid-template-columns: clamp(50px, 8vw, 140px) minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 24px 40px; padding: 40px 0; border-top: 1px solid var(--gray-2);
 }
-.websites-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px; margin-top: 40px;
+.install-steps > li:first-child { border-top: 0; }
+.install-steps > li::before {
+  counter-increment: s; content: counter(s, decimal-leading-zero);
+  font: 300 clamp(40px, 5vw, 80px)/1 var(--text); font-variant-numeric: tabular-nums;
+  letter-spacing: -.04em; color: var(--gray-1);
 }
-.website-card {
-  background: var(--black-card); border: 1px solid var(--border-subtle);
-  border-radius: 14px; padding: 24px; text-align: left;
-  display: flex; flex-direction: column; justify-content: space-between;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  transition: transform .2s, border-color .2s;
-}
-.website-card:hover { transform: translateY(-3px); border-color: var(--white); }
-.website-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-.website-icon {
-  width: 40px; height: 40px; border-radius: 8px; background: var(--gray-3);
-  display: flex; align-items: center; justify-content: center;
-}
-.website-title { font-size: 17px; font-weight: 800; font-family: var(--display); }
-.website-type { font-size: 11px; font-family: var(--mono); color: var(--accent-green); }
-.website-desc { font-size: 14px; color: var(--gray-1); line-height: 1.55; }
-.website-steps {
-  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-subtle);
-  display: flex; flex-direction: column; gap: 6px; font-family: var(--mono); font-size: 11.5px; color: var(--white);
-}
+.install-steps h3 { font-size: clamp(22px, 2.2vw, 34px); font-weight: 600; line-height: 1.1; letter-spacing: -.03em; margin-bottom: 10px; }
+.install-steps p { color: var(--gray-1); max-width: 32em; }
+.install-steps p b { color: var(--white); }
 
-/* =========================================================================
-   MULTI-DISTRO INSTALLATION SECTION
-   ========================================================================= */
-.install-section {
-  padding: clamp(60px, 8vw, 110px) var(--gutter);
-  border-bottom: 1px solid var(--border-subtle);
+.tabs { display: flex; flex-wrap: wrap; border: 1px solid var(--white); width: fit-content; margin-bottom: 14px; }
+.tabs button {
+  border: 0; background: transparent; color: var(--white);
+  padding: 10px 16px; font: 500 14px var(--text); cursor: pointer; border-radius: 0;
 }
-.distro-tabs {
-  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 34px 0 20px;
-}
-.distro-tab {
-  background: var(--black-card); border: 1px solid var(--border-subtle);
-  color: var(--gray-1); font-family: var(--mono); font-size: 13px;
-  padding: 10px 18px; border-radius: 8px; cursor: pointer; transition: all .15s;
-  display: flex; align-items: center; gap: 8px; font-weight: 600;
-}
-.distro-tab:hover { color: var(--white); border-color: var(--white); }
-.distro-tab.active {
-  background: var(--white); color: var(--black); border-color: var(--white);
-}
-.code-panel {
-  background: var(--black-card); border: 1px solid var(--border-subtle);
-  border-radius: 12px; max-width: 820px; margin: 0 auto; overflow: hidden;
-  text-align: left; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-}
-.code-panel-head {
-  background: var(--gray-3); padding: 10px 16px;
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.code-panel-title { font-family: var(--mono); font-size: 12px; color: var(--gray-1); }
-.code-panel pre {
-  padding: 20px; overflow-x: auto; font-family: var(--mono); font-size: 13.5px;
-  line-height: 1.6; color: var(--white);
-}
+.tabs button + button { border-left: 1px solid var(--white); }
+.tabs button.active { background: var(--white); color: var(--black); font-weight: 600; }
 
-/* =========================================================================
-   ARCHITECTURAL COMPARISON MATRIX
-   ========================================================================= */
-.comparison-section {
-  padding: clamp(60px, 8vw, 110px) var(--gutter);
-  border-bottom: 1px solid var(--border-subtle);
-}
-.compare-container {
-  max-width: 1100px; margin: 40px auto 0; overflow-x: auto;
-}
+/* Architectural Comparison Table ----------------------------------------- */
+.compare-section { padding: clamp(80px, 13vh, 150px) 0; border-bottom: 1px solid var(--gray-2); }
 .compare-table {
-  width: 100%; border-collapse: separate; border-spacing: 0;
-  border: 1px solid var(--border-subtle); border-radius: 14px;
-  background: var(--black-card); overflow: hidden; text-align: left;
+  width: 100%; border-collapse: collapse; margin-top: clamp(32px, 6vh, 64px);
+  border-top: 1px solid var(--gray-2);
+}
+.compare-table th, .compare-table td {
+  text-align: left; padding: 18px 18px 18px 0;
+  border-bottom: 1px solid var(--gray-2); font-size: 15px;
 }
 .compare-table th {
-  padding: 16px 18px; font-family: var(--display); font-size: 14px;
-  font-weight: 800; background: var(--gray-3); border-bottom: 1px solid var(--border-subtle);
-  color: var(--white);
+  font: 600 14px var(--mono); color: var(--gray-1); text-transform: uppercase; letter-spacing: .05em;
 }
-.compare-table th.highlight {
-  background: var(--accent-green-bg); color: var(--accent-green);
-  border-left: 2px solid var(--accent-green); border-right: 2px solid var(--accent-green);
-}
-.compare-table td {
-  padding: 14px 18px; font-size: 13.5px; border-bottom: 1px solid var(--border-subtle);
-  color: var(--gray-1);
-}
-.compare-table td.highlight {
-  background: color-mix(in srgb, var(--accent-green-bg) 40%, transparent);
-  color: var(--white); font-weight: 600;
-  border-left: 2px solid var(--accent-green); border-right: 2px solid var(--accent-green);
-}
-.compare-table tbody tr:last-child td { border-bottom: none; }
-.compare-table td.check { color: var(--accent-green); font-weight: 700; }
-.compare-table td.cross { color: var(--accent-red); font-weight: 600; }
+.compare-table th.u-col, .compare-table td.u-col { color: var(--white); font-weight: 600; }
+.compare-table td { color: var(--gray-1); }
 
-/* FAQ Section */
-.faq-section {
-  padding: clamp(60px, 8vw, 110px) var(--gutter);
-  border-bottom: 1px solid var(--border-subtle);
-}
-.faq-grid {
-  max-width: 820px; margin: 40px auto 0; display: flex; flex-direction: column; gap: 12px;
-}
+/* FAQ Section ------------------------------------------------------------- */
+.faq-section { padding: clamp(80px, 13vh, 150px) 0; border-bottom: 1px solid var(--gray-2); }
+.faq-list { margin-top: clamp(32px, 6vh, 64px); border-top: 1px solid var(--gray-2); }
 .faq-item {
-  background: var(--black-card); border: 1px solid var(--border-subtle);
-  border-radius: 10px; overflow: hidden; text-align: left; transition: border-color .15s;
+  border-bottom: 1px solid var(--gray-2); padding: 28px 0;
 }
-.faq-item:hover { border-color: var(--white); }
 .faq-q {
-  padding: 18px 22px; font-size: 16px; font-weight: 700; cursor: pointer;
-  display: flex; justify-content: space-between; align-items: center; user-select: none;
+  font-size: clamp(20px, 2.2vw, 32px); font-weight: 600; letter-spacing: -.03em;
+  cursor: pointer; display: flex; justify-content: space-between; align-items: center;
 }
-.faq-q .arw { font-size: 14px; transition: transform .2s; }
-.faq-item.open .faq-q .arw { transform: rotate(180deg); }
-.faq-a {
-  max-height: 0; overflow: hidden; transition: max-height .3s var(--ease);
-}
-.faq-a .inner {
-  padding: 0 22px 20px; font-size: 14.5px; color: var(--gray-1); line-height: 1.6;
-}
+.faq-a { max-height: 0; overflow: hidden; transition: max-height .3s var(--ease); }
+.faq-a p { margin-top: 16px; color: var(--gray-1); max-width: 42em; font-size: 16.5px; line-height: 1.6; }
+.faq-a b { color: var(--white); }
+.faq-item.open .faq-a { max-height: 300px; }
 
-/* Footer */
+/* Footer ------------------------------------------------------------------ */
 footer {
   padding: 50px var(--gutter);
   display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-  gap: 20px; font-size: 13.5px; color: var(--gray-1);
+  gap: 20px; font-size: 14.5px; color: var(--gray-1);
 }
 footer a { color: var(--white); text-decoration: underline; text-underline-offset: 3px; }
-footer a:hover { color: var(--accent-green); }
-
-/* Reveal Animations */
-.reveal {
-  opacity: 0; transform: translateY(16px);
-  transition: opacity .5s var(--ease), transform .5s var(--ease);
-}
-.reveal.in { opacity: 1; transform: translateY(0); }
+footer a:hover { color: var(--live); }
 </style>
 </head>
 
 <body>
-<div class="scroll-progress"></div>
 
 <!-- NAVIGATION -->
 <nav class="nav">
-  <div class="wordmark">
+  <a class="wordmark" href="#top">
     <span>uKey</span>
-    <span class="badge"><span class="pulse-dot"></span> Virtual FIDO2</span>
-  </div>
-  <ul class="nav-links">
-    <li><a href="#rig">Simulator</a></li>
-    <li><a href="#security">Zero-Trust</a></li>
-    <li><a href="#websites">WebAuthn</a></li>
-    <li><a href="#compare">Comparison</a></li>
-    <li><a href="#install">Install</a></li>
-    <li><a href="#faq">FAQ</a></li>
+    <span class="live-dot"></span>
+  </a>
+  <ul>
+    <li class="opt"><a href="#demo">See it work</a></li>
+    <li class="opt"><a href="#pipe">Architecture</a></li>
+    <li class="opt"><a href="#secure">Zero-Trust</a></li>
+    <li class="opt"><a href="#compare">Compare</a></li>
+    <li class="opt"><a href="#install">Install</a></li>
+    <li><a href="https://github.com/siddharthsai218/ukey" target="_blank" rel="noopener">GitHub</a></li>
+    <li><button class="theme-btn" type="button" id="themeBtn">Light</button></li>
   </ul>
-  <div class="nav-actions">
-    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.5 5.5 0 0 1-7.54-7.54C12.92 3.04 12.46 3 12 3z"/>
-      </svg>
-    </button>
-    <a href="https://github.com/siddharthsai218/ukey" class="btn github" target="_blank" rel="noopener">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-      </svg>
-      <span>GitHub</span>
-    </a>
-  </div>
 </nav>
 
 <main>
   <!-- HERO SECTION -->
-  <section class="hero">
-    <div class="hero-tag">
-      <span>●</span> Touch ID for Linux • Hardware Biometric Security
+  <section class="hero" id="top">
+    <div class="hero-main">
+      <div>
+        <h1 class="hero-title">
+          <span>The <em class="claim">world's first</em></span>
+          <span>virtual FIDO2 key</span>
+          <span>for Linux.</span>
+        </h1>
+        <p class="lede hero-sub">
+          <b>Your Android phone becomes a real USB security key.</b> Not a browser extension: the Linux kernel sees a physical token on <code>/dev/uhid</code>, and your phone's hardware enclave signs for <code>sudo</code>, <code>git push</code>, and WebAuthn.
+        </p>
+        <div class="ctas">
+          <a class="btn solid" href="#install">Install on Linux</a>
+          <a class="btn" href="#demo">See it work</a>
+          <a class="btn" href="http://127.0.0.1:8444" target="_blank">Web Console</a>
+        </div>
+        <div class="hero-cmd">
+          <p>Install with one command on Fedora, Ubuntu, Arch or openSUSE:</p>
+          <div class="cmd">
+            <code><span class="prompt" aria-hidden="true">$ </span>curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash</code>
+            <button type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash">Copy</button>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <!-- Clean typographic badge or ASCII status -->
+        <div style="font-family:var(--mono); font-size:13px; color:var(--gray-1); line-height:1.8; text-align:left; border-left:1px solid var(--gray-2); padding-left:24px;">
+          <div style="color:var(--white); font-weight:600; margin-bottom:8px;">[SYSTEM ARCHITECTURE]</div>
+          <div>Kernel Token: <span style="color:var(--live);">/dev/uhid (BUS_USB)</span></div>
+          <div>Usage Page:   <span style="color:var(--white);">0xF1D0 (FIDO)</span></div>
+          <div>Key Enclave:  <span style="color:var(--white);">Android StrongBox</span></div>
+          <div>Security:     <span style="color:var(--live);">CC EAL5+ Hardware</span></div>
+          <div>Network Auth: <span style="color:var(--white);">HMAC-SHA256 Nonces</span></div>
+        </div>
+      </div>
     </div>
-    <h1 class="mega hero-title">Your phone is now a Linux FIDO2 key.</h1>
-    <p class="lede hero-desc">
-      Zero hardware dongles. Tap your Android phone's fingerprint for <b>sudo</b>, <b>git push</b>, and <b>WebAuthn</b> logins. 100% local, zero cloud.
-    </p>
 
-    <div class="hero-cta">
-      <a href="#rig" class="btn solid">
-        <span>🎮 Try Interactive Rig</span>
-      </a>
-      <a href="uKey_Product_Guide.pdf" class="btn" target="_blank" rel="noopener">
-        <span>📄 Product Guide (PDF)</span>
-      </a>
-      <a href="http://127.0.0.1:8444" class="btn" target="_blank" rel="noopener">
-        <span>⚙️ Local Web Dashboard</span>
-      </a>
-    </div>
-
-    <!-- 1-Click Install Box -->
-    <div class="cmd-box">
-      <code><span class="p">$ </span>curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash</code>
-      <button class="copy-btn" data-copy="curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash">Copy</button>
-    </div>
-
-    <!-- Metrics Strip -->
-    <div class="metrics-strip">
-      <div class="metric-pill">
-        <div class="metric-val">&lt; 5 <span>ms</span></div>
-        <div class="metric-label">Pairing & Handshake Latency</div>
-      </div>
-      <div class="metric-pill">
-        <div class="metric-val">0.0 <span>s</span></div>
-        <div class="metric-label">Instant Password Fallback</div>
-      </div>
-      <div class="metric-pill">
-        <div class="metric-val">CC EAL5+ <span></span></div>
-        <div class="metric-label">Android StrongBox Silicon</div>
-      </div>
-      <div class="metric-pill">
-        <div class="metric-val">100% <span>Local</span></div>
-        <div class="metric-label">Peer-to-Peer, Zero Cloud Relays</div>
-      </div>
+    <!-- FACTS ROW (Pure architectural border-separated columns) -->
+    <div class="facts">
+      <div><b>&lt; 5 ms</b><span>from kernel event to StrongBox signature over USB or Wi-Fi.</span></div>
+      <div><b>0.0 s fallback</b><span>Linux drops to password if phone is away. Never locked out.</span></div>
+      <div><b>PAM + OpenSSH</b><span>Sudo, disk unlock, and hardware git push with <code>ecdsa-sk</code>.</span></div>
+      <div><b>Zero cloud</b><span>100% peer-to-peer. Private keys never leave the phone's silicon.</span></div>
     </div>
   </section>
 
+  <!-- STATEMENT SECTION (Typographic expansion) -->
+  <section class="statement" id="statement">
+    <p class="st-line mega on"><span>Not a</span> <span>cloud passkey.</span></p>
+    <p class="st-line mega"><span>Not a</span> <span>browser extension.</span></p>
+    <p class="st-line mega"><span>A real</span> <span>hardware key.</span></p>
+    <p class="lede st-note">
+      Google and Apple passkeys only work inside browser tabs. They cannot unlock your Linux terminal. They cannot authenticate <code>sudo</code>. They cannot sign an OpenSSH commit.<br><br>
+      <b>uKey emulates a physical USB HID device directly in the Linux kernel.</b> Any application or website that supports physical YubiKeys works natively out of the box.
+    </p>
+  </section>
+
   <!-- =========================================================================
-       THE INTERACTIVE HARDWARE RIG (TANDEM STYLE)
+       DEVICE RIG (THE HARDWARE SIMULATOR)
        ========================================================================= -->
-  <section class="rig-section" id="rig">
-    <div class="rig-header">
-      <h2 class="h2">Interactive Simulator</h2>
-      <p class="lede" style="margin: 8px auto 0; font-size: 16px;">
-        Click any scenario below to see how the Linux kernel, PAM stack, and Android StrongBox communicate in real-time.
-      </p>
-    </div>
-
-    <div class="rig-controls">
-      <div class="mode-toggles">
-        <button class="mode-btn active" data-scenario="sudo">🖐️ 1. Sudo Biometric</button>
-        <button class="mode-btn" data-scenario="git">🔑 2. Git Push (OpenSSH ecdsa-sk)</button>
-        <button class="mode-btn" data-scenario="webauthn">🌐 3. WebAuthn (Google/GitHub)</button>
-        <button class="mode-btn" data-scenario="fallback">⚡ 4. 0.0s Password Fallback</button>
-        <button class="mode-btn danger" data-scenario="rogue">🚨 5. Rogue Wi-Fi Defense</button>
+  <section class="demo-section" id="demo">
+    <div class="demo-head">
+      <div>
+        <p class="caption" id="caption">1. Sudo Authorization — Touch phone fingerprint sensor to authorize sudo.</p>
       </div>
-
-      <div class="conn-switcher">
-        <span style="color:var(--gray-1); margin-right:4px;">Transport:</span>
-        <button class="conn-pill active" id="btnUsb" title="Low latency USB via adb reverse">🔌 USB Loopback</button>
-        <button class="conn-pill wifi" id="btnWifi" title="Zero-Trust Wi-Fi LAN">📡 Wi-Fi LAN</button>
+      <div class="scenarios-nav">
+        <button class="sc-btn active" data-s="sudo">01 Sudo</button>
+        <button class="sc-btn" data-s="git">02 Git Push</button>
+        <button class="sc-btn" data-s="web">03 WebAuthn</button>
+        <button class="sc-btn" data-s="fallback">04 Fallback</button>
+        <button class="sc-btn danger" data-s="rogue">05 Rogue Defense</button>
       </div>
     </div>
 
     <div class="stage-viewport">
       <div class="hardware-duo">
 
-        <!-- 1. REALISTIC VECTOR LAPTOP -->
-        <div class="laptop-chassis">
-          <div class="laptop-lid">
-            <div class="laptop-screen">
-              <!-- Top bar -->
-              <div class="desktop-topbar">
-                <div class="topbar-left">
-                  <span class="topbar-pill">Activities</span>
-                  <span style="color:var(--white);" id="topbarApp">Terminal</span>
+        <!-- 1. Brushed Gunmetal Laptop -->
+        <div class="laptop-wrap">
+          <div class="lid">
+            <div class="screen">
+              <!-- Waybar -->
+              <div class="waybar">
+                <div class="waybar-left">
+                  <span class="waybar-ws">1</span>
+                  <span style="color:#FFF;">kitty</span>
                 </div>
                 <span>Fedora Linux 43 (Wayland)</span>
-                <div style="display:flex; gap:8px;">
-                  <span id="topbarConn">USB-HID: /dev/uhid</span>
-                  <span>100%</span>
+                <div style="display:flex; gap:10px;">
+                  <span style="color:var(--live);" id="topbarStatus">● /dev/uhid FIDO2</span>
+                  <span>18:30</span>
                 </div>
               </div>
 
-              <!-- Workspace -->
-              <div class="desktop-workspace">
-                <!-- Linux Terminal Window -->
-                <div class="screen-terminal" id="screenTerminal">
-                  <div class="sterm-bar">
-                    <div class="sterm-dots">
-                      <span class="sterm-dot r"></span>
-                      <span class="sterm-dot y"></span>
-                      <span class="sterm-dot g"></span>
+              <!-- Kitty Terminal Window -->
+              <div class="term-window" id="termWindow">
+                <div><span class="term-prompt">siddharth@fedora:~$ </span><span id="cmdText">sudo dnf update</span></div>
+                <div class="term-waiting" id="termWait">
+                  <span class="term-waiting-dot"></span>
+                  <span id="waitPrompt">Touch phone biometric or press Enter for password:</span>
+                </div>
+                <div class="term-done" id="termDone" style="display:none;"></div>
+              </div>
+
+              <!-- Browser Window (for WebAuthn scenario) -->
+              <div class="browser-window" id="browserWindow">
+                <div class="browser-tabs">
+                  <div class="browser-tab">Google Account — 2-Step</div>
+                </div>
+                <div class="browser-body">
+                  <div class="browser-auth-box">
+                    <div style="font-weight:700; font-size:13px; color:#FFF;">Verify your identity</div>
+                    <div style="font-size:11px; color:var(--gray-1); margin-top:2px;">Touch your FIDO2 security key for <b>google.com</b></div>
+                    <div id="browserWait" style="margin-top:10px; color:#38BDF8; font-size:11px; font-family:var(--mono);">
+                      ● Waiting for touch on security key...
                     </div>
-                    <span style="color:var(--gray-1); font-family:var(--mono); font-size:11px;" id="stermTitle">siddharth@fedora:~ (bash)</span>
-                    <span style="font-family:var(--mono); font-size:10px; color:var(--accent-green);" id="stermStatus">● FIDO2 Key Active</span>
-                  </div>
-                  <div class="sterm-body" id="screenTermBody">
-                    <div><span style="color:var(--accent-green);">siddharth@fedora:~$ </span><span style="color:#FFF;" id="termCmdLine">sudo dnf update</span></div>
-                    <div id="termWaitingLine" style="margin-top:8px; color:var(--accent-amber); display:flex; align-items:center; gap:6px;">
-                      <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent-amber);"></span>
-                      <span id="termPromptText">Touch phone biometric or press Enter for password:</span>
-                    </div>
-                    <div id="termDoneOutput" style="display:none; margin-top:8px;">
-                      <div style="color:var(--accent-green); font-weight:600;" id="termSuccessHead">✓ Authorized by Android StrongBox</div>
-                      <div style="color:var(--gray-1); margin-top:2px;" id="termSuccessDetail">Running transaction check... All packages up to date!</div>
+                    <div id="browserDone" style="display:none; margin-top:10px; color:var(--live); font-size:11.5px; font-family:var(--mono); font-weight:600;">
+                      ✓ Verified with FIDO2 Security Key!
                     </div>
                   </div>
                 </div>
-
-                <!-- Chrome Browser Window -->
-                <div class="screen-browser" id="screenBrowser">
-                  <div class="sbrowser-bar">
-                    <div class="sterm-dots">
-                      <span class="sterm-dot r"></span>
-                      <span class="sterm-dot y"></span>
-                      <span class="sterm-dot g"></span>
-                    </div>
-                    <div class="sbrowser-tab" id="browserTabTitle">
-                      <span>Google Account — 2-Step</span>
-                    </div>
-                    <div class="sbrowser-urlbar" id="browserUrlText">
-                      <span>https://myaccount.google.com/security</span>
-                    </div>
-                  </div>
-                  <div class="sbrowser-body">
-                    <div class="browser-auth-card">
-                      <div class="browser-auth-head">
-                        <div id="browserServiceIcon">
-                          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.7s.1-2 .4-2.7L1.6 6.4C.6 8.3 0 10.1 0 12s.6 3.7 1.6 5.6l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.3-6.7-5.3L1.6 15.9C3.5 19.7 7.4 23 12 23z"/></svg>
-                        </div>
-                        <div>
-                          <div class="browser-auth-title" id="browserCardTitle">Verify your identity</div>
-                          <div class="browser-auth-sub" id="browserCardSub">Use your security key with <b>google.com</b></div>
-                        </div>
-                      </div>
-                      <div class="browser-auth-box">
-                        <div id="browserWaitingText" style="display:flex; align-items:center; gap:6px; color:var(--accent-cyan);">
-                          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent-cyan);"></span>
-                          <span>Waiting for touch on security key...</span>
-                        </div>
-                        <div id="browserDoneText" style="display:none; color:var(--accent-green); font-weight:600;">
-                          ✓ Identity verified with FIDO2 Security Key!
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
             </div>
           </div>
-          <!-- Laptop Base and Hinge -->
-          <div class="laptop-base"><div class="laptop-notch"></div></div>
-          <div class="laptop-shadow"></div>
+          <div class="base"></div>
+          <div class="floor"></div>
         </div>
 
-        <!-- 2. DATA CONDUIT (USB or Wi-Fi packets) -->
-        <div class="stream-conduit">
-          <div class="conduit-line" id="conduitLine"></div>
-          <div class="packet-pulse" id="packetPulse"></div>
-        </div>
-
-        <!-- 3. REALISTIC VECTOR ANDROID PHONE -->
-        <div class="phone-chassis">
-          <div class="phone-key power"></div>
-          <div class="phone-key vol"></div>
-
+        <!-- 2. Titanium Phone Slab -->
+        <div class="phone-wrap">
           <div class="phone-screen">
-            <div class="phone-punchhole"></div>
-            <div class="phone-statusbar">
+            <div class="phone-cam"></div>
+            <div class="phone-status">
               <span>18:30</span>
-              <div class="phone-status-icons">
-                <span id="phoneWifiIcon">5G</span>
-                <span>88%</span>
+              <span>5G  88%</span>
+            </div>
+
+            <div class="uapp">
+              <div class="uapp-title">uKey</div>
+              <div class="uapp-sub">Hardware Biometric Authenticator</div>
+
+              <div class="uapp-bridge-box">
+                <div class="uapp-bridge-label">DAEMON BRIDGE</div>
+                <div class="uapp-bridge-row">
+                  <span id="phoneBridgeIp">127.0.0.1:8443</span>
+                  <span class="uapp-bridge-pill" id="phoneBridgePill">CONNECTED</span>
+                </div>
+              </div>
+
+              <div class="uapp-logs" id="phoneLogs">
+                <div><span class="uapp-log-time">[18:30:01]</span> StrongBox Keystore ready</div>
+                <div><span class="uapp-log-time">[18:30:02]</span> Paired with laptop</div>
+                <div id="logLiveReq"><span class="uapp-log-time">[18:30:10]</span> REQ: pam://fedora</div>
               </div>
             </div>
 
-            <!-- Authentic uKey Mobile App Screen -->
-            <div class="uapp-container">
-              <div class="uapp-header">
-                <div class="uapp-title">uKey</div>
-                <div class="uapp-tagline">Hardware Biometric Authenticator</div>
-              </div>
+            <!-- Material 3 BiometricPrompt Bottom Sheet -->
+            <div class="bio-sheet" id="bioSheet">
+              <div class="sheet-handle"></div>
+              <div class="sheet-head">uKey Authenticator</div>
+              <div class="sheet-rp" id="sheetRp">Authorize sudo: pam://fedora</div>
+              <div class="sheet-desc">Touch fingerprint sensor to sign with StrongBox</div>
 
-              <!-- Connection Card -->
-              <div class="uapp-card">
-                <div class="uapp-section-label">DAEMON BRIDGE</div>
-                <div class="uapp-inputs">
-                  <div class="uapp-field">
-                    <span class="uapp-field-label">Host IP</span>
-                    <div class="uapp-input-box" id="phoneHostInput">127.0.0.1</div>
-                  </div>
-                  <div class="uapp-field-port">
-                    <span class="uapp-field-label">Port</span>
-                    <div class="uapp-input-box">8443</div>
-                  </div>
-                </div>
-
-                <div class="uapp-status-row">
-                  <span class="uapp-status-pill" id="phoneStatusPill">
-                    <span class="uapp-dot" id="phoneDot"></span>
-                    <span id="phoneStatusText">Connected</span>
-                  </span>
-                  <span class="uapp-status-detail" id="phoneLatencyDetail">&lt; 3ms (USB)</span>
-                </div>
-              </div>
-
-              <!-- Real-time Packet & Security Log -->
-              <div class="uapp-log-card">
-                <div class="uapp-log-header">
-                  <span class="uapp-log-label">SECURITY CONSOLE</span>
-                  <button class="uapp-clear-btn" id="clearLogBtn">CLEAR</button>
-                </div>
-                <div class="uapp-log-body" id="appLogBody">
-                  <div class="uapp-log-line"><span class="log-time">[18:30:01]</span> <span class="log-info">StrongBox Keystore initialized</span></div>
-                  <div class="uapp-log-line"><span class="log-time">[18:30:02]</span> <span class="log-conn">Paired with laptop (token verified)</span></div>
-                  <div class="uapp-log-line" id="appLogLiveReq"><span class="log-time">[18:30:10]</span> <span class="log-req">REQ assertion: pam://fedora</span></div>
-                  <div class="uapp-log-line" id="appLogLiveDone" style="display:none;"><span class="log-time">[18:30:12]</span> <span class="log-ok">OK StrongBox signature verified</span></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Material 3 BiometricPrompt Modal -->
-            <div class="biometric-sheet" id="phoneDialog">
-              <div class="sheet-drag-handle"></div>
-              <div class="sheet-header">
-                <div class="sheet-icon" id="dialogIcon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2">
-                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                </div>
-                <div>
-                  <div class="sheet-title">uKey Authenticator</div>
-                  <div class="sheet-sub" id="phoneRpId">Authorize sudo: pam://fedora</div>
-                </div>
-              </div>
-
-              <div class="sheet-desc" id="phoneSheetDesc">Touch fingerprint sensor to authorize login</div>
-
-              <!-- Interactive Fingerprint Target -->
-              <div class="fingerprint-touch-area" id="fingerprintBtn" title="Click to touch fingerprint">
-                <div class="fp-ripple"></div>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" id="fpIcon">
+              <div class="fp-target" id="fpBtn" title="Click to touch sensor">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2">
                   <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
                   <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
                   <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>
@@ -1180,11 +758,7 @@ footer a:hover { color: var(--accent-green); }
                   <path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>
                 </svg>
               </div>
-
-              <div class="sheet-footer">
-                <span class="phone-gesture-hint" id="fpStatusText">Tap sensor to sign</span>
-                <span class="sheet-cancel">Cancel</span>
-              </div>
+              <span class="fp-hint" id="fpHint">Tap sensor to sign</span>
             </div>
 
           </div>
@@ -1194,389 +768,261 @@ footer a:hover { color: var(--accent-green); }
     </div>
   </section>
 
-  <!-- =========================================================================
-       ZERO-TRUST SECURITY ARCHITECTURE & WEB DASHBOARD
-       ========================================================================= -->
-  <section class="security-section" id="security">
-    <div style="text-align:center; max-width:44em; margin: 0 auto;">
-      <div class="hero-tag">DEFENSE-IN-DEPTH • ZERO TRUST</div>
-      <h2 class="h2">Engineered for Untrusted Wi-Fi Networks.</h2>
-      <p class="lede" style="margin: 12px auto 0;">
-        Unlike Bluetooth which transmits in the clear, uKey uses a <b>one-time 6-digit PIN pairing architecture</b>. Strangers on the same Wi-Fi cannot see your keys or forge authentications.
-      </p>
+  <!-- PIPELINE SECTION ------------------------------------------------------ -->
+  <section class="pipe" id="pipe">
+    <div class="wrap">
+      <h2 class="ms mega">&lt; 5<small>ms</small></h2>
+      <p class="lede">Hardware cryptographic signing time inside Android's <b>StrongBox Keymaster</b>. From kernel event to authenticated return with zero cloud transit.</p>
+
+      <div class="stages">
+        <div class="stage-col">
+          <div class="n">01 / KERNEL</div>
+          <h3>/dev/uhid</h3>
+          <p>Emulates a physical USB HID security token over <code>BUS_USB</code> with FIDO usage page <code>0xF1D0</code>.</p>
+        </div>
+        <div class="stage-col">
+          <div class="n">02 / PROTOCOL</div>
+          <h3>CTAPHID</h3>
+          <p>64-byte segmented packets, channel allocation (CID), and 100ms keep-alive pulses.</p>
+        </div>
+        <div class="stage-col">
+          <div class="n">03 / ENGINE</div>
+          <h3>CTAP2 CBOR</h3>
+          <p>Strict CBOR encoding for <code>authenticatorMakeCredential</code> and <code>authenticatorGetAssertion</code>.</p>
+        </div>
+        <div class="stage-col">
+          <div class="n">04 / TRANSPORT</div>
+          <h3>Local Bridge</h3>
+          <p>Zero-telemetry TCP bridge over USB loopback (<code>adb reverse</code>) or paired Wi-Fi LAN.</p>
+        </div>
+        <div class="stage-col">
+          <div class="n">05 / SILICON</div>
+          <h3>Android StrongBox</h3>
+          <p>Hardware-isolated NIST P-256 keys (CC EAL5+). Keys never leave silicon even with root.</p>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <div class="sec-grid">
-      <div class="sec-card">
-        <div>
-          <div class="sec-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2">
-              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-          </div>
-          <div class="sec-title">1. One-Time 6-Digit PIN</div>
-          <p class="sec-desc">
-            Pair your phone once using a cryptographically generated 6-digit PIN. The daemon issues a unique 256-bit device token stored in Android's secure preferences. No passwords to remember.
-          </p>
-        </div>
-        <div class="sec-tag">ukeyctl pair • 15min expiry</div>
-      </div>
-
-      <div class="sec-card">
-        <div>
-          <div class="sec-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-          </div>
-          <div class="sec-title">2. HMAC-SHA256 Challenge-Response</div>
-          <p class="sec-desc">
-            The daemon drops unauthenticated TCP packets in &lt;5ms. Bearer tokens are never sent in the clear; replay attacks are mathematically prevented via single-use nonces.
-          </p>
-        </div>
-        <div class="sec-tag">Sub-5ms Rogue Drop</div>
-      </div>
-
-      <div class="sec-card">
-        <div>
-          <div class="sec-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-            </svg>
-          </div>
-          <div class="sec-title">3. 0.0s Password Fallback</div>
-          <p class="sec-desc">
-            Phone in another room or out of battery? Linux PAM <code>sufficient</code> fallback immediately prompts for your normal UNIX password with <b>zero delay</b>. You are never locked out.
-          </p>
-        </div>
-        <div class="sec-tag">Zero Hangs • Instant Fallback</div>
-      </div>
-
-      <div class="sec-card">
-        <div>
-          <div class="sec-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 12h10"/><path d="M12 7v10"/>
-            </svg>
-          </div>
-          <div class="sec-title">4. Automatic Desktop Lock</div>
-          <p class="sec-desc">
-            Walk away from your desk with your phone? The daemon monitors the bridge socket. When disconnected, it calls <code>loginctl lock-session</code> to lock your screen automatically.
-          </p>
-        </div>
-        <div class="sec-tag">systemd-logind Integration</div>
-      </div>
-
-      <!-- Live Web Settings Console Mock -->
-      <div class="webconsole-card">
-        <div class="webconsole-header">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:14px; font-weight:800; font-family:var(--display);">Embedded Web Dashboard</span>
-            <span class="badge" style="font-size:10px; padding:2px 6px; background:var(--accent-green-bg); color:var(--accent-green); border-radius:4px; font-family:var(--mono);">LIVE ON LOCALHOST</span>
-          </div>
-          <div class="webconsole-url">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span>http://127.0.0.1:8444</span>
+  <!-- WAYS TO CONNECT ------------------------------------------------------- -->
+  <section class="ways" id="ways">
+    <div class="wrap">
+      <h2 class="h2">Three ways to connect</h2>
+      <div class="ways-list">
+        <div class="way">
+          <h3>USB Cable</h3>
+          <div>
+            <p>Low-latency reverse-tunneled socket over USB (<code>adb reverse tcp:8443 tcp:8443</code>). Works in airplane mode with zero network configuration.</p>
+            <span class="speed">Latency: ~3 ms • Zero configuration</span>
           </div>
         </div>
-
-        <div class="webconsole-body">
-          <div class="console-widget">
-            <div class="widget-head">Master Authenticator Toggle</div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <div style="font-weight:700; font-size:14px;" id="webToggleState">uKey Active (Enabled)</div>
-                <div style="font-size:11.5px; color:var(--gray-1); margin-top:2px;">Intercepts PAM & WebAuthn</div>
-              </div>
-              <button class="btn" id="btnWebToggle" style="padding:6px 14px; font-size:12px; font-family:var(--mono); background:var(--accent-green); color:#000; font-weight:700;">TOGGLE</button>
-            </div>
+        <div class="way">
+          <h3>Wi-Fi LAN</h3>
+          <div>
+            <p>Keep your phone in your pocket or desk stand. Authenticate seamlessly across the room over local Wi-Fi with one-time 6-digit PIN pairing.</p>
+            <span class="speed">Latency: ~5 ms • Zero cloud relay</span>
           </div>
-
-          <div class="console-widget">
-            <div class="widget-head">Pairing PIN Generator</div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <div style="font-family:var(--mono); font-size:22px; font-weight:900; color:var(--accent-cyan); letter-spacing:2px;" id="webPinDisplay">749 104</div>
-                <div style="font-size:11px; color:var(--gray-1);">Valid for 14m 20s</div>
-              </div>
-              <button class="btn" id="btnGenPin" style="padding:6px 12px; font-size:12px; font-family:var(--mono);">NEW PIN</button>
-            </div>
-          </div>
-
-          <div class="console-widget" style="grid-column: 1 / -1;">
-            <div class="widget-head">Authorized Paired Devices</div>
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-subtle); font-family:var(--mono); font-size:12px;">
-              <div>
-                <span style="color:var(--white); font-weight:600;">📱 Pixel 7 Pro (Android 14)</span>
-                <span style="color:var(--gray-1); margin-left:12px;">ID: a3f89c02</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:12px;">
-                <span style="color:var(--accent-green);">● Active (Last seen 2s ago)</span>
-                <button class="btn" style="padding:3px 8px; font-size:11px; color:var(--accent-red); border-color:var(--accent-red);" id="btnRevokeDemo">Revoke</button>
-              </div>
-            </div>
+        </div>
+        <div class="way">
+          <h3>Phone Hotspot</h3>
+          <div>
+            <p>Working from a coffee shop or train without trusted Wi-Fi? Turn on your phone's hotspot and authenticate point-to-point directly.</p>
+            <span class="speed">Latency: ~4 ms • No router required</span>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- =========================================================================
-       WEBAUTHN & OPENSSH ECOSYSTEM
-       ========================================================================= -->
-  <section class="websites-section" id="websites">
-    <div style="text-align:center; max-width:44em; margin: 0 auto;">
-      <div class="hero-tag">FIDO2 / CTAP2 COMPATIBILITY</div>
-      <h2 class="h2">Works with Git, Gmail, & Any Identity Provider.</h2>
-      <p class="lede" style="margin: 12px auto 0;">
-        Because the Linux kernel exposes a standard physical <b>USB Security Key</b> on <code>/dev/uhid</code>, any application or website supporting FIDO2 works natively out of the box.
+  <!-- SECURITY: INVERTED SECTION (White on Black) --------------------------- -->
+  <section class="secure" id="secure">
+    <div class="wrap">
+      <h2 class="h2">Engineered for untrusted networks.</h2>
+      <p class="lede" style="color:rgba(0,0,0,0.65); margin-top:18px;">
+        Unlike Bluetooth which transmits in the clear, uKey uses a defense-in-depth zero-trust pairing architecture.
       </p>
-    </div>
 
-    <div class="websites-grid">
-      <div class="website-card">
-        <div>
-          <div class="website-header">
-            <div class="website-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-              </svg>
-            </div>
-            <div>
-              <div class="website-title">OpenSSH & Git Push</div>
-              <div class="website-type">ecdsa-sk Hardware Signing</div>
-            </div>
-          </div>
-          <p class="website-desc">
-            Replace GitHub personal access tokens and passwords forever. Generate a FIDO2 hardware SSH key via <code>ssh-keygen -t ecdsa-sk</code>. Git pushes verify your fingerprint!
-          </p>
+      <div class="secure-grid">
+        <div class="secure-col">
+          <div class="num">01 / PAIRING</div>
+          <h3>One-Time 6-Digit PIN</h3>
+          <p>Pair your phone once using a cryptographically generated 6-digit PIN. The daemon issues a unique 256-bit device token stored in Android's secure preferences. No passwords to remember.</p>
         </div>
-        <div class="website-steps">
-          <span>1. ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</span>
-          <span>2. Add public key to GitHub SSH Keys</span>
-          <span>3. git push &rarr; touch phone to sign</span>
+        <div class="secure-col">
+          <div class="num">02 / HANDSHAKE</div>
+          <h3>HMAC-SHA256 Challenge</h3>
+          <p>The daemon drops unauthenticated TCP packets in &lt;4ms. Bearer tokens are never sent in the clear; replay attacks are mathematically prevented via single-use nonces.</p>
         </div>
-      </div>
-
-      <div class="website-card">
-        <div>
-          <div class="website-header">
-            <div class="website-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.7s.1-2 .4-2.7L1.6 6.4C.6 8.3 0 10.1 0 12s.6 3.7 1.6 5.6l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.3-6.7-5.3L1.6 15.9C3.5 19.7 7.4 23 12 23z"/></svg>
-            </div>
-            <div>
-              <div class="website-title">Google & YouTube</div>
-              <div class="website-type">Hardware Security Key 2FA</div>
-            </div>
-          </div>
-          <p class="website-desc">
-            Add uKey in Google Account Security under <b>2-Step Verification &rarr; Security Keys</b>. Protect Gmail, YouTube, and Google Cloud with phishing-resistant hardware credentials.
-          </p>
-        </div>
-        <div class="website-steps">
-          <span>1. myaccount.google.com/security</span>
-          <span>2. Add Security Key &rarr; USB Key</span>
-          <span>3. Touch phone fingerprint sensor</span>
-        </div>
-      </div>
-
-      <div class="website-card">
-        <div>
-          <div class="website-header">
-            <div class="website-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-            </div>
-            <div>
-              <div class="website-title">AWS & Cloudflare IAM</div>
-              <div class="website-type">Enterprise Passkeys</div>
-            </div>
-          </div>
-          <p class="website-desc">
-            Use uKey as an MFA security key for AWS Console, Cloudflare Zero Trust, GitLab, 1Password, and Bitwarden. NIST P-256 signatures validated against hardware silicon root.
-          </p>
-        </div>
-        <div class="website-steps">
-          <span>1. IAM Console &rarr; MFA Device</span>
-          <span>2. Choose FIDO2 Security Key</span>
-          <span>3. Touch sensor to authenticate</span>
+        <div class="secure-col">
+          <div class="num">03 / SILICON</div>
+          <h3>Android StrongBox Enclave</h3>
+          <p>Private keys are generated directly inside tamper-resistant hardware silicon (CC EAL5+). Biometric matching occurs inside Android Keystore; raw fingerprint images never leave the device.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- =========================================================================
-       ARCHITECTURAL COMPARISON MATRIX
-       ========================================================================= -->
-  <section class="comparison-section" id="compare">
-    <div style="text-align:center; max-width:44em; margin: 0 auto;">
-      <div class="hero-tag">OBJECTIVE BENCHMARKS</div>
-      <h2 class="h2">How uKey Compares.</h2>
-      <p class="lede" style="margin: 12px auto 0;">
-        From Bluetooth latency to physical dongles: why uKey provides the ultimate balance of zero-cost hardware security and desktop integration.
-      </p>
-    </div>
+  <!-- INSTALLATION ---------------------------------------------------------- -->
+  <section class="install" id="install">
+    <div class="wrap">
+      <h2 class="h2">One command. Any distribution.</h2>
+      <ol class="install-steps">
+        <li>
+          <div>
+            <h3>Install the daemon</h3>
+            <p>Installs <code>/dev/uhid</code> kernel rules, systemd user service, and validation tools.</p>
+          </div>
+          <div>
+            <div class="tabs">
+              <button class="active" data-dist="fedora">Fedora</button>
+              <button data-dist="ubuntu">Ubuntu / Debian</button>
+              <button data-dist="arch">Arch Linux</button>
+              <button data-dist="suse">openSUSE</button>
+            </div>
+            <div class="cmd">
+              <code id="installCmd"><span class="prompt" aria-hidden="true">$ </span>curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash</code>
+              <button type="button" id="copyInstallBtn">Copy</button>
+            </div>
+          </div>
+        </li>
 
-    <div class="compare-container">
+        <li>
+          <div>
+            <h3>Configure sudo</h3>
+            <p>Sets up <code>pam_u2f</code> with <b>0.0s password fallback</b>. If your phone is away, Linux prompts for your normal password immediately.</p>
+          </div>
+          <div>
+            <div class="cmd">
+              <code><span class="prompt" aria-hidden="true">$ </span>sudo ./scripts/setup_pam_sudo.sh</code>
+              <button type="button" data-copy="sudo ./scripts/setup_pam_sudo.sh">Copy</button>
+            </div>
+          </div>
+        </li>
+
+        <li>
+          <div>
+            <h3>OpenSSH Git Push</h3>
+            <p>Generate a hardware-backed FIDO2 SSH key. Replace GitHub personal access tokens with phone fingerprint verification.</p>
+          </div>
+          <div>
+            <div class="cmd">
+              <code><span class="prompt" aria-hidden="true">$ </span>ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code>
+              <button type="button" data-copy="ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey">Copy</button>
+            </div>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- COMPARISON TABLE ------------------------------------------------------ -->
+  <section class="compare-section" id="compare">
+    <div class="wrap">
+      <h2 class="h2">How uKey compares</h2>
       <table class="compare-table">
         <thead>
           <tr>
             <th>Architecture Feature</th>
-            <th class="highlight">uKey (This Project)</th>
-            <th>mahirsn/passkey (Play Store)</th>
-            <th>Physical YubiKey 5</th>
-            <th>Apple / Google Cloud Passkeys</th>
+            <th class="u-col">uKey</th>
+            <th>mahirsn/passkey</th>
+            <th>YubiKey 5</th>
+            <th>Cloud Passkeys</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td><strong>Hardware Cost</strong></td>
-            <td class="highlight check"><strong>$0 (Free & Open Source)</strong></td>
-            <td class="check">$0 (Free)</td>
-            <td class="cross">$55 – $95+</td>
-            <td class="check">$0 (Built-in)</td>
+            <td>Hardware Cost</td>
+            <td class="u-col">$0 (Open Source)</td>
+            <td>$0 (Free)</td>
+            <td>$55 – $95+</td>
+            <td>$0 (Built-in)</td>
           </tr>
           <tr>
-            <td><strong>Connection Transports</strong></td>
-            <td class="highlight"><strong>USB Loopback + Zero-Trust Wi-Fi</strong></td>
+            <td>Transport Protocol</td>
+            <td class="u-col">USB + Zero-Trust Wi-Fi</td>
             <td>Bluetooth (BLE) + USB</td>
-            <td>Physical USB-A / USB-C</td>
-            <td>Bluetooth caBLE + Cloud Relay</td>
+            <td>Physical USB</td>
+            <td>Bluetooth caBLE + Cloud</td>
           </tr>
           <tr>
-            <td><strong>Auth Latency</strong></td>
-            <td class="highlight check"><strong>&lt; 5 ms (Instant)</strong></td>
-            <td class="cross">1,500 – 3,000 ms (BLE lag)</td>
-            <td class="check">&lt; 10 ms</td>
+            <td>Auth Latency</td>
+            <td class="u-col">&lt; 5 ms (Instant)</td>
+            <td>1,500 – 3,000 ms (BLE lag)</td>
+            <td>&lt; 10 ms</td>
             <td>Variable (Network reliant)</td>
           </tr>
           <tr>
-            <td><strong>Linux Sudo (PAM) Support</strong></td>
-            <td class="highlight check"><strong>✓ Native pam_u2f (0.4s)</strong></td>
-            <td class="cross">✗ No native PAM integration</td>
-            <td class="check">✓ Native pam_u2f</td>
-            <td class="cross">✗ Impossible (Browser only)</td>
+            <td>Linux Sudo (PAM)</td>
+            <td class="u-col">✓ Native pam_u2f</td>
+            <td>✗ None</td>
+            <td>✓ Native pam_u2f</td>
+            <td>✗ Browser only</td>
           </tr>
           <tr>
-            <td><strong>OpenSSH Hardware Keys</strong></td>
-            <td class="highlight check"><strong>✓ Native ecdsa-sk Git Push</strong></td>
-            <td class="cross">✗ Not supported</td>
-            <td class="check">✓ Supported</td>
-            <td class="cross">✗ Impossible</td>
+            <td>OpenSSH Git Push (ecdsa-sk)</td>
+            <td class="u-col">✓ Supported</td>
+            <td>✗ Not supported</td>
+            <td>✓ Supported</td>
+            <td>✗ Impossible</td>
           </tr>
           <tr>
-            <td><strong>Linux Desktop Auto-Lock</strong></td>
-            <td class="highlight check"><strong>✓ Native systemd-logind</strong></td>
-            <td class="cross">✗ None</td>
-            <td class="cross">✗ Only on physical pull</td>
-            <td class="cross">✗ None</td>
+            <td>Desktop Auto-Lock</td>
+            <td class="u-col">✓ systemd-logind</td>
+            <td>✗ None</td>
+            <td>✗ Physical pull only</td>
+            <td>✗ None</td>
           </tr>
           <tr>
-            <td><strong>Silicon Isolation</strong></td>
-            <td class="highlight"><strong>Android StrongBox (CC EAL5+)</strong></td>
+            <td>Silicon Protection</td>
+            <td class="u-col">StrongBox (CC EAL5+)</td>
             <td>Android Keystore</td>
-            <td>Secure Element (CC EAL6+)</td>
-            <td>Apple/Google HSM Enclave</td>
+            <td>Secure Element</td>
+            <td>Apple/Google HSM Cloud</td>
           </tr>
           <tr>
-            <td><strong>Zero Cloud Dependency</strong></td>
-            <td class="highlight check"><strong>✓ 100% Local Peer-to-Peer</strong></td>
-            <td class="check">✓ Local</td>
-            <td class="check">✓ Local</td>
-            <td class="cross">✗ Cloud synchronized</td>
+            <td>Zero Cloud Reliance</td>
+            <td class="u-col">✓ 100% Local Peer-to-Peer</td>
+            <td>✓ Local</td>
+            <td>✓ Local</td>
+            <td>✗ Cloud synchronized</td>
           </tr>
           <tr>
-            <td><strong>Multi-Distro Support</strong></td>
-            <td class="highlight check"><strong>✓ Fedora, Ubuntu, Arch, openSUSE</strong></td>
+            <td>Linux Distros</td>
+            <td class="u-col">✓ Fedora, Ubuntu, Arch, openSUSE</td>
             <td>Manual Rust build</td>
-            <td class="check">✓ Universal</td>
-            <td class="cross">✗ ChromeOS / macOS focused</td>
+            <td>✓ Universal</td>
+            <td>✗ ChromeOS / macOS focused</td>
           </tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- =========================================================================
-       UNIVERSAL MULTI-DISTRO INSTALLATION
-       ========================================================================= -->
-  <section class="install-section" id="install">
-    <div style="text-align:center; max-width:44em; margin: 0 auto;">
-      <div class="hero-tag">UNIVERSAL LINUX SUPPORT</div>
-      <h2 class="h2">One Command. Any Distribution.</h2>
-      <p class="lede" style="margin: 12px auto 0;">
-        Installs kernel <code>/dev/uhid</code> permissions, systemd user service, and validation tools with safe password fallbacks.
-      </p>
-    </div>
-
-    <div class="distro-tabs">
-      <button class="distro-tab active" data-distro="fedora">🔵 Fedora / RHEL</button>
-      <button class="distro-tab" data-distro="ubuntu">🟠 Ubuntu / Debian</button>
-      <button class="distro-tab" data-distro="arch">🔷 Arch Linux</button>
-      <button class="distro-tab" data-distro="suse">🦎 openSUSE</button>
-      <button class="distro-tab" data-distro="manual">⚙️ Manual Dev</button>
-    </div>
-
-    <div class="code-panel" id="codePanel">
-      <div class="code-panel-head">
-        <span class="code-panel-title" id="codeDistroLabel">Fedora 40+ / RHEL 9 (dnf)</span>
-        <button class="copy-btn" id="btnCopyDistro">Copy Command</button>
-      </div>
-      <pre><code># 1. Production 1-command installer (detects distro automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure passwordless sudo with 0.0s password fallback
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. (Optional) Generate FIDO2 OpenSSH key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code></pre>
-    </div>
-  </section>
-
-  <!-- =========================================================================
-       FAQ SECTION
-       ========================================================================= -->
+  <!-- FAQ SECTION ----------------------------------------------------------- -->
   <section class="faq-section" id="faq">
-    <div style="text-align:center; max-width:44em; margin: 0 auto;">
-      <div class="hero-tag">FREQUENTLY ASKED QUESTIONS</div>
-      <h2 class="h2">The Tough Questions, Answered.</h2>
-    </div>
-
-    <div class="faq-grid">
-      <div class="faq-item">
-        <div class="faq-q">How is this different from mahirsn/passkey on Google Play? <span class="arw">▾</span></div>
-        <div class="faq-a"><div class="inner">
-          <b>mahirsn/passkey</b> uses Bluetooth (BLE) and USB. On Linux, Bluetooth LE has 1,500ms to 3,000ms latency, frequent BlueZ pairing drops, and many desktop PCs lack BLE hardware entirely. Furthermore, it lacks native Linux PAM integration and desktop auto-lock.<br><br>
-          <b>uKey</b> uses zero-trust Wi-Fi LAN + USB with <b>&lt;5ms latency</b>, single-use PIN pairing, native <code>pam_u2f</code> for instant terminal <code>sudo</code>, <code>ecdsa-sk</code> for git push, and systemd session auto-lock.
-        </div></div>
-      </div>
-
-      <div class="faq-item">
-        <div class="faq-q">Can this replace the username and password when I git push? <span class="arw">▾</span></div>
-        <div class="faq-a"><div class="inner">
-          <b>Yes!</b> OpenSSH 8.2+ natively supports FIDO2 security keys via the <code>ecdsa-sk</code> key type. Run <code>ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code>, touch your phone's sensor to generate the key, and add <code>~/.ssh/id_ukey.pub</code> to your GitHub account under SSH Keys. Every <code>git push</code> will verify your fingerprint on your phone!
-        </div></div>
-      </div>
-
-      <div class="faq-item">
-        <div class="faq-q">Can strangers on the same Wi-Fi intercept my keys or logins? <span class="arw">▾</span></div>
-        <div class="faq-a"><div class="inner">
-          <b>No.</b> First, your private key NEVER leaves your phone's Android StrongBox silicon. Second, Wi-Fi connections require a one-time 6-digit PIN pairing that yields a 256-bit device token. All handshake frames use HMAC-SHA256 challenge-response with random nonces. Unpaired or rogue Wi-Fi connections are dropped by the daemon in &lt;5ms.
-        </div></div>
-      </div>
-
-      <div class="faq-item">
-        <div class="faq-q">What happens if my phone dies or is in another room? Am I locked out? <span class="arw">▾</span></div>
-        <div class="faq-a"><div class="inner">
-          <b>No, never.</b> The PAM rule uses <code>auth sufficient pam_u2f.so</code>. If your phone is unreachable, or if you press <kbd>Enter</kbd>, Linux immediately falls back to your regular Linux password in <b>0.0s</b> with zero hangs. You can also disable uKey anytime with <code>ukeyctl off</code>.
-        </div></div>
-      </div>
-
-      <div class="faq-item">
-        <div class="faq-q">Does biometric data (fingerprint scans) leave my phone? <span class="arw">▾</span></div>
-        <div class="faq-a"><div class="inner">
-          <b>Never.</b> Biometric matching happens entirely inside Android's BiometricPrompt and StrongBox hardware. The daemon and laptop only receive the signed ECDSA assertion data. No raw biometric imagery or templates ever cross the wire.
-        </div></div>
+    <div class="wrap">
+      <h2 class="h2">The tough questions, answered.</h2>
+      <div class="faq-list">
+        <div class="faq-item">
+          <div class="faq-q">How is this different from mahirsn/passkey on Google Play? <span>▾</span></div>
+          <div class="faq-a"><p><b>mahirsn/passkey</b> uses Bluetooth (BLE) and USB. On Linux, Bluetooth LE has 1,500ms to 3,000ms latency, frequent BlueZ pairing drops, and many desktop PCs lack BLE hardware entirely. Furthermore, it lacks native Linux PAM integration and desktop auto-lock.<br><br><b>uKey</b> uses zero-trust Wi-Fi LAN + USB with <b>&lt;5ms latency</b>, single-use PIN pairing, native <code>pam_u2f</code> for instant terminal <code>sudo</code>, <code>ecdsa-sk</code> for git push, and systemd session auto-lock.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Can this replace the username and password when I git push? <span>▾</span></div>
+          <div class="faq-a"><p><b>Yes.</b> OpenSSH natively supports FIDO2 security keys via the <code>ecdsa-sk</code> key type. Run <code>ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code>, touch your phone's sensor to generate the key, and add <code>~/.ssh/id_ukey.pub</code> to your GitHub account under SSH Keys. Every <code>git push</code> will verify your fingerprint on your phone.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Can strangers on the same Wi-Fi intercept my keys or logins? <span>▾</span></div>
+          <div class="faq-a"><p><b>No.</b> First, your private key NEVER leaves your phone's Android StrongBox silicon. Second, Wi-Fi connections require a one-time 6-digit PIN pairing that yields a 256-bit device token. All handshake frames use HMAC-SHA256 challenge-response with random nonces. Unpaired or rogue Wi-Fi connections are dropped by the daemon in &lt;4ms.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">What happens if my phone dies or is in another room? Am I locked out? <span>▾</span></div>
+          <div class="faq-a"><p><b>No, never.</b> The PAM rule uses <code>auth sufficient pam_u2f.so</code>. If your phone is unreachable, or if you press <kbd>Enter</kbd>, Linux immediately falls back to your regular Linux password in <b>0.0s</b> with zero hangs. You can also disable uKey anytime with <code>ukeyctl off</code>.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Does biometric data (fingerprint scans) leave my phone? <span>▾</span></div>
+          <div class="faq-a"><p><b>Never.</b> Biometric matching happens entirely inside Android's BiometricPrompt and StrongBox hardware. The daemon and laptop only receive the signed ECDSA assertion data. No raw biometric imagery or templates ever cross the wire.</p></div>
+        </div>
       </div>
     </div>
   </section>
@@ -1584,9 +1030,9 @@ ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code></pre>
 
 <footer>
   <div>
-    <b>uKey</b> — Open-source project by <a href="https://github.com/siddharthsai218" target="_blank">BYN Siddharth Sai</a>.
+    <b>uKey</b> — An open-source project by <a href="https://github.com/siddharthsai218" target="_blank">BYN Siddharth Sai</a>.
   </div>
-  <div style="display:flex; gap:18px; flex-wrap:wrap;">
+  <div style="display:flex; gap:20px; flex-wrap:wrap;">
     <a href="https://github.com/siddharthsai218/ukey" target="_blank">GitHub</a>
     <a href="https://github.com/siddharthsai218/ukey/blob/main/LICENSE" target="_blank">GPLv3 License</a>
     <a href="uKey_Product_Guide.pdf" target="_blank">Product Guide (PDF)</a>
@@ -1594,9 +1040,9 @@ ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code></pre>
   </div>
 </footer>
 
-<!-- INTERACTIVE SCRIPTS -->
+<!-- SCRIPT LAYER -->
 <script>
-// ================= WEB AUDIO API HAPTICS =================
+// Web Audio API synthesized haptics (zero external files)
 let audioCtx;
 function getAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1642,438 +1088,225 @@ function playBuzzer() {
   } catch(e) {}
 }
 
-// ================= THEME TOGGLE =================
-const themeBtn = document.getElementById("themeToggle");
+// Theme switch
+const themeBtn = document.getElementById("themeBtn");
 themeBtn.addEventListener("click", () => {
   playTick();
-  const current = document.documentElement.dataset.theme;
-  const next = current === "light" ? "dark" : "light";
-  document.documentElement.dataset.theme = next;
-  localStorage.setItem("ukey-theme", next);
+  const cur = document.documentElement.dataset.theme;
+  const nxt = cur === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = nxt;
+  themeBtn.textContent = nxt === "light" ? "Dark" : "Light";
+  localStorage.setItem("ukey-theme", nxt);
 });
 
-// ================= SCROLL REVEALS & PROGRESS =================
-window.addEventListener('scroll', () => {
-  const h = document.documentElement;
-  const max = h.scrollHeight - h.clientHeight;
-  const bar = document.querySelector('.scroll-progress');
-  if (bar) bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
-}, { passive: true });
+// Hardware Rig Scenarios
+const caption = document.getElementById("caption");
+const scBtns = document.querySelectorAll(".sc-btn");
+const termWindow = document.getElementById("termWindow");
+const browserWindow = document.getElementById("browserWindow");
+const cmdText = document.getElementById("cmdText");
+const waitPrompt = document.getElementById("waitPrompt");
+const termDone = document.getElementById("termDone");
+const browserWait = document.getElementById("browserWait");
+const browserDone = document.getElementById("browserDone");
+const topbarStatus = document.getElementById("topbarStatus");
 
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('in'); observer.unobserve(e.target); }
-  });
-}, { threshold: 0.1 });
-document.querySelectorAll('.sec-card, .website-card, .metric-pill, .compare-table tr, .faq-item').forEach(el => {
-  el.classList.add('reveal');
-  observer.observe(el);
-});
+const bioSheet = document.getElementById("bioSheet");
+const sheetRp = document.getElementById("sheetRp");
+const fpBtn = document.getElementById("fpBtn");
+const fpHint = document.getElementById("fpHint");
+const phoneLogs = document.getElementById("phoneLogs");
+const logLiveReq = document.getElementById("logLiveReq");
+const phoneBridgePill = document.getElementById("phoneBridgePill");
 
-// ================= HARDWARE SIMULATOR RIG LOGIC =================
-const screenTerminal = document.getElementById("screenTerminal");
-const screenBrowser = document.getElementById("screenBrowser");
-const stermTitle = document.getElementById("stermTitle");
-const stermStatus = document.getElementById("stermStatus");
-const termCmdLine = document.getElementById("termCmdLine");
-const termWaitingLine = document.getElementById("termWaitingLine");
-const termPromptText = document.getElementById("termPromptText");
-const termDoneOutput = document.getElementById("termDoneOutput");
-const termSuccessHead = document.getElementById("termSuccessHead");
-const termSuccessDetail = document.getElementById("termSuccessDetail");
+let curSc = "sudo";
 
-const browserTabTitle = document.getElementById("browserTabTitle");
-const browserUrlText = document.getElementById("browserUrlText");
-const browserServiceIcon = document.getElementById("browserServiceIcon");
-const browserCardTitle = document.getElementById("browserCardTitle");
-const browserCardSub = document.getElementById("browserCardSub");
-const browserWaitingText = document.getElementById("browserWaitingText");
-const browserDoneText = document.getElementById("browserDoneText");
-
-const phoneDialog = document.getElementById("phoneDialog");
-const phoneRpId = document.getElementById("phoneRpId");
-const phoneSheetDesc = document.getElementById("phoneSheetDesc");
-const fingerprintBtn = document.getElementById("fingerprintBtn");
-const fpStatusText = document.getElementById("fpStatusText");
-const dialogIcon = document.getElementById("dialogIcon");
-const appLogBody = document.getElementById("appLogBody");
-const appLogLiveReq = document.getElementById("appLogLiveReq");
-const appLogLiveDone = document.getElementById("appLogLiveDone");
-
-const conduitLine = document.getElementById("conduitLine");
-const packetPulse = document.getElementById("packetPulse");
-const phoneStatusPill = document.getElementById("phoneStatusPill");
-const phoneDot = document.getElementById("phoneDot");
-const phoneStatusText = document.getElementById("phoneStatusText");
-
-let currentScenario = "sudo";
-let isWireless = false;
-
-const scenarios = {
+const SCENARIOS = {
   sudo: {
-    type: "terminal",
-    title: "siddharth@fedora:~ (bash)",
+    cap: "1. Sudo Authorization — Touch phone fingerprint sensor to authorize sudo.",
     cmd: "sudo dnf update",
-    prompt: "Touch phone biometric or press Enter for password:",
+    wait: "Touch phone biometric or press Enter for password:",
     rp: "Authorize sudo: pam://fedora",
-    logReq: "REQ assertion: pam://fedora",
-    logOk: "OK StrongBox signature verified (0.38s)",
-    successMsg: "✓ Authorized by Android StrongBox",
-    detailMsg: "Running transaction check... All packages up to date!"
+    log: "REQ: pam://fedora (sudo)",
+    ok: "✓ Authorized by Android StrongBox\nRunning transaction check... Packages up to date!"
   },
   git: {
-    type: "terminal",
-    title: "siddharth@fedora:~/Desktop/ukey (git)",
+    cap: "2. Git Push (OpenSSH) — Hardware ecdsa-sk signature replaces passwords & PATs.",
     cmd: "git push origin main",
-    prompt: "Confirm user presence on security key ~/.ssh/id_ukey...",
+    wait: "Confirm user presence on security key ~/.ssh/id_ukey...",
     rp: "Authorize git push: github.com/siddharthsai218/ukey",
-    logReq: "REQ assertion: OpenSSH ecdsa-sk (github.com)",
-    logOk: "OK Signed ecdsa-sk via StrongBox (0.41s)",
-    successMsg: "✓ Signed with ecdsa-sk hardware key",
-    detailMsg: "To github.com:siddharthsai218/ukey.git\n7fd2611..cbb9b6d  main -> main (0 passwords entered)"
+    log: "REQ: OpenSSH ecdsa-sk (github.com)",
+    ok: "Writing objects: 100% (5/5), 1.2 KiB | done.\nTo github.com:siddharthsai218/ukey.git\n   7fd2611..9ab815b  main -> main (0 passwords entered)"
   },
-  webauthn: {
-    type: "browser",
-    tab: "Google Account — 2-Step Verification",
-    url: "https://myaccount.google.com/security",
-    title: "Verify your identity",
-    sub: "Touch your FIDO2 security key for <b>google.com</b>",
-    prompt: "Waiting for touch on security key...",
+  web: {
+    cap: "3. WebAuthn Passkey — Physical FIDO2 token verification for Google & GitHub.",
+    cmd: "",
+    wait: "",
     rp: "Authorize login: google.com",
-    logReq: "REQ assertion: google.com (WebAuthn)",
-    logOk: "OK StrongBox assertion verified (0.35s)",
-    successMsg: "✓ Welcome back, Siddharth! Logged in via FIDO2.",
-    detailMsg: "Hardware-bound credential verified against Google root."
+    log: "REQ: google.com (FIDO2 assertion)",
+    ok: "✓ Verified with FIDO2 Security Key!"
   },
   fallback: {
-    type: "terminal",
-    title: "siddharth@fedora:~ (bash)",
+    cap: "4. 0.0s Password Fallback — Instant fallback to UNIX password when phone is away.",
     cmd: "sudo whoami",
-    prompt: "[sudo] password for siddharth: ********",
+    wait: "[sudo] password for siddharth: ********",
     rp: "uKey disabled (ukeyctl off)",
-    logReq: "Bridge in bypass mode (0.0s password fallback)",
-    logOk: "PAM fallback to pam_unix.so successful",
-    successMsg: "root",
-    detailMsg: "Instant fallback in 0.0s. Never hangs, never locks you out."
+    log: "Bridge bypass: 0.0s password fallback",
+    ok: "root\n✓ 0.0s fallback. Never hangs, never locks you out."
   },
   rogue: {
-    type: "rogue",
-    title: "siddharth@fedora:~ (ukey-security-audit)",
+    cap: "5. Rogue Wi-Fi Defense — Zero-trust handshake blocks unauthenticated peers in <4ms.",
     cmd: "ukeyctl security-audit --live",
-    prompt: "Listening for rogue packets on 0.0.0.0:8443...",
+    wait: "Listening on 0.0.0.0:8443 for rogue packets...",
     rp: "SECURITY ALERT: Rogue connection detected",
-    logReq: "ALERT: Unauthorized connection from 192.168.1.142:54892",
-    logOk: "REJECTED: Missing HMAC-SHA256 token (Dropped in 3.4ms)",
-    successMsg: "🚨 ROGUE DEVICE BLOCKED IN <4ms",
-    detailMsg: "Zero-Trust Wi-Fi Handshake dropped connection. Host safe."
+    log: "ALERT: Unauthorized connection from 192.168.1.142:54892",
+    ok: "🚨 ROGUE CONNECTION DROPPED IN 3.4ms\nHandshake rejected: missing / invalid HMAC token."
   }
 };
 
-function resetStage() {
-  const sc = scenarios[currentScenario];
-  if (!sc) return;
+function renderStage() {
+  const s = SCENARIOS[curSc];
+  caption.textContent = s.cap;
+  caption.classList.remove("swap"); caption.offsetWidth; caption.classList.add("swap");
 
-  // Reset conduit styling
-  conduitLine.classList.remove("danger");
-  packetPulse.classList.remove("danger");
-  phoneStatusPill.classList.remove("danger");
-  phoneDot.classList.remove("danger");
-  phoneStatusText.textContent = isWireless ? "Wi-Fi (Zero-Trust)" : "Connected (USB)";
+  phoneBridgePill.className = "uapp-bridge-pill";
+  phoneBridgePill.textContent = "CONNECTED";
+  topbarStatus.style.color = "var(--live)";
+  topbarStatus.textContent = "● /dev/uhid FIDO2";
 
-  if (sc.type === "terminal") {
-    screenTerminal.style.display = "block";
-    screenBrowser.style.display = "none";
-    stermTitle.textContent = sc.title;
-    termCmdLine.textContent = sc.cmd;
-    termPromptText.textContent = sc.prompt;
-    termWaitingLine.style.display = "flex";
-    termDoneOutput.style.display = "none";
-    phoneDialog.style.display = "block";
-  } else if (sc.type === "browser") {
-    screenTerminal.style.display = "none";
-    screenBrowser.style.display = "flex";
-    browserTabTitle.querySelector("span").textContent = sc.tab;
-    browserUrlText.querySelector("span").textContent = sc.url;
-    browserCardTitle.textContent = sc.title;
-    browserCardSub.innerHTML = sc.sub;
-    browserWaitingText.innerHTML = `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent-cyan);"></span><span>${sc.prompt}</span>`;
-    browserWaitingText.style.display = "flex";
-    browserDoneText.style.display = "none";
-    phoneDialog.style.display = "block";
-  } else if (sc.type === "rogue") {
-    // Rogue simulation: Red alert!
-    screenTerminal.style.display = "block";
-    screenBrowser.style.display = "none";
-    stermTitle.textContent = sc.title;
-    termCmdLine.textContent = sc.cmd;
-    termPromptText.textContent = sc.prompt;
-    termWaitingLine.style.display = "flex";
-    termDoneOutput.style.display = "none";
-    phoneDialog.style.display = "none";
+  if (curSc === "web") {
+    termWindow.style.display = "none";
+    browserWindow.style.display = "flex";
+    browserWait.style.display = "block";
+    browserDone.style.display = "none";
+    bioSheet.style.display = "block";
+  } else if (curSc === "rogue") {
+    termWindow.style.display = "block";
+    browserWindow.style.display = "none";
+    cmdText.textContent = s.cmd;
+    waitPrompt.textContent = s.wait;
+    termDone.style.display = "none";
+    bioSheet.style.display = "none";
 
-    conduitLine.classList.add("danger");
-    packetPulse.classList.add("danger");
-    phoneStatusPill.classList.add("danger");
-    phoneDot.classList.add("danger");
-    phoneStatusText.textContent = "ATTACK BLOCKED";
+    phoneBridgePill.className = "uapp-bridge-pill err";
+    phoneBridgePill.textContent = "ATTACK BLOCKED";
+    topbarStatus.style.color = "var(--red)";
+    topbarStatus.textContent = "● ROGUE REJECTED";
 
     playBuzzer();
-
     setTimeout(() => {
-      termWaitingLine.style.display = "none";
-      termDoneOutput.style.display = "block";
-      termSuccessHead.style.color = "var(--accent-red)";
-      termSuccessHead.textContent = sc.successMsg;
-      termSuccessDetail.textContent = sc.detailMsg;
-
-      const line = document.createElement("div");
-      line.className = "uapp-log-line";
-      line.innerHTML = `<span class="log-time">[18:30:14]</span> <span class="log-err">${sc.logOk}</span>`;
-      appLogBody.appendChild(line);
-      appLogBody.scrollTop = appLogBody.scrollHeight;
-    }, 600);
+      termDone.style.display = "block";
+      termDone.className = "term-done err";
+      termDone.textContent = s.ok;
+      const l = document.createElement("div");
+      l.innerHTML = `<span class="uapp-log-time">[18:30:14]</span> <span style="color:var(--red);">DROP rogue: invalid token</span>`;
+      phoneLogs.appendChild(l);
+    }, 450);
     return;
+  } else {
+    termWindow.style.display = "block";
+    browserWindow.style.display = "none";
+    cmdText.textContent = s.cmd;
+    waitPrompt.textContent = s.wait;
+    termDone.style.display = "none";
+    bioSheet.style.display = "block";
   }
 
-  phoneRpId.textContent = sc.rp;
-  appLogLiveReq.innerHTML = `<span class="log-time">[18:30:10]</span> <span class="log-req">${sc.logReq}</span>`;
-  appLogLiveDone.style.display = "none";
-
-  phoneDialog.classList.remove("success");
-  fingerprintBtn.classList.remove("verified");
-  fpStatusText.textContent = "Tap sensor to sign";
-  dialogIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+  sheetRp.textContent = s.rp;
+  logLiveReq.innerHTML = `<span class="uapp-log-time">[18:30:10]</span> ${s.log}`;
+  fpBtn.classList.remove("verified");
+  fpHint.textContent = "Tap sensor to sign";
 }
 
-// Scenario buttons
-document.querySelectorAll(".mode-btn").forEach(btn => {
+scBtns.forEach(btn => {
   btn.addEventListener("click", () => {
     playTick();
-    document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+    scBtns.forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    currentScenario = btn.dataset.scenario;
-    resetStage();
+    curSc = btn.dataset.s;
+    renderStage();
   });
 });
 
-// Transport toggle (USB vs Wi-Fi)
-const btnUsb = document.getElementById("btnUsb");
-const btnWifi = document.getElementById("btnWifi");
-const phoneHostInput = document.getElementById("phoneHostInput");
-const phoneLatencyDetail = document.getElementById("phoneLatencyDetail");
-const topbarConn = document.getElementById("topbarConn");
-
-btnUsb.addEventListener("click", () => {
+fpBtn.addEventListener("click", () => {
   playTick();
-  isWireless = false;
-  btnUsb.classList.add("active");
-  btnWifi.classList.remove("active");
-  phoneHostInput.textContent = "127.0.0.1";
-  phoneLatencyDetail.textContent = "< 3ms (USB)";
-  topbarConn.textContent = "USB-HID: /dev/uhid";
-  resetStage();
-});
-
-btnWifi.addEventListener("click", () => {
-  playTick();
-  isWireless = true;
-  btnWifi.classList.add("active");
-  btnUsb.classList.remove("active");
-  phoneHostInput.textContent = "10.59.72.79";
-  phoneLatencyDetail.textContent = "< 5ms (Wi-Fi Zero-Trust)";
-  topbarConn.textContent = "Wi-Fi LAN (Paired)";
-  resetStage();
-});
-
-// Fingerprint Touch Animation & Execution
-fingerprintBtn.addEventListener("click", () => {
-  playTick();
-  fpStatusText.textContent = "Signing in StrongBox...";
-  fingerprintBtn.classList.add("verified");
+  fpHint.textContent = "Signing in StrongBox...";
+  fpBtn.classList.add("verified");
 
   setTimeout(() => {
     playChime();
-    const sc = scenarios[currentScenario];
-    phoneDialog.classList.add("success");
-    dialogIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
-    fpStatusText.textContent = "✓ Verified (StrongBox P-256)";
+    const s = SCENARIOS[curSc];
+    fpHint.textContent = "✓ Verified";
 
-    appLogLiveDone.style.display = "block";
-    appLogLiveDone.innerHTML = `<span class="log-time">[18:30:12]</span> <span class="log-ok">${sc.logOk}</span>`;
-
-    if (sc.type === "terminal") {
-      termWaitingLine.style.display = "none";
-      termDoneOutput.style.display = "block";
-      termSuccessHead.style.color = "var(--accent-green)";
-      termSuccessHead.textContent = sc.successMsg;
-      termSuccessDetail.textContent = sc.detailMsg;
-    } else if (sc.type === "browser") {
-      browserWaitingText.style.display = "none";
-      browserDoneText.style.display = "block";
-      browserDoneText.innerHTML = `${sc.successMsg}<div style="font-size:10.5px; color:var(--gray-1); margin-top:3px; font-weight:normal;">${sc.detailMsg}</div>`;
+    if (curSc === "web") {
+      browserWait.style.display = "none";
+      browserDone.style.display = "block";
+    } else {
+      termDone.style.display = "block";
+      termDone.className = "term-done ok";
+      termDone.textContent = s.ok;
     }
 
-    setTimeout(() => {
-      resetStage();
-    }, 4500);
+    const l = document.createElement("div");
+    l.innerHTML = `<span class="uapp-log-time">[18:30:12]</span> OK StrongBox signature verified`;
+    phoneLogs.appendChild(l);
   }, 350);
 });
 
-// Clear app logs
-document.getElementById("clearLogBtn").addEventListener("click", () => {
-  playTick();
-  appLogBody.innerHTML = `<div class="uapp-log-line"><span class="log-time">[18:30:00]</span> <span class="log-info">Logs cleared</span></div>`;
-});
-
-// Initialize on page load
-resetStage();
-
-// ================= DISTRO TABS & SCRIPTS =================
-const distroScripts = {
-  fedora: {
-    label: "Fedora 40+ / RHEL 9 (dnf)",
-    code: `# 1. Universal installer (configures /dev/uhid, systemd user service)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure passwordless sudo with 0.0s password fallback
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. Add OpenSSH FIDO2 hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
-  },
-  ubuntu: {
-    label: "Ubuntu 22.04+ / Debian 12 (apt-get)",
-    code: `# 1. Universal installer (installs libpam-u2f, fido2-tools automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure PAM sudo
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. OpenSSH hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
-  },
-  arch: {
-    label: "Arch Linux / Manjaro (pacman)",
-    code: `# 1. Universal installer (installs pam-u2f, libfido2 automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure PAM sudo
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. OpenSSH hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
-  },
-  suse: {
-    label: "openSUSE Tumbleweed / Leap (zypper)",
-    code: `# 1. Universal installer (installs pam_u2f, fido2-tools automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure PAM sudo
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. OpenSSH hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`
-  },
-  manual: {
-    label: "Manual Developer Setup (Git)",
-    code: `# Clone and set up permissions
-git clone https://github.com/siddharthsai218/ukey.git && cd ukey
-sudo ./setup_udev.sh
-
-# Create virtualenv and run
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-./scripts/ukeyctl menu`
-  }
+// Install distro tabs
+const installCmd = document.getElementById("installCmd");
+const copyInstallBtn = document.getElementById("copyInstallBtn");
+const tabs = document.querySelectorAll(".tabs button");
+const DIST_SCRIPTS = {
+  fedora: "curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash",
+  ubuntu: "curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash",
+  arch: "curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash",
+  suse: "curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash"
 };
 
-const distroTabs = document.querySelectorAll(".distro-tab");
-const codeDistroLabel = document.getElementById("codeDistroLabel");
-const codePanel = document.getElementById("codePanel");
-const btnCopyDistro = document.getElementById("btnCopyDistro");
-
-distroTabs.forEach(tab => {
-  tab.addEventListener("click", () => {
+tabs.forEach(t => {
+  t.addEventListener("click", () => {
     playTick();
-    distroTabs.forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    const d = distroScripts[tab.dataset.distro];
-    codeDistroLabel.textContent = d.label;
-    codePanel.querySelector("code").innerText = d.code;
+    tabs.forEach(b => b.classList.remove("active"));
+    t.classList.add("active");
+    installCmd.innerHTML = `<span class="prompt" aria-hidden="true">$ </span>${DIST_SCRIPTS[t.dataset.dist]}`;
   });
 });
 
-btnCopyDistro.addEventListener("click", () => {
-  const code = codePanel.querySelector("code").innerText;
+copyInstallBtn.addEventListener("click", () => {
+  const code = installCmd.textContent.replace("$ ", "");
   navigator.clipboard.writeText(code).then(() => {
     playTick();
-    btnCopyDistro.innerText = "✓ Copied!";
-    setTimeout(() => btnCopyDistro.innerText = "Copy Command", 2000);
+    copyInstallBtn.textContent = "Copied";
+    setTimeout(() => copyInstallBtn.textContent = "Copy", 2000);
   });
 });
 
-// ================= WEB SETTINGS DASHBOARD MOCK INTERACTION =================
-const btnWebToggle = document.getElementById("btnWebToggle");
-const webToggleState = document.getElementById("webToggleState");
-let webEnabled = true;
-btnWebToggle.addEventListener("click", () => {
-  playTick();
-  webEnabled = !webEnabled;
-  if (webEnabled) {
-    webToggleState.textContent = "uKey Active (Enabled)";
-    webToggleState.style.color = "var(--white)";
-    btnWebToggle.style.background = "var(--accent-green)";
-    btnWebToggle.textContent = "ON";
-  } else {
-    webToggleState.textContent = "uKey Bypassed (0.0s Fallback)";
-    webToggleState.style.color = "var(--accent-amber)";
-    btnWebToggle.style.background = "var(--accent-amber)";
-    btnWebToggle.textContent = "OFF";
-  }
-});
-
-const btnGenPin = document.getElementById("btnGenPin");
-const webPinDisplay = document.getElementById("webPinDisplay");
-btnGenPin.addEventListener("click", () => {
-  playTick();
-  const randPin = Math.floor(100000 + Math.random() * 900000);
-  webPinDisplay.textContent = `${String(randPin).slice(0,3)} ${String(randPin).slice(3)}`;
-});
-
-const btnRevokeDemo = document.getElementById("btnRevokeDemo");
-btnRevokeDemo.addEventListener("click", () => {
-  playTick();
-  btnRevokeDemo.parentElement.innerHTML = `<span style="color:var(--accent-red); font-size:11px;">✓ Revoked</span>`;
-});
-
-// ================= FAQ ACCORDION =================
-document.querySelectorAll(".faq-item").forEach(item => {
-  item.querySelector(".faq-q").addEventListener("click", () => {
-    playTick();
-    const a = item.querySelector(".faq-a");
-    const isOpen = item.classList.contains("open");
-    document.querySelectorAll(".faq-item").forEach(i => {
-      i.classList.remove("open");
-      i.querySelector(".faq-a").style.maxHeight = null;
-    });
-    if (!isOpen) {
-      item.classList.add("open");
-      a.style.maxHeight = a.scrollHeight + "px";
-    }
-  });
-});
-
-// ================= GLOBAL COPY BUTTONS =================
+// Global copy buttons
 document.querySelectorAll("[data-copy]").forEach(btn => {
   btn.addEventListener("click", () => {
     const text = btn.getAttribute("data-copy");
     navigator.clipboard.writeText(text).then(() => {
       playTick();
       const orig = btn.innerText;
-      btn.innerText = "✓ Copied!";
+      btn.innerText = "Copied";
       setTimeout(() => btn.innerText = orig, 2000);
     });
   });
 });
+
+// FAQ Accordion
+document.querySelectorAll(".faq-item").forEach(item => {
+  item.querySelector(".faq-q").addEventListener("click", () => {
+    playTick();
+    const open = item.classList.contains("open");
+    document.querySelectorAll(".faq-item").forEach(i => i.classList.remove("open"));
+    if (!open) item.classList.add("open");
+  });
+});
+
+// Initial render
+renderStage();
 </script>
 </body>
 </html>
