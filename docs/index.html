@@ -9,30 +9,32 @@
 <meta name="robots" content="index, follow">
 <meta name="author" content="uKey Team">
 
-<!-- High-Fashion Condensed Variable Font (Archivo wdth 62), Geist, JetBrains Mono & Material Symbols -->
+<!-- Typography: Archivo (wdth 62), Geist, JetBrains Mono & Material 3 Symbols -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Geist:wght@300..800&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
+<!-- Three.js for Interactive 3D WebGL Enclave Object -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
 <style>
 /* =========================================================================
-   TANDEM-GRADE DESIGN SYSTEM & HARDWARE RIG CSS
-   Brushed Gunmetal Aluminum, Titanium Borders, Condensed Archivo Typography
+   3D TANDEM-GRADE DESIGN SYSTEM & HARDWARE RIG
+   Interactive 3D Perspective, Brushed Gunmetal Shaders, Three.js WebGL
    ========================================================================= */
 :root {
   --bg-page: #06080D;
   --bg-surface: #0E121B;
   --bg-surface-elevated: #151A26;
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.18);
+  --border-hover: rgba(255, 255, 255, 0.22);
   --border-emerald: rgba(16, 185, 129, 0.4);
 
   --text-white: #FFFFFF;
   --text-primary: #F1F5F9;
   --text-secondary: #94A3B8;
   --text-muted: #64748B;
-  --gray-dim: #232836;
 
   --accent-emerald: #10B981;
   --accent-emerald-glow: rgba(16, 185, 129, 0.28);
@@ -72,8 +74,8 @@ body {
   background-color: var(--bg-page);
   line-height: 1.6;
   background-image: 
-    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(16, 185, 129, 0.10), transparent 70%),
-    radial-gradient(circle at 90% 20%, rgba(56, 189, 248, 0.04), transparent 50%);
+    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(16, 185, 129, 0.12), transparent 70%),
+    radial-gradient(circle at 90% 20%, rgba(56, 189, 248, 0.05), transparent 50%);
 }
 
 .material-symbols-outlined {
@@ -91,7 +93,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* =========================================================================
-   HEADER / NAVIGATION
+   HEADER / NAVBAR
    ========================================================================= */
 header.site-header {
   position: sticky;
@@ -166,7 +168,7 @@ header.site-header {
 }
 
 /* =========================================================================
-   HERO: TANDEM STYLE ASYMMETRIC HEADLINE + HARDWARE RIG
+   HERO SECTION
    ========================================================================= */
 section.hero {
   padding: 64px 0 90px;
@@ -175,7 +177,7 @@ section.hero {
 
 .hero-layout {
   display: grid;
-  grid-template-columns: 1fr 1.25fr;
+  grid-template-columns: 1fr 1.28fr;
   gap: 48px;
   align-items: center;
 }
@@ -285,48 +287,23 @@ section.hero {
 }
 
 /* =========================================================================
-   TANDEM-STYLE FACTS STRIP (BELOW HERO)
+   3D PERSPECTIVE HARDWARE STAGE (MOUSE TILT & PHYSICAL DEPTH)
    ========================================================================= */
-.facts-strip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  padding: 24px 0;
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
-  margin-top: 20px;
+.perspective-viewport {
+  perspective: 1200px;
+  transform-style: preserve-3d;
 }
 
-.fact-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.fact-item b {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--text-white);
-  font-family: var(--font-mono);
-}
-
-.fact-item span {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
-/* =========================================================================
-   THE HARDWARE RIG (BRUSHED METAL LAPTOP + TITANIUM PHONE)
-   Inspired by Tandem's .lid / .base / .device architecture
-   ========================================================================= */
-.rig-stage {
+.rig-stage-3d {
   position: relative;
   background: radial-gradient(circle at center, rgba(14, 18, 27, 0.95), rgba(6, 8, 13, 0.98));
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 28px 24px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+  transform-style: preserve-3d;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 }
 
 .rig-header {
@@ -334,6 +311,7 @@ section.hero {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 22px;
+  transform: translateZ(25px);
 }
 
 .rig-badge {
@@ -375,32 +353,35 @@ section.hero {
   border-color: var(--accent-emerald);
 }
 
-/* Device Pair */
-.rig-devices {
+/* Device Pair in 3D */
+.rig-devices-3d {
   display: grid;
   grid-template-columns: 1.35fr auto 1fr;
   align-items: center;
   gap: 16px;
+  transform-style: preserve-3d;
 }
 
-/* BRUSHED METAL LAPTOP (.lid & .base) */
-.laptop-rig {
+/* BRUSHED METAL LAPTOP WITH 3D DEPTH */
+.laptop-rig-3d {
   position: relative;
+  transform-style: preserve-3d;
+  transform: translateZ(30px);
 }
 
-.laptop-lid {
+.laptop-lid-3d {
   border: 2px solid transparent;
   border-radius: 14px 14px 4px 4px;
   background:
     linear-gradient(#08080A, #08080A) padding-box,
     linear-gradient(160deg, #8A8E94 0%, #2E3034 20%, #5C6066 45%, #25272A 70%, #6A6E74 100%) border-box;
   padding: 8px 8px 18px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
   position: relative;
+  transform: rotateX(4deg);
 }
 
-/* Laptop Webcam */
-.laptop-lid::before {
+.laptop-lid-3d::before {
   content: "";
   position: absolute;
   left: 50%;
@@ -423,16 +404,16 @@ section.hero {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Laptop Base with CNC Chin */
-.laptop-base {
+.laptop-base-3d {
   height: 14px;
   margin: -2px -6px 0;
   border-radius: 3px 3px 10px 10px;
   background: linear-gradient(#A3A7AD 0, #5E6268 1.5px, #3E4146 45%, #1E1F22 100%);
   position: relative;
+  transform: rotateX(-4deg);
 }
 
-.laptop-base::before {
+.laptop-base-3d::before {
   content: "";
   position: absolute;
   left: 50%;
@@ -445,9 +426,9 @@ section.hero {
 }
 
 .laptop-floor-shadow {
-  height: 12px;
+  height: 14px;
   margin-top: 2px;
-  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.5), transparent);
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), transparent);
 }
 
 /* DATA BEAM CABLE */
@@ -458,6 +439,7 @@ section.hero {
   justify-content: center;
   gap: 8px;
   padding: 0 4px;
+  transform: translateZ(20px);
 }
 
 .cable-line {
@@ -509,16 +491,19 @@ section.hero {
   transform: rotate(180deg);
 }
 
-/* TITANIUM PHONE RIG */
-.phone-rig {
+/* TITANIUM PHONE RIG WITH 3D POP */
+.phone-rig-3d {
   border: 3px solid transparent;
   border-radius: 26px;
   background:
     linear-gradient(#030304, #030304) padding-box,
     linear-gradient(150deg, #B2B5B9 0%, #4A4D52 22%, #A4A8AC 46%, #393C40 70%, #8E9296 100%) border-box;
   padding: 8px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
   position: relative;
+  transform-style: preserve-3d;
+  transform: translateZ(45px) rotateY(-6deg);
+  transition: transform 0.25s ease;
 }
 
 .phone-screen-slab {
@@ -574,13 +559,13 @@ section.hero {
 .fingerprint-touch-plate:hover {
   background: rgba(16, 185, 129, 0.2);
   border-color: var(--accent-emerald);
-  transform: scale(1.06);
+  transform: scale(1.08);
 }
 
 .fingerprint-touch-plate.verified {
   background: var(--accent-emerald);
   border-color: var(--accent-emerald);
-  box-shadow: 0 0 24px rgba(16, 185, 129, 0.8);
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.85);
 }
 
 .fingerprint-touch-plate.verified span {
@@ -595,7 +580,39 @@ section.hero {
 }
 
 /* =========================================================================
-   THE TANDEM-STYLE STATEMENT PIN (CONDENSED ARCHIVO MEGA-TYPOGRAPHY)
+   TANDEM-STYLE 4-FACTS STRIP
+   ========================================================================= */
+.facts-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding: 24px 0;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-top: 20px;
+}
+
+.fact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fact-item b {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-white);
+  font-family: var(--font-mono);
+}
+
+.fact-item span {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* =========================================================================
+   CONDENSED ARCHIVO STATEMENT PIN (TANDEM MEGA-TEXT)
    ========================================================================= */
 section.statement-section {
   padding: 130px 0;
@@ -614,7 +631,7 @@ section.statement-section {
   letter-spacing: -0.02em;
   font-size: clamp(3.2rem, 8.5vw, 6.8rem);
   text-transform: uppercase;
-  color: #2A3142;
+  color: #242B38;
   display: flex;
   gap: 16px;
 }
@@ -634,6 +651,69 @@ section.statement-section {
   font-size: 1.25rem;
   color: var(--text-secondary);
   line-height: 1.6;
+}
+
+/* =========================================================================
+   INTERACTIVE 3D WEBGL ENCLAVE OBJECT (THREE.JS SHOWCASE)
+   ========================================================================= */
+section.threejs-showcase-section {
+  padding: 100px 0 120px;
+  position: relative;
+  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.05), transparent 70%);
+}
+
+.threejs-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.webgl-canvas-container {
+  width: 100%;
+  height: 440px;
+  background: #090C14;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  cursor: grab;
+}
+
+.webgl-canvas-container:active {
+  cursor: grabbing;
+}
+
+.webgl-interactive-badge {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--accent-emerald);
+  pointer-events: none;
+}
+
+.webgl-hint {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* =========================================================================
@@ -1069,6 +1149,7 @@ footer.site-footer {
    ========================================================================= */
 @media (max-width: 1024px) {
   .hero-layout { grid-template-columns: 1fr; gap: 48px; }
+  .threejs-grid { grid-template-columns: 1fr; gap: 36px; }
   .facts-strip { grid-template-columns: repeat(2, 1fr); gap: 24px; }
   .pillars-3col { grid-template-columns: 1fr; }
   .threat-columns { grid-template-columns: 1fr; }
@@ -1076,7 +1157,7 @@ footer.site-footer {
 }
 
 @media (max-width: 640px) {
-  .rig-devices { grid-template-columns: 1fr; gap: 20px; }
+  .rig-devices-3d { grid-template-columns: 1fr; gap: 20px; }
   .cable-connector { transform: rotate(90deg); margin: 12px 0; }
   .nav-menu { display: none; }
   .hero-ctas { flex-direction: column; }
@@ -1103,8 +1184,9 @@ footer.site-footer {
     </a>
 
     <nav class="nav-menu">
-      <a href="#simulator" class="nav-link">Interactive Rig</a>
+      <a href="#simulator" class="nav-link">3D Rig</a>
       <a href="#statement" class="nav-link">Architecture</a>
+      <a href="#threejs-enclave" class="nav-link">3D Silicon</a>
       <a href="#manifesto" class="nav-link">Zero Cloud</a>
       <a href="#threat" class="nav-link">Threat Model</a>
       <a href="#install" class="nav-link">Install</a>
@@ -1119,7 +1201,7 @@ footer.site-footer {
 
 <main>
 <!-- =========================================================================
-     HERO SECTION WITH TANDEM-GRADE HARDWARE RIG
+     HERO SECTION WITH 3D PERSPECTIVE RIG & MOUSE TRACKING
      ========================================================================= -->
 <section class="hero" id="simulator">
   <div class="wrap hero-layout">
@@ -1147,59 +1229,61 @@ footer.site-footer {
       </div>
     </div>
 
-    <!-- TANDEM STYLE BRUSHED GUNMETAL HARDWARE RIG -->
-    <div class="rig-stage">
-      <div class="rig-header">
-        <div class="rig-badge">
-          <span class="material-symbols-outlined" style="font-size: 16px;">fiber_manual_record</span>
-          <span>KERNEL: /dev/hidraw6 ACTIVE</span>
-        </div>
-        <div class="sim-switcher">
-          <button class="sim-tab active" id="tab-git" onclick="setRigMode('git')">$ git push</button>
-          <button class="sim-tab" id="tab-sudo" onclick="setRigMode('sudo')">$ sudo</button>
-        </div>
-      </div>
-
-      <div class="rig-devices">
-        <!-- BRUSHED GUNMETAL LAPTOP (.lid & .base) -->
-        <div class="laptop-rig">
-          <div class="laptop-lid">
-            <div class="laptop-terminal-screen" id="term-display">
-              <div><span style="color: var(--accent-emerald); font-weight: 700;">dev@fedora:~/ukey$</span> <span style="color: #fff; font-weight: 600;">git push origin main</span></div>
-              <div style="color: var(--text-muted); font-size: 0.74rem;">Signing via OpenSSH ecdsa-sk (uKey CTAPHID)...</div>
-              <div style="color: var(--accent-amber); margin-top: 4px;" id="term-waiting">⚡ [uKey] Waiting for physical touch on phone...</div>
-            </div>
+    <!-- 3D PERSPECTIVE STAGE WITH INTERACTIVE MOUSE PARALLAX -->
+    <div class="perspective-viewport" id="viewport-3d">
+      <div class="rig-stage-3d" id="rig-stage">
+        <div class="rig-header">
+          <div class="rig-badge">
+            <span class="material-symbols-outlined" style="font-size: 16px;">fiber_manual_record</span>
+            <span>KERNEL: /dev/hidraw6 ACTIVE</span>
           </div>
-          <div class="laptop-base"></div>
-          <div class="laptop-floor-shadow"></div>
-        </div>
-
-        <!-- DATA BEAM CABLE -->
-        <div class="cable-connector">
-          <div class="cable-line">
-            <div class="cable-particle" id="cable-particle"></div>
+          <div class="sim-switcher">
+            <button class="sim-tab active" id="tab-git" onclick="setRigMode('git')">$ git push</button>
+            <button class="sim-tab" id="tab-sudo" onclick="setRigMode('sudo')">$ sudo</button>
           </div>
-          <span class="cable-tag">CTAPHID</span>
         </div>
 
-        <!-- TITANIUM ANDROID PHONE -->
-        <div class="phone-rig">
-          <div class="phone-screen-slab">
-            <div class="phone-punchhole-cam"></div>
-            <div>
-              <div class="phone-prompt-head">uKey Security</div>
-              <div class="phone-prompt-body" id="phone-prompt-text">Confirm Git Push</div>
+        <div class="rig-devices-3d">
+          <!-- BRUSHED GUNMETAL LAPTOP (.lid & .base) WITH 3D DEPTH -->
+          <div class="laptop-rig-3d">
+            <div class="laptop-lid-3d">
+              <div class="laptop-terminal-screen" id="term-display">
+                <div><span style="color: var(--accent-emerald); font-weight: 700;">dev@fedora:~/ukey$</span> <span style="color: #fff; font-weight: 600;">git push origin main</span></div>
+                <div style="color: var(--text-muted); font-size: 0.74rem;">Signing via OpenSSH ecdsa-sk (uKey CTAPHID)...</div>
+                <div style="color: var(--accent-amber); margin-top: 4px;" id="term-waiting">⚡ [uKey] Waiting for physical touch on phone...</div>
+              </div>
             </div>
+            <div class="laptop-base-3d"></div>
+            <div class="laptop-floor-shadow"></div>
+          </div>
 
-            <!-- Glowing Fingerprint Sensor Target -->
-            <div class="fingerprint-touch-plate" id="fingerprint-target" onclick="triggerBiometricTouch()">
-              <span class="material-symbols-outlined" style="font-size: 34px; color: var(--accent-emerald);">fingerprint</span>
+          <!-- DATA BEAM CABLE -->
+          <div class="cable-connector">
+            <div class="cable-line">
+              <div class="cable-particle" id="cable-particle"></div>
             </div>
-            <div class="fingerprint-hint" id="fingerprint-label">TAP FINGERPRINT</div>
+            <span class="cable-tag">CTAPHID</span>
+          </div>
 
-            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">
-              <span class="material-symbols-outlined" style="font-size: 14px; color: var(--accent-emerald);">shield</span>
-              <span>Titan M2 StrongBox</span>
+          <!-- TITANIUM ANDROID PHONE WITH 3D POP -->
+          <div class="phone-rig-3d">
+            <div class="phone-screen-slab">
+              <div class="phone-punchhole-cam"></div>
+              <div>
+                <div class="phone-prompt-head">uKey Security</div>
+                <div class="phone-prompt-body" id="phone-prompt-text">Confirm Git Push</div>
+              </div>
+
+              <!-- Glowing Fingerprint Sensor Target -->
+              <div class="fingerprint-touch-plate" id="fingerprint-target" onclick="triggerBiometricTouch()">
+                <span class="material-symbols-outlined" style="font-size: 34px; color: var(--accent-emerald);">fingerprint</span>
+              </div>
+              <div class="fingerprint-hint" id="fingerprint-label">TAP FINGERPRINT</div>
+
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">
+                <span class="material-symbols-outlined" style="font-size: 14px; color: var(--accent-emerald);">shield</span>
+                <span>Titan M2 StrongBox</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1231,7 +1315,7 @@ footer.site-footer {
 </section>
 
 <!-- =========================================================================
-     CONDENSED ARCHIVO STATEMENT PIN (TANDEM STYLE MEGA-TEXT)
+     CONDENSED ARCHIVO STATEMENT PIN (TANDEM MEGA-TEXT)
      ========================================================================= -->
 <section class="statement-section" id="statement">
   <div class="wrap">
@@ -1241,6 +1325,47 @@ footer.site-footer {
     <p class="st-explanation">
       Your Linux kernel gets a genuine virtual HID device node (<code>/dev/hidraw</code>). OpenSSH and PAM communicate with your phone's tamper-proof security enclave exactly as if a physical USB security dongle were plugged into your motherboard.
     </p>
+  </div>
+</section>
+
+<!-- =========================================================================
+     INTERACTIVE 3D WEBGL SILICON ENCLAVE (THREE.JS COMPONENT)
+     ========================================================================= -->
+<section class="threejs-showcase-section" id="threejs-enclave">
+  <div class="wrap threejs-grid">
+    <div class="threejs-copy">
+      <div class="hero-pill">Hardware Architecture</div>
+      <h2 style="font-size: clamp(2.2rem, 3.8vw, 3.4rem); font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: 20px;">
+        Interactive 3D Cryptographic Enclave
+      </h2>
+      <p style="font-size: 1.15rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px;">
+        Inspect the unexportable hardware security chip. When you run a command on Linux, raw cryptographic challenges are dispatched into this hardware enclave. Drag to inspect the chip in full 360-degree 3D space.
+      </p>
+
+      <ul style="list-style: none; display: flex; flex-direction: column; gap: 14px; margin-bottom: 32px;">
+        <li style="display: flex; align-items: center; gap: 12px; font-size: 0.95rem; color: #F1F5F9;">
+          <span class="material-symbols-outlined" style="color: var(--accent-emerald);">verified</span>
+          <span><strong>NIST P-256 (secp256r1):</strong> Elliptic curve cryptography computed inside isolated silicon.</span>
+        </li>
+        <li style="display: flex; align-items: center; gap: 12px; font-size: 0.95rem; color: #F1F5F9;">
+          <span class="material-symbols-outlined" style="color: var(--accent-emerald);">verified</span>
+          <span><strong>FIDO2 / CTAP2 Standard:</strong> Certified interoperability with OpenSSH and WebAuthn.</span>
+        </li>
+        <li style="display: flex; align-items: center; gap: 12px; font-size: 0.95rem; color: #F1F5F9;">
+          <span class="material-symbols-outlined" style="color: var(--accent-emerald);">verified</span>
+          <span><strong>Physical User Presence:</strong> Signature generation strictly gated behind biometric touch.</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- WebGL Canvas Mount -->
+    <div class="webgl-canvas-container" id="webgl-canvas-box" role="img" aria-label="Interactive 3D model of the Titan M2 hardware enclave security chip. Drag to rotate.">
+      <div class="webgl-interactive-badge">
+        <span class="material-symbols-outlined" style="font-size: 16px;">3d_rotation</span>
+        <span>INTERACTIVE 3D ENCLAVE</span>
+      </div>
+      <div class="webgl-hint">Drag to Rotate in 3D</div>
+    </div>
   </div>
 </section>
 
@@ -1538,8 +1663,9 @@ footer.site-footer {
       </div>
 
       <div class="footer-nav">
-        <a href="#simulator">Interactive Rig</a>
+        <a href="#simulator">3D Rig</a>
         <a href="#statement">Architecture</a>
+        <a href="#threejs-enclave">3D Silicon</a>
         <a href="#threat">Threat Model</a>
         <a href="https://github.com/siddharth/ukey" target="_blank">GitHub Repository</a>
       </div>
@@ -1552,9 +1678,172 @@ footer.site-footer {
 </footer>
 
 <!-- =========================================================================
-     INTERACTIVE HARDWARE RIG SCRIPTS (WEB AUDIO HAPTICS & PROTOCOL SIMULATION)
+     INTERACTIVE 3D SCRIPTS: THREE.JS WEBGL + MOUSE TILT RIG + HAPTICS
      ========================================================================= -->
 <script>
+/* --- 1. MOUSE PARALLAX TILT ON 3D HARDWARE RIG --- */
+const viewport3D = document.getElementById('viewport-3d');
+const rigStage = document.getElementById('rig-stage');
+
+if (viewport3D && rigStage) {
+  viewport3D.addEventListener('mousemove', (e) => {
+    const rect = viewport3D.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    
+    const rotateX = -(y / rect.height) * 16;
+    const rotateY = (x / rect.width) * 16;
+    
+    rigStage.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+  });
+
+  viewport3D.addEventListener('mouseleave', () => {
+    rigStage.style.transform = 'rotateX(0deg) rotateY(0deg)';
+  });
+}
+
+/* --- 2. THREE.JS INTERACTIVE 3D SILICON ENCLAVE TOKEN --- */
+(function initThreeJS() {
+  const container = document.getElementById('webgl-canvas-box');
+  if (!container || typeof THREE === 'undefined') return;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+  camera.position.z = 5.2;
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setAttribute('role', 'img');
+  renderer.setAttribute('aria-label', 'Interactive 3D model of Titan M2 hardware enclave security chip. Drag to rotate.');
+  container.appendChild(renderer.domElement);
+
+  // Lighting
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+  scene.add(ambientLight);
+
+  const keyLight = new THREE.DirectionalLight(0x10b981, 2.5);
+  keyLight.position.set(4, 5, 4);
+  scene.add(keyLight);
+
+  const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.8);
+  rimLight.position.set(-4, -3, -2);
+  scene.add(rimLight);
+
+  // Group for the 3D chip and rings
+  const enclaveGroup = new THREE.Group();
+  scene.add(enclaveGroup);
+
+  // Main Silicon Chip Body
+  const chipGeometry = new THREE.BoxGeometry(2, 2, 0.28);
+  const chipMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0c0f17,
+    roughness: 0.25,
+    metalness: 0.85
+  });
+  const chipMesh = new THREE.Mesh(chipGeometry, chipMaterial);
+  enclaveGroup.add(chipMesh);
+
+  // Gold / Emerald Edge Bevel
+  const edgeGeo = new THREE.BoxGeometry(2.05, 2.05, 0.24);
+  const edgeMat = new THREE.MeshStandardMaterial({
+    color: 0x10b981,
+    roughness: 0.3,
+    metalness: 0.9,
+    wireframe: true
+  });
+  const edgeMesh = new THREE.Mesh(edgeGeo, edgeMat);
+  enclaveGroup.add(edgeMesh);
+
+  // Inner Core Silicon Die (Glows Emerald)
+  const dieGeo = new THREE.BoxGeometry(0.9, 0.9, 0.3);
+  const dieMat = new THREE.MeshStandardMaterial({
+    color: 0x059669,
+    emissive: 0x10b981,
+    emissiveIntensity: 0.6,
+    roughness: 0.2,
+    metalness: 0.8
+  });
+  const dieMesh = new THREE.Mesh(dieGeo, dieMat);
+  enclaveGroup.add(dieMesh);
+
+  // Floating Cryptographic Orbit Rings (P-256 Curve)
+  const ringGeo1 = new THREE.TorusGeometry(1.6, 0.02, 16, 100);
+  const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.6 });
+  const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
+  ring1.rotation.x = Math.PI / 3;
+  enclaveGroup.add(ring1);
+
+  const ringGeo2 = new THREE.TorusGeometry(1.9, 0.015, 16, 100);
+  const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.4 });
+  const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
+  ring2.rotation.y = Math.PI / 4;
+  enclaveGroup.add(ring2);
+
+  // Mouse & Touch Drag Controls
+  let isDragging = false;
+  let previousMousePosition = { x: 0, y: 0 };
+
+  function onPointerDown(e) {
+    isDragging = true;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    previousMousePosition = { x: clientX, y: clientY };
+  }
+
+  function onPointerMove(e) {
+    if (!isDragging) return;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+    const deltaX = clientX - previousMousePosition.x;
+    const deltaY = clientY - previousMousePosition.y;
+
+    enclaveGroup.rotation.y += deltaX * 0.008;
+    enclaveGroup.rotation.x += deltaY * 0.008;
+
+    previousMousePosition = { x: clientX, y: clientY };
+  }
+
+  function onPointerUp() {
+    isDragging = false;
+  }
+
+  container.addEventListener('mousedown', onPointerDown);
+  container.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+
+  // Mobile Touch Listeners (ui-ux-pro-max standard)
+  container.addEventListener('touchstart', onPointerDown, { passive: true });
+  container.addEventListener('touchmove', onPointerMove, { passive: true });
+  window.addEventListener('touchend', onPointerUp);
+
+  // Animation Loop
+  function animate() {
+    requestAnimationFrame(animate);
+
+    if (!isDragging) {
+      enclaveGroup.rotation.y += 0.006;
+      enclaveGroup.rotation.x = Math.sin(Date.now() * 0.001) * 0.15;
+    }
+
+    ring1.rotation.z += 0.01;
+    ring2.rotation.z -= 0.008;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  // Resize Handler
+  window.addEventListener('resize', () => {
+    if (!container) return;
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+})();
+
+/* --- 3. HARDWARE SIMULATOR & WEB AUDIO HAPTICS --- */
 let currentSim = 'git';
 let audioContext = null;
 
