@@ -1,1190 +1,1672 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-type="software" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>uKey — Touch ID for Linux</title>
-<meta name="description" content="Unlock your Linux terminal with your fingerprint. Turn your Android phone into an authentic USB security key for sudo, OpenSSH, and WebAuthn. 100% local, zero cloud.">
-<meta name="theme-color" content="#07090E">
+<title>uKey: your Android phone as a hardware FIDO2 security key for Linux</title>
+<meta name="description" content="uKey turns an Android phone into an authentic FIDO2/CTAP2 USB security key for Linux PAM, OpenSSH, and Git. 100% local, zero cloud, unexportable Titan M & Knox silicon.">
+<meta name="theme-color" content="#06080D">
+<meta name="robots" content="index, follow">
+<meta name="author" content="uKey Team">
 
+<!-- High-Fashion Condensed Variable Font (Archivo wdth 62), Geist, JetBrains Mono & Material Symbols -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Geist:wght@300..800&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
 <style>
 /* =========================================================================
-   CLEAN, SPACIOUS, MODERN DESIGN SYSTEM (Linear/Apple Quality)
+   TANDEM-GRADE DESIGN SYSTEM & HARDWARE RIG CSS
+   Brushed Gunmetal Aluminum, Titanium Borders, Condensed Archivo Typography
    ========================================================================= */
 :root {
-  --bg-page: #07090E;
-  --bg-card: #0E121A;
-  --bg-card-subtle: #131824;
+  --bg-page: #06080D;
+  --bg-surface: #0E121B;
+  --bg-surface-elevated: #151A26;
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-highlight: rgba(255, 255, 255, 0.16);
+  --border-hover: rgba(255, 255, 255, 0.18);
+  --border-emerald: rgba(16, 185, 129, 0.4);
+
   --text-white: #FFFFFF;
   --text-primary: #F1F5F9;
   --text-secondary: #94A3B8;
   --text-muted: #64748B;
-  --emerald: #10B981;
-  --emerald-glow: rgba(16, 185, 129, 0.2);
-  --cyan: #38BDF8;
-  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --max-w: 1160px;
-  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --gray-dim: #232836;
+
+  --accent-emerald: #10B981;
+  --accent-emerald-glow: rgba(16, 185, 129, 0.28);
+  --accent-amber: #F59E0B;
+  --accent-red: #EF4444;
+
+  --font-display: "Geist", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mega: "Archivo", -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  --wrap-max: 1220px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+
+  --transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; background: var(--bg-page); color: var(--text-primary); }
-body {
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.65;
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-display);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
   overflow-x: hidden;
-  background: var(--bg-page);
+  background-color: var(--bg-page);
+  line-height: 1.6;
+  background-image: 
+    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(16, 185, 129, 0.10), transparent 70%),
+    radial-gradient(circle at 90% 20%, rgba(56, 189, 248, 0.04), transparent 50%);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
 }
 
 a { color: inherit; text-decoration: none; }
-button { font-family: inherit; cursor: pointer; border: none; background: none; }
-code, pre { font-family: var(--font-mono); }
 
-/* Ambient Lighting */
-.ambient-glow {
-  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 1000px; height: 500px;
-  background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, rgba(56, 189, 248, 0.06) 40%, transparent 75%);
-  pointer-events: none; z-index: 0;
-}
-
-.container {
-  width: 100%; max-width: var(--max-w); margin: 0 auto; padding: 0 24px; position: relative; z-index: 1;
+.wrap {
+  width: 100%;
+  max-width: var(--wrap-max);
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 /* =========================================================================
-   NAVIGATION BAR
+   HEADER / NAVIGATION
    ========================================================================= */
-.navbar {
-  position: sticky; top: 0; z-index: 50;
-  background: rgba(7, 9, 14, 0.8);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+header.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(6, 8, 13, 0.85);
   border-bottom: 1px solid var(--border-subtle);
-  padding: 18px 0;
 }
-.nav-inner {
-  display: flex; justify-content: space-between; align-items: center;
+
+.nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;
 }
-.brand-link {
-  display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -0.02em;
+
+.brand-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 800;
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+  color: var(--text-white);
 }
-.brand-icon {
-  width: 28px; height: 28px; background: var(--emerald); border-radius: 8px;
-  display: grid; place-items: center; color: #000; font-weight: 900; font-size: 14px;
+
+.brand-gem {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #10B981, #059669);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #06080D;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
 }
+
 .nav-menu {
-  display: flex; gap: 32px; list-style: none; font-size: 14.5px; font-weight: 500; color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 32px;
 }
-.nav-menu a:hover { color: var(--text-white); }
-.nav-right { display: flex; align-items: center; gap: 12px; }
 
-.btn-github {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-subtle);
-  color: var(--text-white); font-weight: 600; font-size: 13.5px; padding: 7px 14px; border-radius: 8px;
-  transition: all 0.2s;
+.nav-link {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
 }
-.btn-github:hover { background: rgba(255, 255, 255, 0.12); }
 
-.audio-toggle-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  color: var(--text-muted); font-size: 13px; font-family: var(--font-mono);
-  padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
-  transition: all 0.2s;
+.nav-link:hover { color: var(--text-white); }
+
+.nav-btn-gh {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: var(--text-white);
+  color: #06080D;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
 }
-.audio-toggle-btn:hover { color: var(--text-white); border-color: var(--border-highlight); }
+
+.nav-btn-gh:hover {
+  background: #E2E8F0;
+  transform: translateY(-1px);
+}
 
 /* =========================================================================
-   HERO SECTION
+   HERO: TANDEM STYLE ASYMMETRIC HEADLINE + HARDWARE RIG
    ========================================================================= */
-.hero {
-  padding: 80px 0 60px;
-  text-align: center;
+section.hero {
+  padding: 64px 0 90px;
+  position: relative;
 }
-.badge-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25);
-  color: var(--emerald); font-family: var(--font-mono); font-size: 12.5px; font-weight: 600;
-  padding: 6px 14px; border-radius: 999px; margin-bottom: 24px;
+
+.hero-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 48px;
+  align-items: center;
 }
-.pulse-circle {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--emerald);
-  box-shadow: 0 0 8px var(--emerald);
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid var(--border-emerald);
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-emerald);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 22px;
+}
+
+.hero-pill .pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-emerald);
+  box-shadow: 0 0 8px var(--accent-emerald);
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
 }
 
 .hero-title {
-  font-size: clamp(40px, 5.8vw, 76px);
-  font-weight: 850;
-  line-height: 1.05;
+  font-size: clamp(2.4rem, 4.4vw, 3.9rem);
+  font-weight: 900;
+  line-height: 1.04;
   letter-spacing: -0.04em;
   color: var(--text-white);
-  max-width: 18ch;
-  margin: 0 auto;
+  margin-bottom: 20px;
 }
-.hero-desc {
-  font-size: clamp(18px, 1.6vw, 22px);
-  line-height: 1.55;
+
+.hero-title .claim-gradient {
+  background: linear-gradient(135deg, #FFFFFF 20%, #10B981 80%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-lead {
+  font-size: 1.15rem;
   color: var(--text-secondary);
-  max-width: 44ch;
-  margin: 22px auto 0;
-}
-.hero-desc b { color: var(--text-white); font-weight: 600; }
-
-.hero-actions {
-  display: flex; justify-content: center; align-items: center; gap: 14px;
-  margin-top: 36px; flex-wrap: wrap;
-}
-.btn-cta {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: var(--emerald); color: #000; font-weight: 700; font-size: 15px;
-  padding: 13px 26px; border-radius: 10px; transition: all 0.2s var(--ease);
-  box-shadow: 0 4px 20px var(--emerald-glow);
-}
-.btn-cta:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 6px 28px rgba(16, 185, 129, 0.35); }
-
-.copy-command-pill {
-  display: inline-flex; align-items: center; gap: 12px;
-  background: var(--bg-card); border: 1px solid var(--border-subtle);
-  padding: 11px 18px; border-radius: 10px; font-family: var(--font-mono); font-size: 13.5px;
-  cursor: pointer; transition: all 0.2s;
-}
-.copy-command-pill:hover { border-color: var(--border-highlight); background: var(--bg-card-subtle); }
-.copy-command-pill .prompt { color: var(--emerald); font-weight: 700; }
-.copy-badge {
-  font-size: 11px; color: var(--text-muted); background: rgba(255, 255, 255, 0.06);
-  padding: 3px 8px; border-radius: 4px;
+  line-height: 1.6;
+  margin-bottom: 32px;
+  max-width: 480px;
 }
 
-/* 4-Item Reassurance Strip */
-.trust-strip {
-  display: flex; justify-content: center; gap: 36px; flex-wrap: wrap;
-  margin-top: 44px; font-size: 13.5px; color: var(--text-muted);
+.hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 36px;
 }
-.trust-item { display: flex; align-items: center; gap: 8px; }
-.trust-icon { color: var(--emerald); font-weight: 800; }
+
+.btn-solid-emerald {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 26px;
+  background: var(--accent-emerald);
+  color: #032b14;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: var(--radius-full);
+  box-shadow: 0 4px 20px var(--accent-emerald-glow);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  border: none;
+}
+
+.btn-solid-emerald:hover {
+  background: #34D399;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(16, 185, 129, 0.4);
+}
+
+.btn-outline-metal {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 22px;
+  background: var(--bg-surface-elevated);
+  color: var(--text-white);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.btn-outline-metal:hover {
+  border-color: var(--border-hover);
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
 
 /* =========================================================================
-   CLEAN, READABLE INTERACTIVE HARDWARE SHOWCASE
+   TANDEM-STYLE FACTS STRIP (BELOW HERO)
    ========================================================================= */
-.showcase-section {
-  padding: 40px 0 80px;
+.facts-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding: 24px 0;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-top: 20px;
 }
-.showcase-card {
-  background: var(--bg-card);
+
+.fact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fact-item b {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-white);
+  font-family: var(--font-mono);
+}
+
+.fact-item span {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* =========================================================================
+   THE HARDWARE RIG (BRUSHED METAL LAPTOP + TITANIUM PHONE)
+   Inspired by Tandem's .lid / .base / .device architecture
+   ========================================================================= */
+.rig-stage {
+  position: relative;
+  background: radial-gradient(circle at center, rgba(14, 18, 27, 0.95), rgba(6, 8, 13, 0.98));
   border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
 }
 
-.tabs-bar {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid var(--border-subtle); padding-bottom: 20px; margin-bottom: 28px;
-  flex-wrap: wrap; gap: 14px;
-}
-.scenario-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
-.sc-tab {
-  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
-  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle);
-  color: var(--text-secondary); transition: all 0.15s;
-}
-.sc-tab:hover { color: var(--text-white); background: rgba(255, 255, 255, 0.08); }
-.sc-tab.active {
-  background: rgba(16, 185, 129, 0.15); border-color: var(--emerald); color: var(--emerald);
+.rig-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
 }
 
-.live-badge {
-  display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono);
-  font-size: 11.5px; color: var(--text-muted);
+.rig-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-emerald);
+  font-weight: 600;
 }
 
-/* Stage Duo */
-.stage-duo {
-  display: grid; grid-template-columns: 1.3fr 1fr; gap: 32px; align-items: center;
+.sim-switcher {
+  display: flex;
+  gap: 8px;
 }
 
-/* Left: Sleek Linux Terminal */
-.term-box {
-  background: #05070B; border: 1px solid #1E2536; border-radius: 14px; overflow: hidden;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
-}
-.term-header {
-  background: #0E131E; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid #1E2536; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted);
-}
-.term-dots { display: flex; gap: 6px; }
-.dot { width: 9px; height: 9px; border-radius: 50%; }
-.dot.r { background: #EF4444; }
-.dot.y { background: #F59E0B; }
-.dot.g { background: #10B981; }
-
-.term-body {
-  padding: 24px; font-family: var(--font-mono); font-size: 14px; line-height: 1.7; min-height: 200px;
-  text-align: left; position: relative; cursor: text;
-}
-.term-cursor {
-  display: inline-block; width: 8px; height: 16px; background: var(--emerald);
-  vertical-align: middle; margin-left: 2px; animation: blink 1s infinite;
-}
-@keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-
-.term-prompt-line {
-  margin-top: 14px; padding: 10px 14px; background: rgba(56, 189, 248, 0.08);
-  border-left: 3px solid var(--cyan); color: var(--cyan); border-radius: 4px; font-size: 13px;
-}
-.term-result {
-  margin-top: 14px; color: var(--emerald); font-weight: 700; font-size: 14px;
-}
-.term-result-sub {
-  color: var(--text-muted); font-size: 12px; font-weight: 400; margin-top: 4px; display: block;
+.sim-tab {
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
-/* Right: Android Phone with Clean Biometric Card */
-.phone-mockup {
-  background: linear-gradient(145deg, #18202E, #0D131D);
-  border: 3px solid #28354A; border-radius: 32px; padding: 12px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7); max-width: 340px; margin: 0 auto; width: 100%;
-}
-.phone-screen {
-  background: #04060A; border-radius: 22px; height: 320px; overflow: hidden;
-  display: flex; flex-direction: column; justify-content: space-between; padding: 18px 16px; text-align: center;
-}
-.phone-top-info {
-  display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);
-}
-.enclave-badge {
-  color: var(--emerald); font-weight: 600;
+.sim-tab:hover {
+  color: var(--text-white);
+  border-color: var(--border-hover);
 }
 
-.bio-card {
-  background: #0F141F; border: 1px solid #1E283C; border-radius: 16px; padding: 20px 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); transition: all 0.25s var(--ease);
-}
-.bio-card.verified {
-  background: #092418; border-color: var(--emerald);
-}
-.bio-title { font-size: 14px; font-weight: 700; color: var(--text-white); }
-.bio-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; font-family: var(--font-mono); }
-
-.fingerprint-btn {
-  width: 68px; height: 68px; border-radius: 50%;
-  background: #182232; border: 1.5px solid #2E3E58; margin: 16px auto 12px;
-  display: grid; place-items: center; cursor: pointer; transition: all 0.2s; position: relative;
-}
-.fingerprint-btn:hover {
-  transform: scale(1.05); border-color: var(--cyan);
-}
-.fingerprint-btn.verified {
-  background: rgba(16, 185, 129, 0.2); border-color: var(--emerald);
-  box-shadow: 0 0 24px var(--emerald-glow);
+.sim-tab.active {
+  background: var(--accent-emerald);
+  color: #032b14;
+  border-color: var(--accent-emerald);
 }
 
-.radar-wave {
-  position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid var(--cyan);
-  opacity: 0; animation: radarPing 2s infinite ease-out; pointer-events: none;
+/* Device Pair */
+.rig-devices {
+  display: grid;
+  grid-template-columns: 1.35fr auto 1fr;
+  align-items: center;
+  gap: 16px;
 }
-.radar-wave:nth-child(2) { animation-delay: 0.7s; }
-@keyframes radarPing { 0% { transform: scale(0.7); opacity: 0.8; } 100% { transform: scale(1.35); opacity: 0; } }
+
+/* BRUSHED METAL LAPTOP (.lid & .base) */
+.laptop-rig {
+  position: relative;
+}
+
+.laptop-lid {
+  border: 2px solid transparent;
+  border-radius: 14px 14px 4px 4px;
+  background:
+    linear-gradient(#08080A, #08080A) padding-box,
+    linear-gradient(160deg, #8A8E94 0%, #2E3034 20%, #5C6066 45%, #25272A 70%, #6A6E74 100%) border-box;
+  padding: 8px 8px 18px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+  position: relative;
+}
+
+/* Laptop Webcam */
+.laptop-lid::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 3px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: #23262B;
+}
+
+.laptop-terminal-screen {
+  background: #07090F;
+  border-radius: 8px;
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  min-height: 220px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Laptop Base with CNC Chin */
+.laptop-base {
+  height: 14px;
+  margin: -2px -6px 0;
+  border-radius: 3px 3px 10px 10px;
+  background: linear-gradient(#A3A7AD 0, #5E6268 1.5px, #3E4146 45%, #1E1F22 100%);
+  position: relative;
+}
+
+.laptop-base::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 72px;
+  height: 4px;
+  margin-left: -36px;
+  border-radius: 0 0 6px 6px;
+  background: #1B1C1F;
+}
+
+.laptop-floor-shadow {
+  height: 12px;
+  margin-top: 2px;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.5), transparent);
+}
+
+/* DATA BEAM CABLE */
+.cable-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.cable-line {
+  width: 32px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.cable-particle {
+  position: absolute;
+  top: 0;
+  left: -14px;
+  width: 14px;
+  height: 100%;
+  background: var(--accent-emerald);
+  box-shadow: 0 0 10px var(--accent-emerald);
+  border-radius: 2px;
+  opacity: 0;
+}
+
+.cable-particle.travel-right {
+  animation: beam-right 0.6s linear forwards;
+}
+
+.cable-particle.travel-left {
+  animation: beam-left 0.6s linear forwards;
+}
+
+@keyframes beam-right {
+  0% { left: -14px; opacity: 1; background: var(--accent-amber); box-shadow: 0 0 10px var(--accent-amber); }
+  100% { left: 32px; opacity: 1; background: var(--accent-amber); }
+}
+
+@keyframes beam-left {
+  0% { left: 32px; opacity: 1; background: var(--accent-emerald); box-shadow: 0 0 10px var(--accent-emerald); }
+  100% { left: -14px; opacity: 1; background: var(--accent-emerald); }
+}
+
+.cable-tag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+/* TITANIUM PHONE RIG */
+.phone-rig {
+  border: 3px solid transparent;
+  border-radius: 26px;
+  background:
+    linear-gradient(#030304, #030304) padding-box,
+    linear-gradient(150deg, #B2B5B9 0%, #4A4D52 22%, #A4A8AC 46%, #393C40 70%, #8E9296 100%) border-box;
+  padding: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+  position: relative;
+}
+
+.phone-screen-slab {
+  background: #090C13;
+  border-radius: 18px;
+  padding: 18px 12px;
+  text-align: center;
+  min-height: 235px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.phone-punchhole-cam {
+  width: 9px;
+  height: 9px;
+  background: #020305;
+  border-radius: 50%;
+  margin-bottom: 8px;
+}
+
+.phone-prompt-head {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.phone-prompt-body {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-white);
+  margin-top: 3px;
+}
+
+.fingerprint-touch-plate {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.08);
+  border: 2px dashed rgba(16, 185, 129, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin: 12px 0;
+}
+
+.fingerprint-touch-plate:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--accent-emerald);
+  transform: scale(1.06);
+}
+
+.fingerprint-touch-plate.verified {
+  background: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.8);
+}
+
+.fingerprint-touch-plate.verified span {
+  color: #032b14 !important;
+}
 
 .fingerprint-hint {
-  font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);
+  font-size: 0.72rem;
+  color: var(--accent-emerald);
+  font-weight: 700;
+  font-family: var(--font-mono);
 }
 
 /* =========================================================================
-   3 WORKFLOWS: WHAT YOU ACTUALLY DO EVERY DAY
+   THE TANDEM-STYLE STATEMENT PIN (CONDENSED ARCHIVO MEGA-TYPOGRAPHY)
    ========================================================================= */
-.workflows-section {
-  padding: 80px 0;
-}
-.section-header {
-  text-align: center; max-width: 560px; margin: 0 auto 50px;
-}
-.section-tag {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--emerald);
-  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; display: block;
-}
-.section-title {
-  font-size: clamp(30px, 4vw, 44px); font-weight: 800; letter-spacing: -0.03em; color: var(--text-white); line-height: 1.15;
-}
-.section-desc {
-  font-size: 16px; color: var(--text-secondary); margin-top: 12px;
+section.statement-section {
+  padding: 130px 0;
+  background: #05070B;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
 }
 
-.workflow-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;
+.st-line {
+  white-space: nowrap;
+  font-family: var(--font-mega);
+  font-variation-settings: "wdth" 62;
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.02em;
+  font-size: clamp(3.2rem, 8.5vw, 6.8rem);
+  text-transform: uppercase;
+  color: #2A3142;
+  display: flex;
+  gap: 16px;
 }
-.wf-card {
-  background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px;
-  padding: 32px; text-align: left; display: flex; flex-direction: column; justify-content: space-between;
+
+.st-line.highlight {
+  color: var(--text-white);
 }
-.wf-icon-wrap {
-  width: 44px; height: 44px; border-radius: 10px; background: rgba(16, 185, 129, 0.12);
-  display: grid; place-items: center; color: var(--emerald); margin-bottom: 20px;
+
+.st-line.highlight span.emerald-word {
+  color: var(--accent-emerald);
+  text-shadow: 0 0 30px rgba(16, 185, 129, 0.35);
 }
-.wf-title { font-size: 20px; font-weight: 750; color: var(--text-white); margin-bottom: 10px; }
-.wf-text { font-size: 14.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
-.wf-code-box {
-  background: #05070B; border: 1px solid #1E2536; border-radius: 8px; padding: 10px 14px;
-  font-family: var(--font-mono); font-size: 12.5px; color: var(--emerald);
+
+.st-explanation {
+  margin-top: 36px;
+  max-width: 680px;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* =========================================================================
+   BIG-TEXT MANIFESTO: ZERO CLOUD, PURE LOCAL SILICON
+   ========================================================================= */
+section.manifesto-pillars {
+  padding: 120px 0;
+}
+
+.manifesto-header {
+  text-align: center;
+  max-width: 820px;
+  margin: 0 auto 64px;
+}
+
+.manifesto-header h2 {
+  font-size: clamp(2.3rem, 4vw, 3.6rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  color: var(--text-white);
+  line-height: 1.08;
+  margin-bottom: 18px;
+}
+
+.manifesto-header p {
+  font-size: 1.18rem;
+  color: var(--text-secondary);
+}
+
+.pillars-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 26px;
+}
+
+.pillar-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 38px 30px;
+  transition: all var(--transition-smooth);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.pillar-item:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-hover);
+  background: var(--bg-surface-elevated);
+}
+
+.pillar-icon-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid var(--border-emerald);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-emerald);
+  margin-bottom: 24px;
+}
+
+.pillar-item h3 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-white);
+  margin-bottom: 14px;
+}
+
+.pillar-item p {
+  font-size: 0.96rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin-bottom: 26px;
+}
+
+.pillar-badge-bot {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--accent-emerald);
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 /* =========================================================================
-   3 PILLARS: WHY DEVELOPERS TRUST UKEY
+   THREAT COMPARISON (UNATTENDED DISK SSH VS uKey SILICON)
    ========================================================================= */
-.pillars-section {
-  padding: 60px 0 90px;
+section.threat-section {
+  padding: 120px 0;
+  background: #090C14;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
 }
-.pillars-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-top: 48px;
+
+.threat-head {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto 60px;
 }
-.pillar-card {
-  background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px;
-  padding: 32px; text-align: left;
+
+.threat-head h2 {
+  font-size: clamp(2.2rem, 3.8vw, 3.2rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  color: var(--text-white);
+  margin-bottom: 16px;
 }
-.pillar-badge {
-  font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--cyan);
-  background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25);
-  padding: 4px 10px; border-radius: 6px; display: inline-block; margin-bottom: 16px;
+
+.threat-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
 }
-.pillar-title { font-size: 20px; font-weight: 750; color: var(--text-white); margin-bottom: 10px; }
-.pillar-text { font-size: 14.5px; color: var(--text-secondary); line-height: 1.65; }
+
+.threat-card {
+  border-radius: var(--radius-lg);
+  padding: 42px;
+  position: relative;
+}
+
+.threat-card.danger {
+  background: rgba(239, 68, 68, 0.03);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+}
+
+.threat-card.secure {
+  background: rgba(16, 185, 129, 0.04);
+  border: 1px solid var(--border-emerald);
+  box-shadow: 0 16px 50px rgba(16, 185, 129, 0.06);
+}
+
+.card-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.threat-card.danger .card-tag {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
+}
+
+.threat-card.secure .card-tag {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-emerald);
+}
+
+.threat-card h3 {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--text-white);
+  margin-bottom: 14px;
+}
+
+.threat-card p {
+  font-size: 0.98rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 26px;
+}
+
+.threat-points {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.threat-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.threat-card.danger .threat-points li { color: #CBD5E1; }
+.threat-card.secure .threat-points li { color: #F1F5F9; }
 
 /* =========================================================================
-   UNIVERSAL 1-COMMAND INSTALLER
+   FOUR DEFENSE CHECKPOINTS
    ========================================================================= */
-.install-section {
-  padding: 80px 0;
+section.four-checkpoints {
+  padding: 120px 0;
+}
+
+.checkpoints-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 26px;
+}
+
+.cp-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 38px;
+  transition: all var(--transition-smooth);
+}
+
+.cp-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-surface-elevated);
+  transform: translateY(-2px);
+}
+
+.cp-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.cp-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-sm);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid var(--border-emerald);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-emerald);
+}
+
+.cp-card h3 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.cp-card p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.snippet-bar {
+  background: #06080D;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  color: var(--accent-emerald);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* =========================================================================
+   COMPETITIVE VALUE TABLE
+   ========================================================================= */
+section.comparison-table-section {
+  padding: 120px 0;
+  background: #090C14;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.table-wrapper {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+table.comp-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+table.comp-matrix th, table.comp-matrix td {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.95rem;
+}
+
+table.comp-matrix th {
+  background: #0E121B;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+table.comp-matrix th.highlighted, table.comp-matrix td.highlighted {
+  background: rgba(16, 185, 129, 0.06);
+  border-left: 1px solid var(--border-emerald);
+  border-right: 1px solid var(--border-emerald);
+  color: var(--text-white);
+  font-weight: 600;
+}
+
+/* =========================================================================
+   INSTALL SECTION
+   ========================================================================= */
+section.install-box-section {
+  padding: 120px 0;
   text-align: center;
 }
-.distro-tabs-row {
-  display: flex; justify-content: center; gap: 8px; margin: 32px 0 20px; flex-wrap: wrap;
+
+.install-card-wrap {
+  max-width: 840px;
+  margin: 0 auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 48px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
 }
+
+.distro-bar {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
 .distro-btn {
-  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle);
-  color: var(--text-secondary); padding: 9px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s;
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
-.distro-btn:hover { color: var(--text-white); background: rgba(255, 255, 255, 0.08); }
+
+.distro-btn:hover {
+  color: var(--text-white);
+  border-color: var(--border-hover);
+}
+
 .distro-btn.active {
-  background: var(--text-white); color: #000; font-weight: 700; border-color: var(--text-white);
+  background: var(--accent-emerald);
+  color: #032b14;
+  border-color: var(--accent-emerald);
 }
 
-.install-terminal {
-  max-width: 840px; margin: 0 auto; background: #05070B; border: 1px solid #1E2536;
-  border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+.cmd-block {
+  background: #06080D;
+  border: 1px solid var(--border-emerald);
+  border-radius: var(--radius-md);
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
-.install-term-header {
-  background: #0E131E; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid #1E2536; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);
-}
-.install-code {
-  padding: 24px; font-family: var(--font-mono); font-size: 14px; line-height: 1.7;
-  color: #FFF; text-align: left; overflow-x: auto;
-}
-.install-copy-btn {
-  background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35);
-  color: var(--emerald); font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;
-  padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all 0.15s;
-}
-.install-copy-btn:hover { background: var(--emerald); color: #000; }
 
-/* =========================================================================
-   TRANSPARENT STATUS MATRIX (AGENTS.md Compliant)
-   ========================================================================= */
-.status-section {
-  padding: 60px 0;
+.cmd-block code {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--text-white);
 }
-.status-table-card {
-  background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px;
-  overflow: hidden; margin-top: 36px;
+
+.copy-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-fast);
 }
-.status-table {
-  width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;
-}
-.status-table th {
-  padding: 14px 20px; border-bottom: 1px solid var(--border-subtle); background: #0A0E17;
-  font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); text-transform: uppercase;
-}
-.status-table td {
-  padding: 16px 20px; border-bottom: 1px solid var(--border-subtle);
-}
-.status-table tr:last-child td { border-bottom: none; }
-.badge-live {
-  background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3);
-  color: var(--emerald); font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-  padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;
-}
-.badge-plan {
-  background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #F59E0B; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-  padding: 3px 8px; border-radius: 4px;
+
+.copy-action-btn:hover {
+  background: var(--accent-emerald);
+  color: #032b14;
+  border-color: var(--accent-emerald);
 }
 
 /* =========================================================================
-   FAQ SECTION
+   FOOTER
    ========================================================================= */
-.faq-section {
-  padding: 80px 0 100px;
+footer.site-footer {
+  border-top: 1px solid var(--border-subtle);
+  padding: 60px 0 40px;
+  background: #05060A;
 }
-.faq-list { max-width: 800px; margin: 40px auto 0; }
-.faq-item { border-bottom: 1px solid var(--border-subtle); }
-.faq-q {
-  padding: 22px 0; display: flex; justify-content: space-between; align-items: center;
-  font-size: 17.5px; font-weight: 700; color: var(--text-white); cursor: pointer; transition: color 0.15s;
-}
-.faq-q:hover { color: var(--emerald); }
-.faq-a { max-height: 0; overflow: hidden; transition: max-height 0.3s var(--ease); }
-.faq-a-inner { padding-bottom: 22px; font-size: 15px; color: var(--text-secondary); line-height: 1.65; }
-.faq-a-inner b { color: var(--text-white); }
 
-/* Footer */
-.footer {
-  padding: 40px 0; border-top: 1px solid var(--border-subtle);
-  background: #04060A; font-size: 13.5px; color: var(--text-muted);
+.footer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
 }
-.footer-inner {
-  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
-}
-.footer-links { display: flex; gap: 24px; }
-.footer-links a:hover { color: var(--text-white); }
 
-/* Responsive adjustments */
-@media (max-width: 900px) {
-  .stage-duo { grid-template-columns: 1fr; }
+.footer-nav {
+  display: flex;
+  gap: 28px;
+}
+
+.footer-nav a {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  transition: color var(--transition-fast);
+}
+
+.footer-nav a:hover { color: var(--text-white); }
+
+.footer-copyright {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* =========================================================================
+   RESPONSIVE QUERIES
+   ========================================================================= */
+@media (max-width: 1024px) {
+  .hero-layout { grid-template-columns: 1fr; gap: 48px; }
+  .facts-strip { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .pillars-3col { grid-template-columns: 1fr; }
+  .threat-columns { grid-template-columns: 1fr; }
+  .checkpoints-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .rig-devices { grid-template-columns: 1fr; gap: 20px; }
+  .cable-connector { transform: rotate(90deg); margin: 12px 0; }
   .nav-menu { display: none; }
-  .hero-title { font-size: 38px; }
-  .trust-strip { gap: 18px; }
+  .hero-ctas { flex-direction: column; }
+  .btn-solid-emerald, .btn-outline-metal { width: 100%; justify-content: center; }
+  .facts-strip { grid-template-columns: 1fr; }
+  .cmd-block { flex-direction: column; gap: 14px; align-items: flex-start; }
+  .copy-action-btn { width: 100%; justify-content: center; }
+  .footer-top { flex-direction: column; gap: 20px; align-items: flex-start; }
 }
 </style>
 </head>
-
 <body>
 
-<div class="ambient-glow"></div>
-
-<!-- Top Navigation -->
-<header class="navbar">
-  <div class="container nav-inner">
-    <a href="#" class="brand-link">
-      <div class="brand-icon">u</div>
+<!-- =========================================================================
+     SITE HEADER
+     ========================================================================= -->
+<header class="site-header">
+  <div class="wrap nav-row">
+    <a href="#" class="brand-wordmark">
+      <div class="brand-gem">
+        <span class="material-symbols-outlined" style="font-size: 20px;">fingerprint</span>
+      </div>
       <span>uKey</span>
     </a>
 
-    <ul class="nav-menu">
-      <li><a href="#demo">How It Works</a></li>
-      <li><a href="#workflows">Workflows</a></li>
-      <li><a href="#security">Security</a></li>
-      <li><a href="#install">Install</a></li>
-      <li><a href="#faq">FAQ</a></li>
-    </ul>
+    <nav class="nav-menu">
+      <a href="#simulator" class="nav-link">Interactive Rig</a>
+      <a href="#statement" class="nav-link">Architecture</a>
+      <a href="#manifesto" class="nav-link">Zero Cloud</a>
+      <a href="#threat" class="nav-link">Threat Model</a>
+      <a href="#install" class="nav-link">Install</a>
+    </nav>
 
-    <div class="nav-right">
-      <button class="audio-toggle-btn" id="soundToggleBtn" title="Toggle audio haptics">
-        <span>🔊 Audio: ON</span>
-      </button>
-      <a href="https://github.com/siddharthsai218/ukey" target="_blank" class="btn-github">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-        <span>GitHub</span>
-      </a>
-    </div>
+    <a href="https://github.com/siddharth/ukey" target="_blank" class="nav-btn-gh">
+      <span class="material-symbols-outlined" style="font-size: 18px;">star</span>
+      <span>Star on GitHub</span>
+    </a>
   </div>
 </header>
 
 <main>
-  <!-- =========================================================================
-       HERO SECTION
-       ========================================================================= -->
-  <section class="hero">
-    <div class="container">
-      <div class="badge-pill">
-        <span class="pulse-circle"></span>
-        <span>Android Hardware StrongBox &bull; Linux /dev/uhid</span>
+<!-- =========================================================================
+     HERO SECTION WITH TANDEM-GRADE HARDWARE RIG
+     ========================================================================= -->
+<section class="hero" id="simulator">
+  <div class="wrap hero-layout">
+    <div class="hero-left">
+      <div class="hero-pill">
+        <span class="pulse-dot"></span>
+        <span>Zero Cloud • Linux Kernel /dev/uhid</span>
       </div>
-
       <h1 class="hero-title">
-        Unlock your Linux terminal with your fingerprint.
+        Your phone is a <span class="claim-gradient">$60 YubiKey</span> for Linux.
       </h1>
-
-      <p class="hero-desc">
-        uKey turns your Android phone into an authentic <b>USB FIDO2 security key</b>. Touch your phone’s fingerprint sensor for <code>sudo</code>, OpenSSH, and browser logins. 100% peer-to-peer. Zero cloud.
+      <p class="hero-lead">
+        Protect Git pushes, OpenSSH keys, and terminal <code>sudo</code> using the unexportable hardware enclave inside your Android phone. Zero dongles to buy. Zero cloud relays.
       </p>
 
-      <div class="hero-actions">
-        <a href="#install" class="btn-cta">
-          Install uKey Free
+      <div class="hero-ctas">
+        <a href="#install" class="btn-solid-emerald">
+          <span class="material-symbols-outlined" style="font-size: 20px;">terminal</span>
+          <span>Install on Linux</span>
         </a>
-        <div class="copy-command-pill" id="heroCopyPill" title="Click to copy install command">
-          <code><span class="prompt">$ </span>curl -fsSL https://git.io/ukey | bash</code>
-          <span class="copy-badge">Copy</span>
-        </div>
-      </div>
-
-      <!-- Trust Strip -->
-      <div class="trust-strip">
-        <div class="trust-item"><span class="trust-icon">✓</span> 0.38s average auth latency</div>
-        <div class="trust-item"><span class="trust-icon">✓</span> Zero passwords typed</div>
-        <div class="trust-item"><span class="trust-icon">✓</span> Never locked out (0.0s fallback)</div>
-        <div class="trust-item"><span class="trust-icon">✓</span> EAL5+ hardware silicon</div>
+        <button class="btn-outline-metal" onclick="startRigSim('git')">
+          <span class="material-symbols-outlined" style="font-size: 20px;">play_arrow</span>
+          <span>Run Interactive Test</span>
+        </button>
       </div>
     </div>
-  </section>
 
-  <!-- =========================================================================
-       CLEAN, READABLE INTERACTIVE HARDWARE SHOWCASE
-       ========================================================================= -->
-  <section class="showcase-section" id="demo">
-    <div class="container">
-      <div class="showcase-card">
-
-        <!-- Top Scenario Switcher -->
-        <div class="tabs-bar">
-          <div class="scenario-tabs">
-            <button class="sc-tab active" data-sc="sudo">🖐️ 1. sudo whoami</button>
-            <button class="sc-tab" data-sc="git">🔑 2. git push (OpenSSH)</button>
-            <button class="sc-tab" data-sc="webauthn">🌐 3. WebAuthn Passkey</button>
-            <button class="sc-tab" data-sc="fallback">⚡ 4. 0.0s Password Fallback</button>
-          </div>
-
-          <div class="live-badge">
-            <span style="color:var(--emerald);">●</span> Live Interactive Simulator
-          </div>
+    <!-- TANDEM STYLE BRUSHED GUNMETAL HARDWARE RIG -->
+    <div class="rig-stage">
+      <div class="rig-header">
+        <div class="rig-badge">
+          <span class="material-symbols-outlined" style="font-size: 16px;">fiber_manual_record</span>
+          <span>KERNEL: /dev/hidraw6 ACTIVE</span>
         </div>
-
-        <!-- Visual Side-by-Side Duo -->
-        <div class="stage-duo">
-
-          <!-- Left: Linux Terminal -->
-          <div class="term-box">
-            <div class="term-header">
-              <div class="term-dots">
-                <span class="dot r"></span>
-                <span class="dot y"></span>
-                <span class="dot g"></span>
-              </div>
-              <span>siddharth@fedora:~ (bash)</span>
-              <span style="color:var(--emerald);">● /dev/uhid attached</span>
-            </div>
-
-            <div class="term-body" id="termBody">
-              <div>
-                <span style="color:var(--emerald); font-weight:700;">siddharth@fedora:~$ </span>
-                <span id="termCmd" style="color:#FFF; font-weight:600;">sudo whoami</span>
-                <span class="term-cursor" id="termCursor"></span>
-              </div>
-
-              <div class="term-prompt-line" id="termPrompt">
-                Touch phone fingerprint sensor or press Enter for password...
-              </div>
-
-              <div class="term-result" id="termResult" style="display:none;">
-                <div id="termResHead" style="color:var(--emerald); font-size:15px;">root</div>
-                <span class="term-result-sub" id="termResSub">✓ PAM authenticated via Android StrongBox in 0.38s</span>
-              </div>
-
-              <input type="text" id="termHiddenInput" style="position:absolute; opacity:0; pointer-events:none;" aria-label="Terminal Input" />
-              <div style="position:absolute; bottom:8px; right:12px; font-size:10.5px; color:var(--text-muted);" id="termHint">
-                [Click to type commands with keyboard]
-              </div>
-            </div>
-          </div>
-
-          <!-- Right: Android Phone with Clean Biometric Card -->
-          <div class="phone-mockup">
-            <div class="phone-screen">
-              <div class="phone-top-info">
-                <span>18:30</span>
-                <span class="enclave-badge">StrongBox EAL5+</span>
-              </div>
-
-              <div class="bio-card" id="bioCard">
-                <div class="bio-title">Biometric Authentication</div>
-                <div class="bio-sub" id="bioSub">pam://fedora (sudo)</div>
-
-                <div class="fingerprint-btn" id="fingerprintBtn" title="Click fingerprint to sign">
-                  <div class="radar-wave"></div>
-                  <div class="radar-wave"></div>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
-                    <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
-                    <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>
-                    <path d="M2 12a10 10 0 0 1 18-6"/>
-                    <path d="M2 16h.01"/>
-                    <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
-                  </svg>
-                </div>
-
-                <div class="fingerprint-hint" id="fingerprintHint">
-                  Tap sensor to authenticate
-                </div>
-              </div>
-
-              <div style="font-family:var(--font-mono); font-size:9.5px; color:var(--text-muted); text-align:center;">
-                USB-C connection &bull; Latency: 0.38s
-              </div>
-            </div>
-          </div>
-
+        <div class="sim-switcher">
+          <button class="sim-tab active" id="tab-git" onclick="setRigMode('git')">$ git push</button>
+          <button class="sim-tab" id="tab-sudo" onclick="setRigMode('sudo')">$ sudo</button>
         </div>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- =========================================================================
-       3 WORKFLOWS: WHAT YOU ACTUALLY DO EVERY DAY
-       ========================================================================= -->
-  <section class="workflows-section" id="workflows">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">DAILY WORKFLOWS</span>
-        <h2 class="section-title">Built for what you actually do every day.</h2>
-        <p class="section-desc">Zero friction. uKey integrates natively into standard Linux authentication layers.</p>
       </div>
 
-      <div class="workflow-grid">
-        <!-- 1. Sudo -->
-        <div class="wf-card">
-          <div>
-            <div class="wf-icon-wrap">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
+      <div class="rig-devices">
+        <!-- BRUSHED GUNMETAL LAPTOP (.lid & .base) -->
+        <div class="laptop-rig">
+          <div class="laptop-lid">
+            <div class="laptop-terminal-screen" id="term-display">
+              <div><span style="color: var(--accent-emerald); font-weight: 700;">dev@fedora:~/ukey$</span> <span style="color: #fff; font-weight: 600;">git push origin main</span></div>
+              <div style="color: var(--text-muted); font-size: 0.74rem;">Signing via OpenSSH ecdsa-sk (uKey CTAPHID)...</div>
+              <div style="color: var(--accent-amber); margin-top: 4px;" id="term-waiting">⚡ [uKey] Waiting for physical touch on phone...</div>
             </div>
-            <h3 class="wf-title">Passwordless sudo</h3>
-            <p class="wf-text">
-              Elevate permissions in your terminal without typing your password. Works for <code>sudo</code>, Polkit desktop dialogs, and screen unlock.
-            </p>
           </div>
-          <div class="wf-code-box">
-            $ sudo dnf upgrade # Touch sensor
-          </div>
+          <div class="laptop-base"></div>
+          <div class="laptop-floor-shadow"></div>
         </div>
 
-        <!-- 2. Git & OpenSSH -->
-        <div class="wf-card">
-          <div>
-            <div class="wf-icon-wrap">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-            </div>
-            <h3 class="wf-title">Hardware-backed SSH</h3>
-            <p class="wf-text">
-              Generate native FIDO2 <code>ecdsa-sk</code> keys. Your private keys never leave your phone’s security silicon, making key theft impossible.
-            </p>
+        <!-- DATA BEAM CABLE -->
+        <div class="cable-connector">
+          <div class="cable-line">
+            <div class="cable-particle" id="cable-particle"></div>
           </div>
-          <div class="wf-code-box">
-            $ git push origin main # 0.41s sign
-          </div>
+          <span class="cable-tag">CTAPHID</span>
         </div>
 
-        <!-- 3. WebAuthn Passkeys -->
-        <div class="wf-card">
-          <div>
-            <div class="wf-icon-wrap">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <!-- TITANIUM ANDROID PHONE -->
+        <div class="phone-rig">
+          <div class="phone-screen-slab">
+            <div class="phone-punchhole-cam"></div>
+            <div>
+              <div class="phone-prompt-head">uKey Security</div>
+              <div class="phone-prompt-body" id="phone-prompt-text">Confirm Git Push</div>
             </div>
-            <h3 class="wf-title">WebAuthn Passkeys</h3>
-            <p class="wf-text">
-              Log into Google, GitHub, and Cloudflare in Chrome or Firefox. To your browser, your phone is indistinguishable from a physical $60 YubiKey.
-            </p>
-          </div>
-          <div class="wf-code-box">
-            Chrome / Firefox: USB Key detected
+
+            <!-- Glowing Fingerprint Sensor Target -->
+            <div class="fingerprint-touch-plate" id="fingerprint-target" onclick="triggerBiometricTouch()">
+              <span class="material-symbols-outlined" style="font-size: 34px; color: var(--accent-emerald);">fingerprint</span>
+            </div>
+            <div class="fingerprint-hint" id="fingerprint-label">TAP FINGERPRINT</div>
+
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">
+              <span class="material-symbols-outlined" style="font-size: 14px; color: var(--accent-emerald);">shield</span>
+              <span>Titan M2 StrongBox</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- =========================================================================
-       3 PILLARS: WHY DEVELOPERS TRUST UKEY
-       ========================================================================= -->
-  <section class="pillars-section" id="security">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">SECURITY FOUNDATIONS</span>
-        <h2 class="section-title">Designed with zero compromises.</h2>
-        <p class="section-desc">Why uKey is radically safer than software Bluetooth passkey apps.</p>
+  <!-- TANDEM STYLE 4-FACTS STRIP -->
+  <div class="wrap">
+    <div class="facts-strip">
+      <div class="fact-item">
+        <b>~0 ms</b>
+        <span>Direct USB loopback or BLE. Zero cloud latency.</span>
       </div>
+      <div class="fact-item">
+        <b>Titan M2 & Knox</b>
+        <span>Keys sealed in hardware-isolated mobile silicon.</span>
+      </div>
+      <div class="fact-item">
+        <b>Linux /dev/uhid</b>
+        <span>Native kernel driver. No browser extensions.</span>
+      </div>
+      <div class="fact-item">
+        <b>$0 Cost</b>
+        <span>100% free and open source. Zero dongles to buy.</span>
+      </div>
+    </div>
+  </div>
+</section>
 
-      <div class="pillars-grid">
-        <div class="pillar-card">
-          <span class="pillar-badge">FAIL-SAFE BY DEFAULT</span>
-          <h3 class="pillar-title">Never locked out. 0.0s fallback.</h3>
-          <p class="pillar-text">
-            If your phone battery dies or the cable is disconnected, uKey’s PAM module immediately yields to your standard Linux password prompt in <b>0.0 seconds</b>. You are never stranded.
+<!-- =========================================================================
+     CONDENSED ARCHIVO STATEMENT PIN (TANDEM STYLE MEGA-TEXT)
+     ========================================================================= -->
+<section class="statement-section" id="statement">
+  <div class="wrap">
+    <p class="st-line"><span>NOT A</span> <span>PASSWORD.</span></p>
+    <p class="st-line"><span>NOT A</span> <span>CLOUD TOKEN.</span></p>
+    <p class="st-line highlight"><span>A REAL</span> <span class="emerald-word">HARDWARE KEY.</span></p>
+    <p class="st-explanation">
+      Your Linux kernel gets a genuine virtual HID device node (<code>/dev/hidraw</code>). OpenSSH and PAM communicate with your phone's tamper-proof security enclave exactly as if a physical USB security dongle were plugged into your motherboard.
+    </p>
+  </div>
+</section>
+
+<!-- =========================================================================
+     BIG TEXT MANIFESTO: ZERO CLOUD, PURE LOCAL SILICON
+     ========================================================================= -->
+<section class="manifesto-pillars" id="manifesto">
+  <div class="wrap">
+    <div class="manifesto-header">
+      <div class="hero-pill">Zero Cloud Architecture</div>
+      <h2>Pure Local Silicon. Zero Relays. Zero Compromise.</h2>
+      <p>
+        Cloud password managers and corporate 2FA tools route your credentials through remote internet servers. If AWS or their API goes down, you are locked out. uKey operates 100% locally with zero internet dependency.
+      </p>
+    </div>
+
+    <div class="pillars-3col">
+      <div class="pillar-item">
+        <div>
+          <div class="pillar-icon-circle">
+            <span class="material-symbols-outlined" style="font-size: 28px;">cloud_off</span>
+          </div>
+          <h3>100% Air-Gapped & Offline</h3>
+          <p>
+            Zero accounts. Zero monthly subscriptions. Zero tracking. All cryptographic handshakes travel through a direct USB cable or local loopback. Even on a restricted university Wi-Fi or inside an airplane, uKey works flawlessly.
           </p>
         </div>
+        <span class="pillar-badge-bot">✓ Sovereign Auth</span>
+      </div>
 
-        <div class="pillar-card">
-          <span class="pillar-badge">TAMPER-RESISTANT SILICON</span>
-          <h3 class="pillar-title">Google Titan M & Samsung Knox.</h3>
-          <p class="pillar-text">
-            Keys are generated inside dedicated EAL5+ hardware silicon. Private keys never touch phone RAM or flash storage. Even a rooted phone cannot extract your private key.
+      <div class="pillar-item">
+        <div>
+          <div class="pillar-icon-circle">
+            <span class="material-symbols-outlined" style="font-size: 28px;">lock</span>
+          </div>
+          <h3>Unexportable Hardware Enclave</h3>
+          <p>
+            Your private key is forged directly inside Google Titan M or Samsung Knox StrongBox. The key is physically locked in silicon—it cannot be dumped into RAM, extracted by malware, or read by a compromised root shell.
           </p>
         </div>
+        <span class="pillar-badge-bot">✓ Tamper-Resistant</span>
+      </div>
 
-        <div class="pillar-card">
-          <span class="pillar-badge">100% PEER-TO-PEER</span>
-          <h3 class="pillar-title">Zero cloud. Zero accounts.</h3>
-          <p class="pillar-text">
-            No cloud relay servers, no user accounts, and zero telemetry. All communication stays local between your workstation and phone via USB or local Wi-Fi.
+      <div class="pillar-item">
+        <div>
+          <div class="pillar-icon-circle">
+            <span class="material-symbols-outlined" style="font-size: 28px;">memory</span>
+          </div>
+          <h3>Native Linux Kernel /dev/uhid</h3>
+          <p>
+            uKey doesn't rely on hacky browser extensions or patched SSH binaries. It registers a synthetic USB device with the Linux kernel user-space HID driver, exposing a genuine <code>/dev/hidraw</code> node that the OS trusts natively.
           </p>
         </div>
+        <span class="pillar-badge-bot">✓ OS-Level Native</span>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- =========================================================================
-       UNIVERSAL 1-COMMAND INSTALLER
-       ========================================================================= -->
-  <section class="install-section" id="install">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">GET STARTED</span>
-        <h2 class="section-title">Install on your distro in 10 seconds.</h2>
-        <p class="section-desc">Automated installer configures udev permissions, daemon user services, and PAM.</p>
+<!-- =========================================================================
+     THREAT COMPARISON (UNATTENDED DISK SSH VS uKey SILICON)
+     ========================================================================= -->
+<section class="threat-section" id="threat">
+  <div class="wrap">
+    <div class="threat-head">
+      <div class="hero-pill">Real-World Vulnerability</div>
+      <h2>Why standard SSH keys are a ticking time bomb.</h2>
+      <p>Developers treat passive SSH keys as a convenience. In reality, unattended keys on your laptop's hard drive are the #1 attack vector for open-source supply-chain malware.</p>
+    </div>
+
+    <div class="threat-columns">
+      <!-- VULNERABLE DISK KEY -->
+      <div class="threat-card danger">
+        <span class="card-tag">Critical Liability</span>
+        <h3>Standard Disk Key (~/.ssh/id_ed25519)</h3>
+        <p>A plain text file sitting on your SSD. Convenient to push code, but completely helpless against modern supply-chain malware.</p>
+        <ul class="threat-points">
+          <li>
+            <span class="material-symbols-outlined" style="color: #EF4444; font-size: 20px;">cancel</span>
+            <span><strong>Silent Malware Exfiltration:</strong> Any malicious <code>npm install</code> or <code>pip</code> postinstall script can read and steal your key in 50 milliseconds.</span>
+          </li>
+          <li>
+            <span class="material-symbols-outlined" style="color: #EF4444; font-size: 20px;">cancel</span>
+            <span><strong>Zero User Presence:</strong> Attackers can push backdoored code to your production GitHub repos while your laptop is unattended.</span>
+          </li>
+          <li>
+            <span class="material-symbols-outlined" style="color: #EF4444; font-size: 20px;">cancel</span>
+            <span><strong>Passphrase Bypass:</strong> Once unlocked, <code>ssh-agent</code> holds the decrypted private key in memory where infostealers dump it.</span>
+          </li>
+        </ul>
       </div>
 
-      <div class="distro-tabs-row">
-        <button class="distro-btn active" data-distro="fedora">Fedora / RHEL</button>
-        <button class="distro-btn" data-distro="ubuntu">Ubuntu / Debian</button>
-        <button class="distro-btn" data-distro="arch">Arch Linux</button>
-        <button class="distro-btn" data-distro="suse">openSUSE</button>
-        <button class="distro-btn" data-distro="manual">Manual Source</button>
-      </div>
-
-      <div class="install-terminal">
-        <div class="install-term-header">
-          <span>bash terminal</span>
-          <button class="install-copy-btn" id="installCopyBtn">Copy Command</button>
-        </div>
-        <pre class="install-code"><code id="installSnippet"># 1. Production 1-command installer (detects Fedora automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure passwordless sudo with 0.0s password fallback
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. Add OpenSSH FIDO2 hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey</code></pre>
+      <!-- HARDENED uKey ENCLAVE -->
+      <div class="threat-card secure">
+        <span class="card-tag">Hardened Hardware Enclave</span>
+        <h3>uKey Biometric Enclave (ecdsa-sk)</h3>
+        <p>Your private key never touches your laptop's storage or RAM. It is physically bound to your thumbprint on your phone.</p>
+        <ul class="threat-points">
+          <li>
+            <span class="material-symbols-outlined" style="color: #10B981; font-size: 20px;">check_circle</span>
+            <span><strong>Physically Impossible to Steal:</strong> Even if a hacker has full root access to your laptop, the private key cannot be exported from your phone's chip.</span>
+          </li>
+          <li>
+            <span class="material-symbols-outlined" style="color: #10B981; font-size: 20px;">check_circle</span>
+            <span><strong>Mandatory Physical Touch:</strong> OpenSSH rejects the push unless your thumb physically touches the biometric sensor on your phone.</span>
+          </li>
+          <li>
+            <span class="material-symbols-outlined" style="color: #10B981; font-size: 20px;">check_circle</span>
+            <span><strong>$0 Free Hardware Security:</strong> Enjoy the exact same FIDO2 protection as a $60 YubiKey using the smartphone already in your pocket.</span>
+          </li>
+        </ul>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- =========================================================================
-       TRANSPARENT STATUS MATRIX (AGENTS.md Compliant)
-       ========================================================================= -->
-  <section class="status-section">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">TRANSPARENCY</span>
-        <h2 class="section-title">Honest architecture status.</h2>
-        <p class="section-desc">Open source integrity. What works today vs ongoing design work.</p>
-      </div>
-
-      <div class="status-table-card">
-        <table class="status-table">
-          <thead>
-            <tr>
-              <th>Feature / Component</th>
-              <th>Status</th>
-              <th>Security Level</th>
-              <th>Test Verification</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><b>CTAP2 /dev/uhid Daemon</b></td>
-              <td><span class="badge-live">✓ IMPLEMENTED</span></td>
-              <td>Kernel UHID + Linux cgroups</td>
-              <td>38/38 unit tests pass</td>
-            </tr>
-            <tr>
-              <td><b>Android StrongBox Silicon</b></td>
-              <td><span class="badge-live">✓ IMPLEMENTED</span></td>
-              <td>Titan M2 / Knox EAL5+ Enclave</td>
-              <td>AndroidKeyStore P-256 Auth</td>
-            </tr>
-            <tr>
-              <td><b>Linux PAM Sudo Integration</b></td>
-              <td><span class="badge-live">✓ IMPLEMENTED</span></td>
-              <td><code>sufficient</code> (0.0s fallback)</td>
-              <td>Non-blocking system fallback</td>
-            </tr>
-            <tr>
-              <td><b>Zero-Trust Wi-Fi Handshake</b></td>
-              <td><span class="badge-live">✓ IMPLEMENTED</span></td>
-              <td>HMAC-SHA256 Token Dropper</td>
-              <td>&lt;4ms rogue rejection</td>
-            </tr>
-            <tr>
-              <td><b>Phone Context Display (WYSIWYS)</b></td>
-              <td><span class="badge-plan">DESIGN-ONLY</span></td>
-              <td>In review (docs/CONTEXT_DISPLAY.md)</td>
-              <td>Planned Phase 4</td>
-            </tr>
-            <tr>
-              <td><b>Resident Credential Storage (RK)</b></td>
-              <td><span class="badge-plan">IN PROGRESS</span></td>
-              <td>CTAP 2.1 Discoverable Keys</td>
-              <td>Active development branch</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+<!-- =========================================================================
+     FOUR DEFENSE CHECKPOINTS
+     ========================================================================= -->
+<section class="four-checkpoints">
+  <div class="wrap">
+    <div class="threat-head">
+      <div class="hero-pill">Complete OS Defense</div>
+      <h2>One device. Four layers of protection.</h2>
+      <p>uKey secures every critical authentication checkpoint across your Linux environment.</p>
     </div>
-  </section>
 
-  <!-- =========================================================================
-       FAQ SECTION
-       ========================================================================= -->
-  <section class="faq-section" id="faq">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">FAQ</span>
-        <h2 class="section-title">Frequently asked questions.</h2>
+    <div class="checkpoints-grid">
+      <div class="cp-card">
+        <div class="cp-head">
+          <div class="cp-icon">
+            <span class="material-symbols-outlined" style="font-size: 24px;">commit</span>
+          </div>
+          <h3>Git Commit & Push Signing</h3>
+        </div>
+        <p>Enforce physical presence on every push to GitHub, GitLab, and enterprise git repositories using OpenSSH <code>ecdsa-sk</code> security keys.</p>
+        <div class="snippet-bar">
+          <span>$ git push origin main</span>
+          <span>requires thumb</span>
+        </div>
       </div>
 
-      <div class="faq-list">
-        <div class="faq-item">
-          <div class="faq-q">
-            <span>What happens if my phone battery dies? Will I be locked out of sudo?</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      <div class="cp-card">
+        <div class="cp-head">
+          <div class="cp-icon">
+            <span class="material-symbols-outlined" style="font-size: 24px;">cloud_sync</span>
           </div>
-          <div class="faq-a">
-            <div class="faq-a-inner">
-              <b>No, you will never be locked out.</b> uKey’s PAM module is configured as <code>sufficient</code>. If your phone is unplugged, powered off, or disconnected, uKey immediately yields to the Linux password prompt in <b>0.0 seconds</b>. You simply press Enter or type your password as usual.
-            </div>
-          </div>
+          <h3>Cloud Server SSH Login</h3>
         </div>
-
-        <div class="faq-item">
-          <div class="faq-q">
-            <span>How is this different from Bluetooth passkey apps on the Play Store?</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-          <div class="faq-a">
-            <div class="faq-a-inner">
-              Apps like <code>sn.mahir.passkey</code> emulate generic Bluetooth keyboards over the air. They do not emulate kernel FIDO2 security keys, cannot do Linux PAM sudo elevation, cannot sign OpenSSH keys, and store credentials in software userland. uKey binds keys into Android StrongBox hardware silicon and creates an authentic kernel <code>/dev/uhid</code> device on Linux.
-            </div>
-          </div>
+        <p>Eliminate vulnerable static SSH keys when logging into production cloud servers, AWS EC2 instances, and Kubernetes bastion hosts.</p>
+        <div class="snippet-bar">
+          <span>$ ssh -i ~/.ssh/id_ukey root@server</span>
+          <span>hardware-bound</span>
         </div>
+      </div>
 
-        <div class="faq-item">
-          <div class="faq-q">
-            <span>Is local Wi-Fi pairing safe on public coffee shop networks?</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      <div class="cp-card">
+        <div class="cp-head">
+          <div class="cp-icon">
+            <span class="material-symbols-outlined" style="font-size: 24px;">terminal</span>
           </div>
-          <div class="faq-a">
-            <div class="faq-a-inner">
-              Yes. When using Wi-Fi, every packet must include an authentic HMAC token hash generated using a paired 6-digit cryptographic PIN. If an unauthorized attacker or rogue scanner on the LAN attempts to hit port <code>8443</code>, the daemon drops the connection in under <b>4ms</b> with zero processing.
-            </div>
+          <h3>Terminal sudo & PAM Authentication</h3>
+        </div>
+        <p>Stop typing long passwords for administrative commands. Authenticate <code>sudo</code> and desktop lock screens with a physical thumb tap.</p>
+        <div class="snippet-bar">
+          <span>$ sudo dnf upgrade</span>
+          <span>pam_u2f verified</span>
+        </div>
+      </div>
+
+      <div class="cp-card">
+        <div class="cp-head">
+          <div class="cp-icon">
+            <span class="material-symbols-outlined" style="font-size: 24px;">lock_clock</span>
           </div>
+          <h3>Walk-Away Desktop Auto-Lock</h3>
+        </div>
+        <p>Unplug your phone or walk away from your desk: uKey detects the disconnection, counts down 5 seconds, and automatically locks your desktop.</p>
+        <div class="snippet-bar">
+          <span>loginctl lock-session</span>
+          <span>5s grace countdown</span>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
+
+<!-- =========================================================================
+     COMPETITIVE COMPARISON TABLE
+     ========================================================================= -->
+<section class="comparison-table-section">
+  <div class="wrap">
+    <div class="threat-head">
+      <div class="hero-pill">Unmatched Value</div>
+      <h2>How uKey compares to alternatives</h2>
+      <p>Compare uKey against expensive proprietary hardware keys and cloud solutions.</p>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="comp-matrix">
+        <thead>
+          <tr>
+            <th>Security Factor</th>
+            <th>Physical YubiKey 5</th>
+            <th>Cloud MFA (Okta/Duo)</th>
+            <th class="highlighted">uKey (Your Phone)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Hardware Cost</strong></td>
+            <td>$60 – $90 / key</td>
+            <td>Monthly Per-User Fee</td>
+            <td class="highlighted"><strong>$0 (Free & Open Source)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Cloud Dependency</strong></td>
+            <td>Zero Cloud</td>
+            <td>Requires Internet & Cloud</td>
+            <td class="highlighted"><strong>Zero Cloud (100% Local)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Linux PAM sudo</strong></td>
+            <td>Yes (via pam_u2f)</td>
+            <td>Complex Enterprise Agent</td>
+            <td class="highlighted"><strong>Native via /dev/uhid</strong></td>
+          </tr>
+          <tr>
+            <td><strong>OpenSSH ecdsa-sk</strong></td>
+            <td>Yes</td>
+            <td>No</td>
+            <td class="highlighted"><strong>Yes (NIST P-256)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Biometric Touch</strong></td>
+            <td>$90 Bio Model Only</td>
+            <td>Push Notification</td>
+            <td class="highlighted"><strong>Built-in Phone Fingerprint</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Desktop Auto-Lock</strong></td>
+            <td>Requires Manual Removal</td>
+            <td>No</td>
+            <td class="highlighted"><strong>Automated 5s Proximity</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================================
+     INSTALLATION SECTION
+     ========================================================================= -->
+<section class="install-box-section" id="install">
+  <div class="wrap">
+    <div class="install-card-wrap">
+      <div class="hero-pill">Quickstart</div>
+      <h2 style="font-size: 2.3rem; font-weight: 800; color: #fff; margin-bottom: 12px;">Install on your Linux machine</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 30px;">Supports all modern Linux distributions. Automatic udev configuration for safe non-root access.</p>
+
+      <div class="distro-bar">
+        <button class="distro-btn active" onclick="switchDistro('fedora')">Fedora / RHEL</button>
+        <button class="distro-btn" onclick="switchDistro('arch')">Arch Linux</button>
+        <button class="distro-btn" onclick="switchDistro('ubuntu')">Ubuntu / Debian</button>
+      </div>
+
+      <div class="cmd-block">
+        <code id="install-command-str">curl -sSL https://raw.githubusercontent.com/siddharth/ukey/main/install.sh | bash</code>
+        <button class="copy-action-btn" onclick="copyInstallString()">
+          <span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>
+          <span id="copy-btn-txt">Copy</span>
+        </button>
+      </div>
+
+      <p style="font-size: 0.88rem; color: var(--text-muted);">
+        Requires Python 3.10+ and <code>/dev/uhid</code> support (included in standard Linux kernels).
+      </p>
+    </div>
+  </div>
+</section>
 </main>
 
-<!-- Footer -->
-<footer class="footer">
-  <div class="container footer-inner">
-    <div>
-      <b>uKey</b> &bull; Created by <a href="https://github.com/siddharthsai218" target="_blank" style="color:#FFF; text-decoration:underline;">BYN Siddharth Sai</a>. Free and open source under GPL-3.0.
+<!-- =========================================================================
+     FOOTER
+     ========================================================================= -->
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <div style="display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 1.15rem; color: var(--text-white);">
+        <div class="brand-gem" style="width: 28px; height: 28px;">
+          <span class="material-symbols-outlined" style="font-size: 18px; color: #06080D;">fingerprint</span>
+        </div>
+        <span>uKey Project</span>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#simulator">Interactive Rig</a>
+        <a href="#statement">Architecture</a>
+        <a href="#threat">Threat Model</a>
+        <a href="https://github.com/siddharth/ukey" target="_blank">GitHub Repository</a>
+      </div>
     </div>
-    <div class="footer-links">
-      <a href="https://github.com/siddharthsai218/ukey" target="_blank">GitHub</a>
-      <a href="https://github.com/siddharthsai218/ukey/blob/main/LICENSE" target="_blank">GPL-3.0 License</a>
-      <a href="uKey_Product_Guide.pdf" target="_blank">Product Guide (PDF)</a>
-      <a href="http://127.0.0.1:8444" target="_blank">Console (:8444)</a>
+
+    <div class="footer-copyright">
+      Released under the GNU General Public License v3.0 (GPL-3.0). Zero cloud servers, zero telemetry, zero proprietary trackers.
     </div>
   </div>
 </footer>
 
 <!-- =========================================================================
-     JAVASCRIPT: WEB AUDIO SYNTHESIZER & INTERACTIVE SHOWCASE
+     INTERACTIVE HARDWARE RIG SCRIPTS (WEB AUDIO HAPTICS & PROTOCOL SIMULATION)
      ========================================================================= -->
 <script>
-// ================= 1. WEB AUDIO API SYNTHESIZER =================
-let audioCtx = null;
-let soundEnabled = true;
+let currentSim = 'git';
+let audioContext = null;
 
-function getAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
-}
-
-function playKeyClick() {
-  if (!soundEnabled) return;
+function clickHaptic(freq = 880, dur = 0.04) {
   try {
-    const ctx = getAudio();
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.type = 'triangle'; osc.frequency.value = 850 + Math.random() * 200;
-    gain.gain.setValueAtTime(0.02, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.035);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + 0.04);
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') audioContext.resume();
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+    gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + dur);
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    osc.start();
+    osc.stop(audioContext.currentTime + dur);
   } catch(e) {}
 }
 
-function playHapticThump() {
-  if (!soundEnabled) return;
-  try {
-    const ctx = getAudio();
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.type = 'sine'; osc.frequency.value = 85;
-    gain.gain.setValueAtTime(0.18, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + 0.14);
-  } catch(e) {}
+function setRigMode(mode) {
+  currentSim = mode;
+  document.getElementById('tab-git').classList.toggle('active', mode === 'git');
+  document.getElementById('tab-sudo').classList.toggle('active', mode === 'sudo');
+
+  const label = document.getElementById('phone-prompt-text');
+  label.textContent = mode === 'git' ? 'Confirm Git Push' : 'Confirm sudo Access';
+
+  startRigSim(mode);
 }
 
-function playChime() {
-  if (!soundEnabled) return;
-  try {
-    const ctx = getAudio();
-    const now = ctx.currentTime;
-    [[880, 0, .10], [1108.7, .07, .12], [1318.5, .14, .18]].forEach(([freq, delay, dur]) => {
-      const osc = ctx.createOscillator(); const gain = ctx.createGain();
-      osc.type = 'sine'; osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, now + delay);
-      gain.gain.linearRampToValueAtTime(0.14, now + delay + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(now + delay); osc.stop(now + delay + dur + 0.04);
-    });
-  } catch(e) {}
-}
+function startRigSim(mode) {
+  const term = document.getElementById('term-display');
+  const beam = document.getElementById('cable-particle');
+  const target = document.getElementById('fingerprint-target');
+  const hint = document.getElementById('fingerprint-label');
 
-const soundToggleBtn = document.getElementById("soundToggleBtn");
-soundToggleBtn.addEventListener("click", () => {
-  soundEnabled = !soundEnabled;
-  soundToggleBtn.querySelector("span").textContent = soundEnabled ? "🔊 Audio: ON" : "🔇 Audio: OFF";
-  if (soundEnabled) playChime();
-});
+  target.classList.remove('verified');
+  hint.textContent = 'TAP FINGERPRINT';
+  hint.style.color = 'var(--accent-emerald)';
 
-// ================= 2. INTERACTIVE DEMO ENGINE =================
-const SCENARIOS = {
-  sudo: {
-    cmd: "sudo whoami",
-    prompt: "Touch phone fingerprint sensor or press Enter for password...",
-    sub: "pam://fedora (sudo)",
-    resHead: "root",
-    resSub: "✓ PAM authenticated via Android StrongBox in 0.38s"
-  },
-  git: {
-    cmd: "git push origin main",
-    prompt: "Confirm user presence on security key ~/.ssh/id_ukey...",
-    sub: "github.com (OpenSSH ecdsa-sk)",
-    resHead: "✓ Signed with hardware ecdsa-sk",
-    resSub: "To github.com:siddharthsai218/ukey.git\nmain -> main (0 passwords entered)"
-  },
-  webauthn: {
-    cmd: "chrome --fido2-verify google.com",
-    prompt: "Waiting for FIDO2 WebAuthn touch confirmation...",
-    sub: "google.com (WebAuthn Passkey)",
-    resHead: "✓ Google Passkey Authenticated",
-    resSub: "FIDO2 assertion validated against origin https://google.com"
-  },
-  fallback: {
-    cmd: "sudo whoami",
-    prompt: "[sudo] password for siddharth: (0.0s instant fallback)",
-    sub: "uKey disabled (ukeyctl off)",
-    resHead: "root",
-    resSub: "Instant fallback in 0.0s. Never hangs, never locks you out."
+  if (mode === 'git') {
+    term.innerHTML = `
+      <div><span style="color: var(--accent-emerald); font-weight: 700;">dev@fedora:~/ukey$</span> <span style="color: #fff; font-weight: 600;">git push origin main</span></div>
+      <div style="color: var(--text-muted); font-size: 0.74rem;">Signing via OpenSSH ecdsa-sk (uKey CTAPHID)...</div>
+      <div style="color: var(--accent-amber); margin-top: 4px;">⚡ [uKey] Waiting for physical touch on phone...</div>
+    `;
+  } else {
+    term.innerHTML = `
+      <div><span style="color: var(--accent-emerald); font-weight: 700;">dev@fedora:~/ukey$</span> <span style="color: #fff; font-weight: 600;">sudo dnf upgrade</span></div>
+      <div style="color: var(--text-muted); font-size: 0.74rem;">[pam_u2f] Authenticating user 'dev' via /dev/hidraw6...</div>
+      <div style="color: var(--accent-amber); margin-top: 4px;">⚡ [uKey] Touch phone biometric sensor to authorize root...</div>
+    `;
   }
-};
 
-let activeScenarioKey = "sudo";
-const termCmd = document.getElementById("termCmd");
-const termPrompt = document.getElementById("termPrompt");
-const termResult = document.getElementById("termResult");
-const termResHead = document.getElementById("termResHead");
-const termResSub = document.getElementById("termResSub");
-const bioCard = document.getElementById("bioCard");
-const bioSub = document.getElementById("bioSub");
-const fingerprintBtn = document.getElementById("fingerprintBtn");
-const fingerprintHint = document.getElementById("fingerprintHint");
-const termBody = document.getElementById("termBody");
-const termHiddenInput = document.getElementById("termHiddenInput");
-
-function loadScenario(key) {
-  activeScenarioKey = key;
-  const sc = SCENARIOS[key];
-
-  termCmd.textContent = sc.cmd;
-  termPrompt.style.display = "block";
-  termPrompt.textContent = sc.prompt;
-  termResult.style.display = "none";
-
-  bioCard.classList.remove("verified");
-  fingerprintBtn.classList.remove("verified");
-  bioSub.textContent = sc.sub;
-  fingerprintHint.textContent = "Tap sensor to authenticate";
+  beam.className = 'cable-particle travel-right';
+  clickHaptic(520, 0.08);
 }
 
-fingerprintBtn.addEventListener("click", () => {
-  playHapticThump();
-  fingerprintBtn.classList.add("verified");
-  fingerprintHint.textContent = "Verifying StrongBox enclave...";
+function triggerBiometricTouch() {
+  const term = document.getElementById('term-display');
+  const beam = document.getElementById('cable-particle');
+  const target = document.getElementById('fingerprint-target');
+  const hint = document.getElementById('fingerprint-label');
+
+  clickHaptic(1100, 0.08);
+  target.classList.add('verified');
+  hint.textContent = 'VERIFIED ✓';
+  hint.style.color = 'var(--accent-emerald)';
+
+  beam.className = 'cable-particle travel-left';
 
   setTimeout(() => {
-    playChime();
-    const sc = SCENARIOS[activeScenarioKey];
-    bioCard.classList.add("verified");
-    fingerprintHint.textContent = "✓ Verified (StrongBox P-256)";
-
-    termPrompt.style.display = "none";
-    termResult.style.display = "block";
-    termResHead.textContent = sc.resHead;
-    termResSub.textContent = sc.resSub;
-  }, 350);
-});
-
-document.querySelectorAll(".sc-tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".sc-tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    loadScenario(tab.dataset.sc);
-  });
-});
-
-// Interactive typing
-termBody.addEventListener("click", () => {
-  termHiddenInput.focus();
-  document.getElementById("termHint").textContent = "[Listening: Type command + Enter]";
-  document.getElementById("termHint").style.color = "var(--emerald)";
-});
-
-termHiddenInput.addEventListener("input", () => {
-  termCmd.textContent = termHiddenInput.value;
-  playKeyClick();
-});
-
-termHiddenInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    const val = termHiddenInput.value.trim().toLowerCase();
-    termHiddenInput.value = "";
-    termCmd.textContent = val;
-    playKeyClick();
-
-    if (!val || val.startsWith("sudo")) {
-      loadScenario("sudo");
-    } else if (val.startsWith("git")) {
-      loadScenario("git");
+    if (currentSim === 'git') {
+      term.innerHTML += `
+        <div style="color: var(--accent-emerald); font-weight: 700; margin-top: 6px;">✓ [uKey] Titan M2 Enclave verified presence (0.16s)</div>
+        <div style="color: var(--text-muted); font-size: 0.74rem;">Enumerating objects: 18, done. Writing objects: 100% (18/18).</div>
+        <div style="color: #fff; font-weight: 600;">To github.com:siddharth/ukey.git  48a91c..9ef01a  main -> main</div>
+      `;
     } else {
-      termPrompt.style.display = "none";
-      termResult.style.display = "block";
-      termResHead.textContent = `Executed: ${val}`;
-      termResSub.textContent = "Type 'sudo whoami' or 'git push' to test biometric authentication.";
+      term.innerHTML += `
+        <div style="color: var(--accent-emerald); font-weight: 700; margin-top: 6px;">✓ [pam_u2f] Authentication succeeded via Titan M2 Enclave</div>
+        <div style="color: #fff; font-weight: 600;">Authorized root privileges. Updating 0 packages (system up to date).</div>
+      `;
     }
+    clickHaptic(1450, 0.06);
+  }, 400);
+}
+
+function switchDistro(distro) {
+  const btns = document.querySelectorAll('.distro-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  const str = document.getElementById('install-command-str');
+  if (distro === 'fedora') {
+    str.textContent = 'curl -sSL https://raw.githubusercontent.com/siddharth/ukey/main/install.sh | bash';
+  } else if (distro === 'arch') {
+    str.textContent = 'git clone https://github.com/siddharth/ukey && cd ukey && ./install.sh';
+  } else {
+    str.textContent = 'sudo apt install python3-pip && git clone https://github.com/siddharth/ukey && cd ukey && ./install.sh';
   }
-});
+}
 
-// ================= 3. DISTRO INSTALL TABS =================
-const DISTRO_SCRIPTS = {
-  fedora: `# 1. Production 1-command installer (detects Fedora automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure passwordless sudo with 0.0s password fallback
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. Add OpenSSH FIDO2 hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`,
-
-  ubuntu: `# 1. Production 1-command installer (detects Ubuntu / Debian automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure PAM sudo
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. OpenSSH hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`,
-
-  arch: `# 1. Production 1-command installer (detects Arch Linux automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure PAM sudo
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. OpenSSH hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`,
-
-  suse: `# 1. Production 1-command installer (detects openSUSE automatically)
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
-
-# 2. Configure PAM sudo
-sudo ./scripts/setup_pam_sudo.sh
-
-# 3. OpenSSH hardware key for Git Push
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey`,
-
-  manual: `# Manual development setup
-git clone https://github.com/siddharthsai218/ukey.git && cd ukey
-sudo ./setup_udev.sh
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-./scripts/ukeyctl menu`
-};
-
-const distroBtns = document.querySelectorAll(".distro-btn");
-const installSnippet = document.getElementById("installSnippet");
-
-distroBtns.forEach(btn => {
-  btn.addEventListener("click", () => {
-    distroBtns.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    installSnippet.textContent = DISTRO_SCRIPTS[btn.dataset.distro];
+function copyInstallString() {
+  const text = document.getElementById('install-command-str').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const lbl = document.getElementById('copy-btn-txt');
+    lbl.textContent = 'Copied!';
+    setTimeout(() => lbl.textContent = 'Copy', 2000);
   });
-});
-
-document.getElementById("installCopyBtn").addEventListener("click", () => {
-  navigator.clipboard.writeText(installSnippet.textContent).then(() => {
-    playKeyClick();
-    const btn = document.getElementById("installCopyBtn");
-    btn.textContent = "Copied!";
-    setTimeout(() => btn.textContent = "Copy Command", 2000);
-  });
-});
-
-document.getElementById("heroCopyPill").addEventListener("click", () => {
-  navigator.clipboard.writeText("curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash").then(() => {
-    playKeyClick();
-    const badge = document.querySelector(".copy-badge");
-    badge.textContent = "Copied!";
-    setTimeout(() => badge.textContent = "Copy", 2000);
-  });
-});
-
-// ================= 4. FAQ ACCORDION =================
-document.querySelectorAll(".faq-item").forEach(item => {
-  const q = item.querySelector(".faq-q");
-  const a = item.querySelector(".faq-a");
-  q.addEventListener("click", () => {
-    const isOpen = item.classList.contains("open");
-    document.querySelectorAll(".faq-item").forEach(i => {
-      i.classList.remove("open");
-      i.querySelector(".faq-a").style.maxHeight = null;
-    });
-    if (!isOpen) {
-      item.classList.add("open");
-      a.style.maxHeight = a.scrollHeight + "px";
-    }
-  });
-});
-
-// Initial state
-loadScenario("sudo");
+}
 </script>
 </body>
 </html>

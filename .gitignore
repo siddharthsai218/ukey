@@ -27,4 +27,6 @@ android/app/*.iml
 .agents/
 skills-lock.json
 .planning/
+.taste-skill/
 *.tmp
+docs/ukey-showcase.html
