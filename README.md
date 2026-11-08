@@ -118,9 +118,6 @@ Launches an interactive terminal dashboard allowing you to inspect daemon status
 
 uKey includes an embedded local web dashboard binding strictly to `http://127.0.0.1:8444`:
 
-<p align="center">
-  <img src="assets/logo.svg" width="600" alt="Web Dashboard Preview">
-</p>
 
 - **Master Authentication Switch**: 1-click toggle to temporarily bypass biometric interception.
 - **Wi-Fi Pairing PIN**: Generates 6-digit one-time PINs for pairing new phones over local Wi-Fi.
