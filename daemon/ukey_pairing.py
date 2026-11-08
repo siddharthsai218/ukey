@@ -54,6 +54,8 @@ class PairingManager:
 
         self._pin: str = ""
         self._pin_created_at: float = 0.0
+        self._failed_pin_attempts: int = 0
+        self._pin_lockout_until: float = 0.0
         self._paired_devices: dict[str, PairedDevice] = {}  # token_hash -> PairedDevice
         self.load()
 
@@ -109,11 +111,14 @@ class PairingManager:
 
     def get_or_create_pin(self, force_new: bool = False) -> str:
         """Return the active 6-digit pairing PIN, generating one if needed."""
-        # PIN expires after 15 minutes unless reused
         now = time.time()
+        if now < self._pin_lockout_until and not force_new:
+            return ""
         if force_new or not self._pin or (now - self._pin_created_at > 900):
             self._pin = f"{secrets.randbelow(900000) + 100000:06d}"
             self._pin_created_at = now
+            self._failed_pin_attempts = 0
+            self._pin_lockout_until = 0.0
             self.save()
             LOG.info("Generated new 6-digit pairing PIN: %s", self._pin)
         return self._pin
@@ -124,10 +129,27 @@ class PairingManager:
 
     def pair_with_pin(self, pin: str, device_name: str = "Android Device") -> Optional[str]:
         """Verify the 6-digit PIN and issue a permanent 256-bit device token."""
+        now = time.time()
+        if now < self._pin_lockout_until:
+            LOG.warning("Pairing attempt rejected: PIN entry temporarily locked out due to failed attempts")
+            return None
+
         clean_pin = pin.strip().replace(" ", "")
         if not self._pin or clean_pin != self._pin:
-            LOG.warning("Pairing attempt failed: invalid PIN provided")
+            self._failed_pin_attempts += 1
+            if self._failed_pin_attempts >= 5:
+                self._pin_lockout_until = now + 60.0  # Lock out for 60 seconds
+                self._pin = ""
+                self._pin_created_at = 0.0
+                self.save()
+                LOG.warning("5 consecutive invalid PIN attempts! PIN invalidated and locked out for 60s")
+            else:
+                LOG.warning("Pairing attempt failed: invalid PIN provided (attempt %d/5)", self._failed_pin_attempts)
             return None
+
+        # Reset failed attempts on success
+        self._failed_pin_attempts = 0
+        self._pin_lockout_until = 0.0
 
         # Expire the PIN once used for security
         self._pin = ""

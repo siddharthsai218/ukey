@@ -51,6 +51,16 @@ class TestPairingManager(unittest.TestCase):
         result = self.manager.pair_with_pin("000000", device_name="Rogue Device")
         self.assertIsNone(result)
 
+    def test_pin_brute_force_lockout(self) -> None:
+        valid_pin = self.manager.get_or_create_pin()
+        # 4 failed attempts should not lock out
+        for _ in range(4):
+            self.assertIsNone(self.manager.pair_with_pin("999999", device_name="Attacker"))
+        # 5th failed attempt triggers lockout and invalidates PIN
+        self.assertIsNone(self.manager.pair_with_pin("999999", device_name="Attacker"))
+        # Even the original valid PIN must now be rejected during lockout
+        self.assertIsNone(self.manager.pair_with_pin(valid_pin, device_name="Legit Device"))
+
     def test_unknown_token_rejection(self) -> None:
         self.assertFalse(self.manager.verify_token("deadbeef" * 8))
         self.assertFalse(self.manager.verify_token(""))

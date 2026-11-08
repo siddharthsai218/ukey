@@ -353,6 +353,28 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_error(500, "Server not initialized")
             return
 
+        # CSRF Protection: Reject cross-site requests to settings/action endpoints
+        sec_fetch_site = self.headers.get("Sec-Fetch-Site", "")
+        if sec_fetch_site and sec_fetch_site not in ("same-origin", "none"):
+            LOG.warning("Rejected cross-site POST request (Sec-Fetch-Site: %s)", sec_fetch_site)
+            self.send_error(403, "Forbidden: Cross-site request rejected")
+            return
+
+        origin = self.headers.get("Origin", "")
+        referer = self.headers.get("Referer", "")
+        allowed = (
+            f"http://127.0.0.1:{server.port}",
+            f"http://localhost:{server.port}",
+        )
+        if origin and not any(origin.startswith(a) for a in allowed):
+            LOG.warning("Rejected CSRF POST with invalid Origin: %s", origin)
+            self.send_error(403, "Forbidden: Invalid origin")
+            return
+        if referer and not any(referer.startswith(a) for a in allowed):
+            LOG.warning("Rejected CSRF POST with invalid Referer: %s", referer)
+            self.send_error(403, "Forbidden: Invalid referer")
+            return
+
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
         try:

@@ -441,6 +441,9 @@ class SignerBridge:
             if not data:
                 self._drop_conn(conn)
                 return
+            # If unread data is pending for the request handler, sleep briefly
+            # to avoid a 100% CPU busy-spin while MSG_PEEK sees the buffered byte.
+            time.sleep(0.1)
 
     def _drop_conn(self, conn: Optional[socket.socket] = None) -> None:
         with self._conn_cond:

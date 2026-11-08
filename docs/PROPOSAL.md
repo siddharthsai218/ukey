@@ -29,6 +29,11 @@ How it works, in plain language:
 • The phone signs inside Android's secure hardware, behind a fingerprint check.
 • The two sides talk over a local socket.
 
+Under the hood, a small Linux daemon presents the phone as a virtual USB
+security key, and the phone signs inside Android's secure hardware after a
+fingerprint check. The talk will unpack how that works.
+
+
 The core authenticator works today. The integration roadmap is about turning it into something you can use every day:
 • Websites: use the phone as a security key for WebAuthn/2FA.
 • Git and SSH: sign commits and authenticate with OpenSSH ecdsa-sk.

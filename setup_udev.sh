@@ -24,11 +24,12 @@ echo "uhid" > /etc/modules-load.d/uhid.conf 2>/dev/null || true
 cat > "${RULES_FILE}" <<'EOF'
 # uKey virtual FIDO2 authenticator
 # /dev/uhid is the control channel used by the daemon.
-KERNEL=="uhid", SUBSYSTEM=="misc", TAG+="uaccess", MODE="0666"
+# Uses systemd-logind uaccess ACLs instead of world-writable permissions.
+KERNEL=="uhid", SUBSYSTEM=="misc", TAG+="uaccess", MODE="0660"
 
 # hidraw node for the virtual key
-KERNEL=="hidraw*", ATTRS{name}=="uKey FIDO2 Authenticator", TAG+="uaccess", MODE="0666"
-KERNEL=="hidraw*", ATTRS{modalias}=="hid:b0003g0001v00001209p00000001", TAG+="uaccess", MODE="0666"
+KERNEL=="hidraw*", ATTRS{name}=="uKey FIDO2 Authenticator", TAG+="uaccess", MODE="0660"
+KERNEL=="hidraw*", ATTRS{modalias}=="hid:b0003g0001v00001209p00000001", TAG+="uaccess", MODE="0660"
 EOF
 
 chmod 0644 "${RULES_FILE}"
