@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/ukey-logo-black.png">
-  <img src="assets/ukey-logo.png" alt="uKey" width="360">
+  <img src="assets/ukey-logo.png" alt="ukey" width="320">
 </picture>
 
 ### Your Android phone, as a real FIDO2 hardware security key for Linux
