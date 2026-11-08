@@ -166,7 +166,7 @@ uKey includes an embedded local web dashboard binding strictly to `http://127.0.
 
 ## Comparison
 
-| Feature | **uKey** (This Project) | **Play Store Apps** (e.g. `mahirsn/passkey`) | **YubiKey 5 Series** | **Google / Apple Passkeys** |
+| Feature | **uKey** (This Project) | **Generic Mobile Apps** (BLE Passkeys) | **YubiKey 5 Series** | **Google / Apple Passkeys** |
 |:---|:---:|:---:|:---:|:---:|
 | **Primary Target** | **Linux Workstations** | Windows / macOS | All Platforms | Cloud Ecosystems |
 | **Key Enclave** | **Android StrongBox (EAL5+)** | Software App Storage | Secure Element Silicon | OS Secure Enclave / TPM |
