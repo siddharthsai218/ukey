@@ -1,26 +1,27 @@
-<p align="center">
-  <a href="https://siddharthsai218.github.io/ukey"><img src="assets/logo.svg" alt="uKey Logo" width="800"></a>
-</p>
+<div align="center">
 
-<p align="center">
-  <em>Native Touch ID for Linux using your Android phone’s hardware biometric enclave.</em>
-</p>
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="assets/ukey-logo-black.png">
+  <img src="assets/ukey-logo.png" alt="uKey" width="360">
+</picture>
+
+### Your Android phone, as a real FIDO2 hardware security key for Linux
+
+Native, zero-cloud, hardware-isolated biometric authentication. Touch your phone’s sensor to sign.
+
+<br />
 
 <p align="center">
   <a href="https://docs.kernel.org/hid/uhid.html"><img src="https://img.shields.io/badge/Kernel-/dev/uhid-22C55E.svg?style=flat-square&logo=linux&logoColor=white" alt="Linux Kernel /dev/uhid"></a>
   <a href="https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setIsStrongBoxBacked(boolean)"><img src="https://img.shields.io/badge/Hardware-Android%20StrongBox%20(EAL5+)-10B981.svg?style=flat-square&logo=android&logoColor=white" alt="Android StrongBox"></a>
   <a href="https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html"><img src="https://img.shields.io/badge/Protocol-FIDO2%20%2F%20CTAP2-06B6D4.svg?style=flat-square" alt="FIDO2 / CTAP2"></a>
-  <a href="https://github.com/siddharthsai218/ukey/actions"><img src="https://img.shields.io/badge/Tests-38%20Passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
+  <a href="https://github.com/siddharthsai218/ukey/actions"><img src="https://img.shields.io/badge/Tests-39%20Passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square" alt="License: GPLv3"></a>
 </p>
 
-<p align="center">
-  <a href="https://siddharthsai218.github.io/ukey"><b>Website & Live Simulator</b></a> •
-  <a href="#quickstart-1-command-installer"><b>Quickstart</b></a> •
-  <a href="#three-native-workflows"><b>Workflows</b></a> •
-  <a href="#architecture"><b>Architecture</b></a> •
-  <a href="#comparison"><b>Comparison</b></a>
-</p>
+**[Website & Live Simulator](https://siddharthsai218.github.io/ukey)** · **[Quickstart](#quickstart-1-command-installer)** · **[Workflows](#three-native-workflows)** · **[Architecture](#architecture)** · **[Comparison](#comparison)**
+
+</div>
 
 ---
 
