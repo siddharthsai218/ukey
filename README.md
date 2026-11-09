@@ -15,11 +15,11 @@ A working prototype: a Python daemon creates a USB-style HID authenticator throu
   <a href="https://docs.kernel.org/hid/uhid.html"><img src="https://img.shields.io/badge/Kernel-/dev/uhid-22C55E.svg?style=flat-square&logo=linux&logoColor=white" alt="Linux Kernel /dev/uhid"></a>
   <a href="https://developer.android.com/privacy-and-security/keystore"><img src="https://img.shields.io/badge/Android-AndroidKeyStore-10B981.svg?style=flat-square&logo=android&logoColor=white" alt="AndroidKeyStore"></a>
   <a href="https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html"><img src="https://img.shields.io/badge/Protocol-FIDO2%20%2F%20CTAP2-06B6D4.svg?style=flat-square" alt="FIDO2 / CTAP2"></a>
-  <a href="https://github.com/ukey-sh/ukey/actions"><img src="https://img.shields.io/badge/Tests-39%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
+  <a href="https://github.com/siddharthsai218/ukey/actions"><img src="https://img.shields.io/badge/Tests-39%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square" alt="License: GPLv3"></a>
 </p>
 
-**[Website](https://ukey.sh)** · **[Status](docs/STATUS.md)** · **[Threat model](docs/THREAT_MODEL.md)** · **[Quickstart](#quickstart)** · **[Architecture](#architecture)**
+**[Website](https://siddharthsai218.github.io/ukey/)** · **[Status](docs/STATUS.md)** · **[Threat model](docs/THREAT_MODEL.md)** · **[Quickstart](#quickstart)** · **[Architecture](#architecture)**
 
 </div>
 
@@ -61,7 +61,7 @@ A working prototype: a Python daemon creates a USB-style HID authenticator throu
 The verified path is a Fedora machine with `/dev/uhid`, Python 3.10–3.12, and libfido2 installed.
 
 ```bash
-git clone https://github.com/ukey-sh/ukey.git
+git clone https://github.com/siddharthsai218/ukey.git
 cd ukey
 ./install.sh
 ```

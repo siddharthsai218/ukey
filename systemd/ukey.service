@@ -1,6 +1,6 @@
 [Unit]
 Description=uKey virtual FIDO2 authenticator
-Documentation=https://github.com/ukey-sh/ukey
+Documentation=https://github.com/siddharthsai218/ukey
 After=network.target
 
 [Service]
