@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# uKey Universal User Installer (Linux)
-# Supports: Fedora, Ubuntu, Debian, Arch Linux, openSUSE
+# uKey User Installer (Linux)
+# Fedora 43 is the tested path. Other distro branches are best-effort.
 # Installs udev permissions, validation tools, Python venv, and a user service.
 # Safe defaults: loopback signer bridge, auto-lock disabled.
 # ==============================================================================
@@ -22,7 +22,7 @@ CONFIG_PATH="${UKEY_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/ukey/config.json}"
 export UKEY_CONFIG="$CONFIG_PATH"
 
 echo -e "${CYAN}========================================================================${NC}"
-echo -e "${BOLD}${CYAN}   uKey Universal Linux Installer${NC}"
+echo -e "${BOLD}${CYAN}   uKey User Installer (Fedora-tested)${NC}"
 echo -e "${CYAN}   udev permissions + virtual FIDO2 daemon + systemd user service${NC}"
 echo -e "${CYAN}========================================================================${NC}\n"
 
@@ -136,7 +136,7 @@ echo -e "• Terminal UI: ${CYAN}ukeyctl menu${NC}"
 echo -e "• Safe defaults: Auto-lock ${BOLD}disabled${NC}, loopback ${CYAN}127.0.0.1:8443${NC}"
 echo -e "• Opt in to Wi-Fi: ${CYAN}ukeyctl config set wireless true${NC}"
 echo -e "• Opt in to auto-lock: ${CYAN}ukeyctl config set auto_lock true${NC}"
-echo -e "• Setup passwordless sudo: ${CYAN}sudo ./scripts/setup_pam_sudo.sh${NC}"
-echo -e "• Setup git push signing: ${CYAN}ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey${NC}"
+echo -e "• Roadmap, not working: PAM/CTAP1 (CTAPHID_MSG returns 6d 00)"
+echo -e "• Roadmap, untested: SSH ${CYAN}ecdsa-sk${NC} end-to-end"
 echo -e "• Apply changes: ${CYAN}systemctl --user restart ukey${NC}"
 echo -e "• Status: ${CYAN}ukeyctl status${NC}\n"
