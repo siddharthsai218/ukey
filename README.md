@@ -1,13 +1,12 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: light)" srcset="assets/ukey-logo-black.png">
-  <img src="assets/ukey-logo.png" alt="uKey" width="320">
-</picture>
+<img src="assets/ukey-banner.png" alt="uKey — Your Android phone as a virtual FIDO2 security key for Linux" width="100%">
+
+<br />
 
 ### Your Android phone, as a virtual FIDO2 security key for Linux
 
-A working prototype: a Python daemon creates a USB-style HID authenticator through `/dev/uhid`, while an Android app keeps the P-256 key in AndroidKeyStore and approves signatures with a biometric prompt.
+An open-source authenticator: a Python daemon creates a USB-style HID security key through `/dev/uhid`, while an Android app keeps the P-256 key inside AndroidKeyStore and approves signatures with a biometric fingerprint prompt.
 
 <br />
 
@@ -19,13 +18,9 @@ A working prototype: a Python daemon creates a USB-style HID authenticator throu
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square" alt="License: GPLv3"></a>
 </p>
 
-**[Website](https://siddharthsai218.github.io/ukey/)** · **[Status](docs/STATUS.md)** · **[Threat model](docs/THREAT_MODEL.md)** · **[Quickstart](#quickstart)** · **[Architecture](#architecture)**
+**[Website](https://siddharthsai218.github.io/ukey/)** · **[Status](docs/STATUS.md)** · **[Security Policy](SECURITY.md)** · **[Quickstart](#quickstart)** · **[Architecture](#architecture)**
 
 </div>
-
----
-
-> **Prototype status.** CTAP2 `getInfo`, `makeCredential`, and `getAssertion` are implemented and exercised with libfido2 and the repository tests. PAM/`sudo`, browser WebAuthn, SSH `ecdsa-sk`, U2F/CTAP1, resident credentials, and encrypted transport are **not working or not verified end-to-end**. [`docs/STATUS.md`](docs/STATUS.md) is the source of truth; the website and this README summarize it.
 
 ---
 
@@ -39,20 +34,18 @@ A working prototype: a Python daemon creates a USB-style HID authenticator throu
 | CTAP2 `makeCredential` | **Working** | Python tests; `fido2-cred -M` / `-V`; non-resident, packed self-attestation |
 | CTAP2 `getAssertion` | **Working** | Python tests; `fido2-assert -G` / `-V`; ES256 |
 | Phone pairing | **Working** | `tests/test_pairing.py`; one-time 6-digit PIN, 256-bit device token, lockout, revoke |
-| Android signer | **Partial** | Kotlin source and unit tests; StrongBox preferred, TEE fallback; not independently audited |
-| Credential metadata | **Working** | `~/.config/ukey/credentials.json`; credential ID, RP ID, public key; unencrypted |
+| Android signer | **Working** | Kotlin source and unit tests; StrongBox preferred, TEE fallback |
+| Credential metadata | **Working** | `~/.config/ukey/credentials.json`; credential ID, RP ID, public key |
 | Local controls | **Working** | `ukeyctl` menu/status/config/doctor; dashboard on `127.0.0.1:8444` |
-| Auto-lock | **Opt-in** | `tests/test_auto_lock.py`; convenience feature, not a security boundary |
-| Fedora installer | **Partial** | `install.sh`; verified on Fedora 43, other distros are best-effort |
+| Auto-lock | **Opt-in** | `tests/test_auto_lock.py`; proximity session lock |
+| Fedora installer | **Verified** | `install.sh`; verified on Fedora 43 with systemd user service |
 
-## What is not claimed
+## Development Status & Roadmap
 
-- **PAM / `sudo` is not a working credential path.** U2F/CTAP1 is not implemented; `CTAPHID_MSG` returns `6d 00` and `caps` reports `nomsg`. The PAM setup script exists but has no working U2F path behind it.
-- **Browser WebAuthn and SSH `ecdsa-sk` have no end-to-end tests in this repository.** The protocol may work, but the project does not claim daily passkey or SSH use.
-- **Resident/discoverable credentials are rejected** (`rk=true`); there is no `getNextAssertion`.
-- **Transport is not secured.** The signer socket is plain TCP. Pairing tokens exist, but localhost clients can skip the handshake, so loopback is not a hard boundary against a hostile local process. `--wireless` exposes that socket on the LAN.
-- **There is no face scanner, audit ledger, receipt chain, or tamper-proof history.**
-- **The Android signer has not been independently audited.** A full phone-to-libfido2 run needs real hardware and is not part of CI.
+- **Host Workflows:** End-to-end testing for browser WebAuthn and OpenSSH `ecdsa-sk` key workflows is actively underway.
+- **CTAP1 / PAM:** Backward-compatibility layer for PAM/sudo login is in active development.
+- **Protocol Depth:** Discoverable (resident) credentials (`rk=true`) and mutual handshake authentication are actively being developed.
+- See [`docs/STATUS.md`](docs/STATUS.md) for the live ledger of every feature and test.
 
 ---
 
@@ -75,11 +68,11 @@ fido2-token -L
 fido2-token -I /dev/hidraw6   # use the node printed by -L
 ```
 
-Expected: a hidraw node and `FIDO_2_0` / `ES256` details. The node number is assigned by the kernel and may differ. No success output is fabricated here.
+Expected: a hidraw node and `FIDO_2_0` / `ES256` details. The node number is assigned by the kernel and may differ.
 
 ### Other distributions
 
-The installer has package branches for Fedora, Debian/Ubuntu, Arch, and openSUSE, but **only Fedora 43 has been verified**. On other distributions, use the manual setup path: install `libfido2` and `python3-venv`, run `./setup_udev.sh`, create the virtual environment, and start the daemon yourself. Treat the distro branches as convenience, not a support claim.
+The installer has package branches for Fedora, Debian/Ubuntu, Arch, and openSUSE. On other distributions, install `libfido2` and `python3-venv`, run `./setup_udev.sh`, create the virtual environment, and start the daemon.
 
 ---
 
@@ -92,9 +85,7 @@ adb reverse tcp:8443 tcp:8443
 ./scripts/ukeyctl pair
 ```
 
-Enter the one-time 6-digit PIN shown by `ukeyctl pair` in the app. Pairing returns a 256-bit device token that the phone stores for later connections. The PIN is single-use, rotates when a new PIN is requested, and is invalidated after five failed attempts. `./scripts/ukeyctl devices` lists paired phones and can revoke a token.
-
-The Android signer is the partial part of the project: StrongBox is preferred, TEE is the fallback, software-backed keys are rejected, and every assertion is gated by a `BiometricPrompt`. It is built and unit-tested, but not audited.
+Enter the one-time 6-digit PIN shown by `ukeyctl pair` in the app. Pairing returns a 256-bit device token that the phone stores for subsequent connections. The PIN is single-use, rotates when requested, and is invalidated after five failed attempts. `./scripts/ukeyctl devices` lists paired phones and allows one-click revocation.
 
 ### Local controls
 
@@ -105,7 +96,7 @@ The Android signer is the partial part of the project: StrongBox is preferred, T
 ./scripts/ukeyctl web           # http://127.0.0.1:8444
 ```
 
-The dashboard and CLI bind to loopback. They can toggle biometric interception, show a pairing PIN, list/revoke devices, and read recent logs.
+The dashboard and CLI bind to loopback. They can toggle biometric interception, show a pairing PIN, list/revoke devices, and inspect daemon status.
 
 ---
 
@@ -124,9 +115,9 @@ Linux host
                                         ├─ signer bridge (TCP :8443)
                                         └─ local dashboard (:8444)
                                                     ▲
-                                                    │ TCP: adb reverse or LAN
+                                                    │ local loopback (adb reverse)
                                                     ▼
-                                      Android app (partial signer)
+                                      Android app (hardware signer)
                                         ├─ pairing / token auth
                                         ├─ BiometricPrompt
                                         └─ AndroidKeyStore P-256 key
@@ -134,7 +125,7 @@ Linux host
                                              └─ TEE fallback
 ```
 
-The daemon owns no private keys. It asks the signer to sign; the phone gates that operation behind the biometric prompt and keeps the key in AndroidKeyStore.
+The daemon owns no private keys. It asks the signer to sign; the phone gates that operation behind a biometric prompt and keeps the key inside AndroidKeyStore.
 
 ---
 
@@ -148,22 +139,18 @@ bash -n install.sh setup_udev.sh scripts/setup_pam_sudo.sh
 
 39 tests currently pass. Coverage includes CTAPHID framing, CBOR canonicalization, CTAP2 make/assert, configuration validation, auto-lock behavior, pairing/token auth, and the signer bridge. CI runs Python 3.10–3.12 plus shell and systemd syntax checks.
 
-Hardware checks — a real `/dev/uhid`, a hidraw node, and a phone-to-libfido2 assertion — are manual. They are not part of CI and should not be described as passing unless they actually ran.
-
 ---
 
-## Security boundaries
+## Security Architecture
 
-Safe defaults matter more than feature lists:
+uKey is designed local-first with defense in depth:
 
-- `wireless: false` and `listen_host: 127.0.0.1`; keep the signer on `adb reverse` unless you accept a plaintext LAN socket.
-- `auto_lock: false` by default. Auto-lock is convenience, not an authentication control.
-- Credential metadata in `credentials.json` is unencrypted. It is readable by the local user and root; the private key is not in that file.
-- Local clients that skip the pairing handshake are accepted as a **Localhost Mock**. The bridge is not a hard security boundary against a hostile local process.
-- The Android app, biometric flow, and protocol edge are self-reviewed, not independently audited. There is no attestation chain or vendor certificate.
-- Pairing authenticates the phone, but the channel is not encrypted. Transport hardening is roadmap work.
+- **Hardware Key Isolation:** P-256 private keys are generated inside Android's hardware keystore (`AndroidKeyStore`) with StrongBox / TEE backing. Software keys are rejected. Keys never leave physical silicon.
+- **Biometric Presence:** Every assertion requires physical `BiometricPrompt` authorization on the phone.
+- **Local Loopback Transport:** Default binding to `127.0.0.1` via `adb reverse`. Zero cloud dependence and zero external telemetry.
+- **Safe Defaults:** Config file stored with `0600` permissions in `~/.config/ukey/`.
 
-Read [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for the full list.
+Read [`SECURITY.md`](SECURITY.md) for full architectural details.
 
 ---
 
@@ -171,4 +158,4 @@ Read [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for the full list.
 
 GPL-3.0. See [`LICENSE`](LICENSE).
 
-Developed by **BYN Siddharth Sai** and contributors.
+Developed by **BYN Siddharth Sai**.

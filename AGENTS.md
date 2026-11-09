@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Operating notes for AI agents and contributors working in this repository.
+Operating notes for AI agents working in this repository.
 
 ## What this is
 
@@ -10,7 +10,7 @@ AndroidKeyStore and signs CTAP2 requests. The current scope is CTAP2
 `getInfo` / `makeCredential` / `getAssertion` over USB (via `adb reverse`) or
 TCP.
 
-Read `README.md`, `docs/STATUS.md`, and `docs/THREAT_MODEL.md` before changing
+Read `README.md`, `docs/STATUS.md`, and `SECURITY.md` before changing
 behavior. `docs/STATUS.md` is the source of truth for what works.
 
 ## Repository layout
@@ -24,7 +24,7 @@ android/             Kotlin app; AndroidKeyStore key + biometric prompt
 scripts/ukeyctl      status / config get|set / doctor / logs
 systemd/             portable user-service template
 tests/               test_phase1.py, test_config.py, test_auto_lock.py
-docs/                index.html (public site), STATUS, THREAT_MODEL, design notes
+docs/                index.html (public site), STATUS, design notes
 docs/ai-prompts/     phase-by-phase implementation prompts (not linked publicly)
 install.sh           Fedora-only user installer using safe defaults
 setup_udev.sh        installs the /etc/udev/rules.d/70-ukey.rules permission rule
