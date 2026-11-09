@@ -2,216 +2,173 @@
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/ukey-logo-black.png">
-  <img src="assets/ukey-logo.png" alt="ukey" width="320">
+  <img src="assets/ukey-logo.png" alt="uKey" width="320">
 </picture>
 
-### Your Android phone, as a real FIDO2 hardware security key for Linux
+### Your Android phone, as a virtual FIDO2 security key for Linux
 
-Native, zero-cloud, hardware-isolated biometric authentication. Touch your phone’s sensor to sign.
+A working prototype: a Python daemon creates a USB-style HID authenticator through `/dev/uhid`, while an Android app keeps the P-256 key in AndroidKeyStore and approves signatures with a biometric prompt.
 
 <br />
 
 <p align="center">
   <a href="https://docs.kernel.org/hid/uhid.html"><img src="https://img.shields.io/badge/Kernel-/dev/uhid-22C55E.svg?style=flat-square&logo=linux&logoColor=white" alt="Linux Kernel /dev/uhid"></a>
-  <a href="https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setIsStrongBoxBacked(boolean)"><img src="https://img.shields.io/badge/Hardware-Android%20StrongBox%20(EAL5+)-10B981.svg?style=flat-square&logo=android&logoColor=white" alt="Android StrongBox"></a>
+  <a href="https://developer.android.com/privacy-and-security/keystore"><img src="https://img.shields.io/badge/Android-AndroidKeyStore-10B981.svg?style=flat-square&logo=android&logoColor=white" alt="AndroidKeyStore"></a>
   <a href="https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html"><img src="https://img.shields.io/badge/Protocol-FIDO2%20%2F%20CTAP2-06B6D4.svg?style=flat-square" alt="FIDO2 / CTAP2"></a>
-  <a href="https://github.com/siddharthsai218/ukey/actions"><img src="https://img.shields.io/badge/Tests-39%20Passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
+  <a href="https://github.com/ukey-sh/ukey/actions"><img src="https://img.shields.io/badge/Tests-39%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square" alt="License: GPLv3"></a>
 </p>
 
-**[Website & Live Simulator](https://siddharthsai218.github.io/ukey)** · **[Quickstart](#quickstart-1-command-installer)** · **[Workflows](#three-native-workflows)** · **[Architecture](#architecture)** · **[Comparison](#comparison)**
+**[Website](https://ukey.sh)** · **[Status](docs/STATUS.md)** · **[Threat model](docs/THREAT_MODEL.md)** · **[Quickstart](#quickstart)** · **[Architecture](#architecture)**
 
 </div>
 
 ---
 
-**uKey makes Linux treat your Android phone as a native USB FIDO2 security key.**
-
-The Linux host kernel sees an authentic `/dev/hidraw` USB security token. A lightweight Python daemon implements `/dev/uhid`, CTAPHID framing, and the CTAP2 CBOR protocol. Cryptographic private keys reside entirely inside Android’s dedicated hardware security module (**Google Titan M** or **Samsung Knox StrongBox** with EAL5+ isolation), and every authentication assertion requires a physical fingerprint touch on the phone.
+> **Prototype status.** CTAP2 `getInfo`, `makeCredential`, and `getAssertion` are implemented and exercised with libfido2 and the repository tests. PAM/`sudo`, browser WebAuthn, SSH `ecdsa-sk`, U2F/CTAP1, resident credentials, and encrypted transport are **not working or not verified end-to-end**. [`docs/STATUS.md`](docs/STATUS.md) is the source of truth; the website and this README summarize it.
 
 ---
 
-## Key Features
+## What works today
 
-- **⚡ Zero Passwords**: Authenticate Linux `sudo`, GDM login, and Polkit authorization dialogs in **0.38 seconds** with a tap of your phone’s fingerprint sensor.
-- **🛡️ Hardware-Enclave Bound**: ECDSA P-256 private keys are generated directly inside Android's hardware security silicon. Keys never touch RAM, never touch disk, and cannot be exported even on a rooted device.
-- **🐧 Native Linux Kernel Subsystem**: Emulates an authentic USB FIDO2 token via `/dev/uhid`. To Linux PAM, OpenSSH, Google Chrome, and Firefox, your phone behaves identically to a physical $60 YubiKey.
-- **⏱️ 0.0s Password Fallback**: Safe PAM `sufficient` design. If your phone is unplugged, powered off, or disconnected, PAM yields to the standard Linux password prompt immediately in **0.0 seconds**. Never hangs, never locks you out.
-- **🌐 Universal Multi-Distro Support**: 1-command installer with out-of-the-box support for **Fedora**, **Ubuntu / Debian**, **Arch Linux**, and **openSUSE**.
-- **🔒 100% Peer-to-Peer & Zero Cloud**: Runs over low-latency physical USB (`adb reverse` loopback at `<3ms`) or local Wi-Fi LAN with 256-bit token authentication. Zero external servers, zero telemetry, zero third-party accounts.
+| Area | State | Evidence |
+|---|---|---|
+| UHID virtual device | **Working** | `fido2-token -L` / `-I` show a `FIDO_2_0` token on a `/dev/hidraw` node |
+| CTAPHID framing | **Working** | `tests/test_phase1.py`; INIT, PING, CBOR, CANCEL, KEEPALIVE, fragmentation |
+| CTAP2 `getInfo` | **Working** | Python tests; `fido2-token -I` |
+| CTAP2 `makeCredential` | **Working** | Python tests; `fido2-cred -M` / `-V`; non-resident, packed self-attestation |
+| CTAP2 `getAssertion` | **Working** | Python tests; `fido2-assert -G` / `-V`; ES256 |
+| Phone pairing | **Working** | `tests/test_pairing.py`; one-time 6-digit PIN, 256-bit device token, lockout, revoke |
+| Android signer | **Partial** | Kotlin source and unit tests; StrongBox preferred, TEE fallback; not independently audited |
+| Credential metadata | **Working** | `~/.config/ukey/credentials.json`; credential ID, RP ID, public key; unencrypted |
+| Local controls | **Working** | `ukeyctl` menu/status/config/doctor; dashboard on `127.0.0.1:8444` |
+| Auto-lock | **Opt-in** | `tests/test_auto_lock.py`; convenience feature, not a security boundary |
+| Fedora installer | **Partial** | `install.sh`; verified on Fedora 43, other distros are best-effort |
+
+## What is not claimed
+
+- **PAM / `sudo` is not a working credential path.** U2F/CTAP1 is not implemented; `CTAPHID_MSG` returns `6d 00` and `caps` reports `nomsg`. The PAM setup script exists but has no working U2F path behind it.
+- **Browser WebAuthn and SSH `ecdsa-sk` have no end-to-end tests in this repository.** The protocol may work, but the project does not claim daily passkey or SSH use.
+- **Resident/discoverable credentials are rejected** (`rk=true`); there is no `getNextAssertion`.
+- **Transport is not secured.** The signer socket is plain TCP. Pairing tokens exist, but localhost clients can skip the handshake, so loopback is not a hard boundary against a hostile local process. `--wireless` exposes that socket on the LAN.
+- **There is no face scanner, audit ledger, receipt chain, or tamper-proof history.**
+- **The Android signer has not been independently audited.** A full phone-to-libfido2 run needs real hardware and is not part of CI.
 
 ---
 
-## Quickstart: 1-Command Installer
+## Quickstart
 
-Install uKey udev permissions, virtual FIDO2 daemon, systemd user service, and management tools:
+The verified path is a Fedora machine with `/dev/uhid`, Python 3.10–3.12, and libfido2 installed.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/siddharthsai218/ukey/main/install.sh | bash
+git clone https://github.com/ukey-sh/ukey.git
+cd ukey
+./install.sh
 ```
 
-The installer detects your distribution automatically, configures `/dev/uhid` permissions, sets up the Python virtual environment, and starts the background user service `ukey.service`.
+`install.sh` asks for `sudo` to install the udev rule. It creates a Python virtual environment and a systemd **user** service, then starts it with safe defaults: signer bridge on `127.0.0.1:8443`, wireless off, auto-lock off.
+
+Verify that the kernel sees the token:
+
+```bash
+fido2-token -L
+fido2-token -I /dev/hidraw6   # use the node printed by -L
+```
+
+Expected: a hidraw node and `FIDO_2_0` / `ES256` details. The node number is assigned by the kernel and may differ. No success output is fabricated here.
+
+### Other distributions
+
+The installer has package branches for Fedora, Debian/Ubuntu, Arch, and openSUSE, but **only Fedora 43 has been verified**. On other distributions, use the manual setup path: install `libfido2` and `python3-venv`, run `./setup_udev.sh`, create the virtual environment, and start the daemon yourself. Treat the distro branches as convenience, not a support claim.
 
 ---
 
-## Three Native Workflows
+## Pair an Android phone
 
-### 1. Passwordless `sudo` & PAM Login
-
-Configure Linux PAM to accept your phone’s biometric touch:
+Build and install the app from `android/` with Gradle, then connect it over USB:
 
 ```bash
-sudo ./scripts/setup_pam_sudo.sh
+adb reverse tcp:8443 tcp:8443
+./scripts/ukeyctl pair
 ```
 
-Now, whenever you run a `sudo` command:
+Enter the one-time 6-digit PIN shown by `ukeyctl pair` in the app. Pairing returns a 256-bit device token that the phone stores for later connections. The PIN is single-use, rotates when a new PIN is requested, and is invalidated after five failed attempts. `./scripts/ukeyctl devices` lists paired phones and can revoke a token.
+
+The Android signer is the partial part of the project: StrongBox is preferred, TEE is the fallback, software-backed keys are rejected, and every assertion is gated by a `BiometricPrompt`. It is built and unit-tested, but not audited.
+
+### Local controls
 
 ```bash
-$ sudo dnf update
-[sudo] Touch phone biometric or press Enter for password:
+./scripts/ukeyctl status
+./scripts/ukeyctl doctor
+./scripts/ukeyctl menu          # interactive terminal control center
+./scripts/ukeyctl web           # http://127.0.0.1:8444
 ```
 
-1. Touch your fingerprint sensor on your phone $\rightarrow$ **Unlocked in 0.38s!**
-2. Or simply press **Enter** $\rightarrow$ **Instant 0.0s fallback to regular password prompt!**
-
-*(To undo anytime: `sudo ./scripts/setup_pam_sudo.sh --restore`)*
-
----
-
-### 2. Hardware Git Commit Signing (OpenSSH `ecdsa-sk`)
-
-Create an unexportable hardware-backed SSH key for GitHub and GitLab git pushes:
-
-```bash
-# Generate FIDO2 hardware key
-ssh-keygen -t ecdsa-sk -f ~/.ssh/id_ukey
-
-# Configure git to sign commits automatically with hardware presence
-git config --global user.signingkey ~/.ssh/id_ukey.pub
-git config --global gpg.format ssh
-git config --global commit.gpgsign true
-```
-
-When you run `git push origin main`, your phone prompts for biometric authorization. No unencrypted private keys exist on your laptop.
-
----
-
-### 3. WebAuthn Passkeys in Chrome, Firefox & Brave
-
-Register your phone as a physical FIDO2 security key for Google Accounts, GitHub 2-Step Verification, AWS Console, or Discord. 
-
-When the browser requests a Security Key, your Android phone vibrates with the authentication prompt and signs the challenge directly in StrongBox.
-
----
-
-## Management Tools
-
-### Interactive Terminal Menu
-
-```bash
-./scripts/ukeyctl menu
-```
-
-Launches an interactive terminal dashboard allowing you to inspect daemon status, toggle auto-lock, generate pairing PINs, and review security logs.
-
-### Embedded Web Console (`:8444`)
-
-uKey includes an embedded local web dashboard binding strictly to `http://127.0.0.1:8444`:
-
-
-- **Master Authentication Switch**: 1-click toggle to temporarily bypass biometric interception.
-- **Wi-Fi Pairing PIN**: Generates 6-digit one-time PINs for pairing new phones over local Wi-Fi.
-- **Authorized Devices**: View paired hardware tokens and revoke devices with a single click.
+The dashboard and CLI bind to loopback. They can toggle biometric interception, show a pairing PIN, list/revoke devices, and read recent logs.
 
 ---
 
 ## Architecture
 
 ```
-+-------------------------------------------------------------------------+
-|                           LINUX HOST SYSTEM                             |
-|                                                                         |
-|  [PAM sudo / OpenSSH / Browser]                                          |
-|                 │ (Standard HID Raw / FIDO2)                            |
-|                 ▼                                                       |
-|        Linux Kernel /dev/uhid  <══════════╗                             |
-|                                           ║                             |
-|  [uKey Python Daemon (ukey_daemon.py)]    ║ ctypes binary packets       |
-|    - UhidDevice (packet loop) ────────────╝                             |
-|    - Ctap2Engine (CBOR parser & state machine)                          |
-|    - SignerBridge (TCP server on :8443)                                 |
-|    - PairingManager (token auth)                                        |
-|    - Web Dashboard (HTTP on :8444)                                      |
-+-------------------------------------------------------------------------+
-                                 ▲
-                                 │  TCP Bridge (adb reverse / Wi-Fi)
-                                 ▼
-+-------------------------------------------------------------------------+
-|                         ANDROID MOBILE DEVICE                           |
-|                                                                         |
-|  [uKey Android Client (Kotlin)]                                         |
-|    - DaemonClient (coroutine TCP socket loop)                           |
-|    - Protocol (handshake & challenge serialization)                     |
-|    - MainActivity / UKeyService                                         |
-|    - BiometricPrompt (CryptoObject user authorization)                  |
-|                 │                                                       |
-|                 ▼                                                       |
-|  [AndroidKeyStore Hardware Enclave]                                     |
-|    - Google Titan M / Knox StrongBox (P-256 private keys)               |
-|    - Hardware isolated ECDSA signature generation                       |
-+-------------------------------------------------------------------------+
+Linux host
+  libfido2 / fido2-*  ──►  /dev/hidrawN  ◄──  Linux kernel /dev/uhid
+                                                    ▲
+                                                    │ HID reports
+                                      uKey Python daemon
+                                        ├─ CTAPHID framing
+                                        ├─ CTAP2 engine
+                                        ├─ credential metadata
+                                        ├─ pairing manager
+                                        ├─ signer bridge (TCP :8443)
+                                        └─ local dashboard (:8444)
+                                                    ▲
+                                                    │ TCP: adb reverse or LAN
+                                                    ▼
+                                      Android app (partial signer)
+                                        ├─ pairing / token auth
+                                        ├─ BiometricPrompt
+                                        └─ AndroidKeyStore P-256 key
+                                             ├─ StrongBox preferred
+                                             └─ TEE fallback
 ```
 
----
-
-## Comparison
-
-| Feature | **uKey** (This Project) | **Generic Mobile Apps** (BLE Passkeys) | **YubiKey 5 Series** | **Google / Apple Passkeys** |
-|:---|:---:|:---:|:---:|:---:|
-| **Primary Target** | **Linux Workstations** | Windows / macOS | All Platforms | Cloud Ecosystems |
-| **Key Enclave** | **Android StrongBox (EAL5+)** | Software App Storage | Secure Element Silicon | OS Secure Enclave / TPM |
-| **Linux PAM sudo** | **✓ Native (0.38s Auth)** | ✕ Unsupported | ✓ Native (`pam_u2f`) | ✕ Unsupported |
-| **OpenSSH `ecdsa-sk`**| **✓ Native Git Signing** | ✕ Unsupported | ✓ Supported | ✕ Unsupported |
-| **Browser WebAuthn** | **✓ Kernel `/dev/uhid`** | Partial (BLE HID) | ✓ USB HID | ✓ Cloud Sync |
-| **Instant Fallback** | **✓ 0.0s Password Fallback** | ✕ Times out / Hangs | ✓ Immediate on pull | ✕ Cloud Dependent |
-| **Hardware Cost** | **$0 (Uses your phone)** | $0 (Play Store App) | $60 – $85 per key | $0 (Locked in) |
-| **License** | **GPLv3 Open Source** | Closed Source | Closed Firmware | Closed Cloud |
+The daemon owns no private keys. It asks the signer to sign; the phone gates that operation behind the biometric prompt and keeps the key in AndroidKeyStore.
 
 ---
 
-## Testing & Quality
-
-uKey maintains a 100% automated test suite with zero hardware dependencies required for CI:
+## Tests
 
 ```bash
-# Run unit & integration test discovery
 .venv/bin/python -m unittest discover -s tests -v
-
-# Validate syntax across Python and Shell files
 .venv/bin/python -m py_compile daemon/*.py scripts/ukeyctl
 bash -n install.sh setup_udev.sh scripts/setup_pam_sudo.sh
 ```
 
-- **`test_phase1.py`**: CTAPHID packet fragmentation, CBOR canonical serialization, `makeCredential`, and `getAssertion`.
-- **`test_config.py`**: Configuration defaults, schema validation, and atomic `0600` persistence.
-- **`test_auto_lock.py`**: Disconnect detection, debounce, and desktop lock triggers.
-- **`test_pairing.py`**: 6-digit PIN expiration, token verification, and rogue network rejection.
-- **`test_signer_bridge.py`**: Keepalive packets, client drop recovery, and mock signer communication.
+39 tests currently pass. Coverage includes CTAPHID framing, CBOR canonicalization, CTAP2 make/assert, configuration validation, auto-lock behavior, pairing/token auth, and the signer bridge. CI runs Python 3.10–3.12 plus shell and systemd syntax checks.
+
+Hardware checks — a real `/dev/uhid`, a hidraw node, and a phone-to-libfido2 assertion — are manual. They are not part of CI and should not be described as passing unless they actually ran.
 
 ---
 
-## Security Boundaries & Roadmap
+## Security boundaries
 
-- **Transport**: Over USB (`adb reverse`), traffic is physically isolated over the cable. Over Wi-Fi, connections are authenticated via a 256-bit token hash; mutual TLS transport encryption is planned for v0.2.0.
-- **Resident Credentials**: Currently, uKey supports standard RP-bound credentials; resident (discoverable) credentials (`rk=true`) are on the v0.2.0 roadmap.
-- **CTAP Version**: uKey implements modern CTAP2. Legacy U2F/CTAP1 commands return `6d 00`.
+Safe defaults matter more than feature lists:
 
-Read [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for full threat model specifications.
+- `wireless: false` and `listen_host: 127.0.0.1`; keep the signer on `adb reverse` unless you accept a plaintext LAN socket.
+- `auto_lock: false` by default. Auto-lock is convenience, not an authentication control.
+- Credential metadata in `credentials.json` is unencrypted. It is readable by the local user and root; the private key is not in that file.
+- Local clients that skip the pairing handshake are accepted as a **Localhost Mock**. The bridge is not a hard security boundary against a hostile local process.
+- The Android app, biometric flow, and protocol edge are self-reviewed, not independently audited. There is no attestation chain or vendor certificate.
+- Pairing authenticates the phone, but the channel is not encrypted. Transport hardening is roadmap work.
+
+Read [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for the full list.
 
 ---
 
 ## License
 
-This project is licensed under the terms of the **GNU General Public License v3.0** (`GPLv3`). See [`LICENSE`](LICENSE) for details.
+GPL-3.0. See [`LICENSE`](LICENSE).
 
-Developed with ❤️ for the Linux community by **BYN Siddharth Sai**.
+Developed by **BYN Siddharth Sai** and contributors.

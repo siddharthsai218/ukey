@@ -13,6 +13,7 @@ website (`docs/index.html`) and README summarize it; if they disagree, fix them.
 | CTAP2 MakeCredential | Working | Python tests; `fido2-cred -M` / `-V` | Packed self-attestation; non-resident credentials only. |
 | CTAP2 GetAssertion | Working | Python tests; `fido2-assert -G` / `-V` | ES256; raw `r || s` converted to DER at the CTAP2 boundary. |
 | Mock signer | Working | `daemon/mock_signer.py`; test suite | Deterministic P-256 signer. Ephemeral keys; test double only. |
+| Phone pairing | Working | `tests/test_pairing.py`; `ukeyctl pair` / `devices` | Single-use 6-digit PIN; 256-bit device token stored as a SHA-256 hash; 5-attempt/60 s lockout; revoke. Handshake is plaintext; localhost clients may bypass it. |
 | Android signer | Partial | Kotlin source; Kotlin unit tests | StrongBox preferred, TEE fallback, software keys rejected; per-use biometric prompt. Not independently audited. |
 | Credential metadata persistence | Working | `~/.config/ukey/credentials.json` | Credential ID, RP ID, and public key; unencrypted. Private keys stay with the signer. |
 | Browser WebAuthn | Not verified | No browser end-to-end test in the repo | Do not claim daily passkey use. |
