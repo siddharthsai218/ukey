@@ -3,10 +3,10 @@
 
 Runs on http://127.0.0.1:8444 to provide a user-friendly settings console on
 the laptop to control:
-- Master Toggle (Enable / Pause biometric interception)
-- One-Time Device Pairing PIN & QR Code
-- Authorized Paired Devices (with revocation)
-- Live Security Audit Log & Enrolled Credentials
+- Master toggle (enable / pause biometric approval for assertions)
+- One-time device pairing PIN
+- Authorized paired devices (with revocation)
+- Local status and loopback-only controls
 
 Security: Only binds to 127.0.0.1 (local machine). Not accessible over the network.
 """
@@ -145,14 +145,6 @@ HTML_DASHBOARD = """<!DOCTYPE html>
   }
   .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
 
-  /* Audit Log */
-  .log-box {
-    background: #090d16; border-radius: 8px; border: 1px solid var(--border);
-    padding: 12px; font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; max-height: 180px; overflow-y: auto;
-  }
-  .log-line { margin-bottom: 4px; color: var(--text-muted); }
-  .log-line.ok { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -172,7 +164,7 @@ HTML_DASHBOARD = """<!DOCTYPE html>
   <div class="switch-card">
     <div class="switch-info">
       <h2 id="masterStateTitle">uKey Biometric Interception</h2>
-      <p id="masterStateDesc">When Active, sudo and WebAuthn prompt your phone. When Paused, sudo uses password directly.</p>
+      <p id="masterStateDesc">When Active, assertions wait for phone approval. When Paused, assertions are refused without a biometric prompt.</p>
     </div>
     <button id="toggleBtn" class="toggle-btn active" onclick="toggleMaster()">ACTIVE</button>
   </div>
@@ -185,11 +177,11 @@ HTML_DASHBOARD = """<!DOCTYPE html>
         <button class="btn-sm" onclick="generateNewPin()">Generate New</button>
       </div>
       <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:12px;">
-        Enter this 6-digit PIN in your Android app <b>once</b>. Your phone will receive a permanent auth token and connect automatically forever after.
+        Enter this 6-digit PIN in your Android app <b>once</b>. The phone stores a device token and reconnects with it until the token is revoked.
       </p>
       <div class="pin-display">
         <div class="pin-num" id="activePin">------</div>
-        <div class="pin-note">Zero-PIN auto-connect active after first pairing</div>
+        <div class="pin-note">No PIN needed after pairing · revoke anytime</div>
       </div>
       <div style="font-size:11px; color:var(--text-muted);">
         Connection Target: <code id="hostTarget" style="color:var(--cyan); background:#090d16; padding:2px 6px; border-radius:4px;">10.59.72.79:8443</code>
@@ -203,7 +195,7 @@ HTML_DASHBOARD = """<!DOCTYPE html>
         <span id="deviceCount" style="color:var(--text-muted); font-size:11px;">0 Paired</span>
       </div>
       <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:12px;">
-        Only authorized devices can connect over Wi-Fi. Rogue strangers on the same network are dropped immediately.
+        Paired phones present a device token. Transport is not encrypted; keep the signer on loopback unless you accept that risk.
       </p>
       <div id="deviceList">
         <div style="color:var(--text-muted); font-size:11.5px; font-style:italic;">No devices paired yet.</div>
@@ -211,16 +203,15 @@ HTML_DASHBOARD = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- Real-Time Audit Log -->
+  <!-- Local-only note -->
   <div class="card">
     <div class="card-title">
-      <span>Hardware Security Audit Ledger</span>
-      <span style="color:var(--cyan); font-size:11px;">Live / Real-Time</span>
+      <span>Local-only console</span>
+      <span style="color:var(--cyan); font-size:11px;">127.0.0.1:8444</span>
     </div>
-    <div class="log-box" id="auditLog">
-      <div class="log-line ok">[Ready] Daemon listening on 0.0.0.0:8443</div>
-      <div class="log-line">[System] Virtual HID security key (/dev/uhid) active</div>
-    </div>
+    <p style="color:var(--text-muted); font-size:11.5px;">
+      This page binds to loopback. Pairing, device revocation, and assertion approval are local controls. The signer channel itself is not a hardened transport boundary.
+    </p>
   </div>
 </div>
 
@@ -260,7 +251,7 @@ function render(data) {
   } else {
     toggleBtn.className = "toggle-btn paused";
     toggleBtn.textContent = "PAUSED";
-    masterTitle.textContent = "uKey Biometric Interception: PAUSED (Password Mode)";
+    masterTitle.textContent = "uKey Biometric Interception: PAUSED";
   }
 
   // Active PIN
