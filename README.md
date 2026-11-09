@@ -18,7 +18,7 @@ An open-source authenticator: a Python daemon creates a USB-style HID security k
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square" alt="License: GPLv3"></a>
 </p>
 
-**[Website](https://siddharthsai218.github.io/ukey/)** · **[Status](docs/STATUS.md)** · **[Security Policy](SECURITY.md)** · **[Quickstart](#quickstart)** · **[Architecture](#architecture)**
+**[Website](https://siddharthsai218.github.io/ukey/)** · **[Architecture](ARCHITECTURE.md)** · **[Status](docs/STATUS.md)** · **[Security Policy](SECURITY.md)** · **[Quickstart](#quickstart)**
 
 </div>
 
