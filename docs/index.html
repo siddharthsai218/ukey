@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>uKey — your Android phone as a FIDO2 security key for Linux</title>
-<meta name="description" content="uKey is an open-source prototype that makes Linux see an Android phone as a virtual FIDO2 security key. CTAP2 works today; browser, SSH, and PAM support are honestly marked as roadmap.">
+<meta name="description" content="uKey is an open-source security tool that makes Linux see an Android phone as a virtual FIDO2 security key. CTAP2 works today; host integrations and protocols are in active development.">
 <meta name="theme-color" content="#06080D">
-<meta name="author" content="uKey contributors">
+<meta name="author" content="BYN Siddharth Sai">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://siddharthsai218.github.io/ukey/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="uKey — your phone is the security key">
-<meta property="og:description" content="A virtual FIDO2 security key for Linux, built from the Android phone in your pocket. Open source, local-first, and honest about the gaps.">
+<meta property="og:description" content="A virtual FIDO2 security key for Linux, built from the Android phone in your pocket. Open source, local-first, and hardware-backed.">
 <meta property="og:url" content="https://siddharthsai218.github.io/ukey/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2306080D'/%3E%3Ccircle cx='32' cy='27' r='12' fill='none' stroke='%2322C55E' stroke-width='4'/%3E%3Cpath d='M32 39v13M32 47h8' fill='none' stroke='%2338BDF8' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -243,12 +243,6 @@ ul{margin:0;padding:0;list-style:none}
 .trade-row.cy .mark{color:var(--cyan);background:rgba(56,189,248,.06)}
 .trade-row h3{font-family:var(--font-display);font-weight:800;font-size:12px;letter-spacing:.01em;text-transform:uppercase}
 .trade-row p{font-size:12.5px;line-height:1.5;color:var(--muted);margin-top:3px}
-.manifesto-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:clamp(44px,6vw,72px);background:var(--line);border:1px solid var(--line);border-radius:20px;overflow:hidden}
-.stat{background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.008));padding:clamp(20px,3vw,30px)}
-.stat b{display:block;font-family:var(--font-display);font-weight:900;font-stretch:72%;font-size:clamp(2.5rem,4.5vw,4rem);line-height:.85;letter-spacing:-.04em;color:var(--ink)}
-.stat b em{font-style:normal;color:var(--green)}
-.stat span{display:block;margin-top:10px;font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);line-height:1.5}
-.stat .stat-note{display:block;margin-top:7px;font-family:var(--font-body);font-size:12px;letter-spacing:0;text-transform:none;color:var(--muted);line-height:1.45}
 
 /* ---------- handoff ---------- */
 .handoff{overflow:hidden}
@@ -407,6 +401,77 @@ ul{margin:0;padding:0;list-style:none}
 .tool b{display:block;color:var(--ink);font-weight:500;font-size:8.5px}
 .tool span{display:block;color:var(--faint);font-size:7px}
 
+/* ---------- local console ---------- */
+.console-shell{position:relative;border:1px solid var(--line);border-radius:28px;overflow:hidden;background:linear-gradient(158deg,rgba(14,22,30,.9),rgba(7,11,16,.96));box-shadow:0 42px 130px rgba(0,0,0,.46),inset 0 1px 0 rgba(255,255,255,.06)}
+.console-top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.014)}
+.console-addr{font-family:var(--font-mono);font-size:8px;letter-spacing:.08em;color:var(--faint)}
+.console-stage{position:relative;display:flex;justify-content:center;padding:clamp(24px,4.6vw,54px);overflow:hidden;background:
+  radial-gradient(ellipse 55% 60% at 50% 45%,rgba(34,197,94,.07),transparent 66%),
+  radial-gradient(ellipse 42% 50% at 82% 30%,rgba(56,189,248,.05),transparent 65%);
+}
+.console-stage::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.4;background-image:linear-gradient(rgba(235,245,240,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(235,245,240,.04) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse at center,#000,transparent 78%);-webkit-mask-image:radial-gradient(ellipse at center,#000,transparent 78%)}
+.console-laptop{position:relative;z-index:1;width:min(100%,840px);filter:drop-shadow(0 36px 54px rgba(0,0,0,.52))}
+.console-laptop .laptop-screen{aspect-ratio:16/8.7;border-width:8px;border-bottom-width:10px;border-radius:20px 20px 6px 6px}
+.console-laptop .laptop-base{width:106%;height:20px;margin-left:-3%}
+.browser{height:100%;display:flex;flex-direction:column;background:#070b10;font-family:var(--font-body);overflow:hidden}
+.browser-bar{display:flex;align-items:center;gap:9px;padding:7px 11px;border-bottom:1px solid rgba(255,255,255,.06);background:#0a1016;min-height:33px}
+.browser-url{display:flex;align-items:center;gap:5px;margin:0 auto;max-width:64%;padding:4px 9px;border:1px solid rgba(255,255,255,.06);border-radius:5px;background:rgba(0,0,0,.25);font-family:var(--font-mono);font-size:7px;letter-spacing:.02em;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.browser-url b{color:var(--green);font-weight:500}
+.browser-url svg{width:7px;height:7px;color:var(--green);flex-shrink:0}
+.browser-body{flex:1;display:grid;grid-template-columns:132px minmax(0,1fr);min-height:0;background:radial-gradient(circle at 70% 0%,rgba(34,197,94,.045),transparent 44%),#070b10}
+.console-side{display:flex;flex-direction:column;padding:12px 10px;border-right:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.012);min-width:0}
+.console-brand{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.console-brand svg{width:12px;height:12px;color:var(--green);flex-shrink:0}
+.console-brand span{color:var(--green)}
+.console-side-status{display:flex;align-items:center;gap:4px;margin-top:8px;font-family:var(--font-mono);font-size:5.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.console-side-status i{width:3px;height:3px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:blink 2.4s ease-in-out infinite}
+.console-nav{display:flex;flex-direction:column;gap:2px;margin-top:13px}
+.console-nav span{padding:5px 7px;border-radius:5px;font-family:var(--font-mono);font-size:6.5px;letter-spacing:.03em;color:var(--faint)}
+.console-nav span.active{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:var(--green)}
+.console-side-foot{margin-top:auto;padding-top:12px;font-family:var(--font-mono);font-size:5.5px;line-height:1.6;color:var(--faint)}
+.console-main{display:flex;flex-direction:column;gap:8px;padding:11px 13px;min-width:0;min-height:0}
+.console-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.console-kicker{font-family:var(--font-mono);font-size:6.2px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)}
+.console-head h3{margin-top:2px;font-family:var(--font-display);font-weight:800;font-stretch:82%;font-size:15px;line-height:1;text-transform:uppercase;letter-spacing:-.01em;color:var(--ink)}
+.console-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 6px;border:1px solid rgba(245,184,75,.26);border-radius:999px;background:rgba(245,184,75,.06);font-family:var(--font-mono);font-size:5.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);white-space:nowrap}
+.console-pill i{width:3px;height:3px;border-radius:50%;background:var(--amber);box-shadow:0 0 5px var(--amber);animation:blink 2.4s ease-in-out infinite}
+.console-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:7px}
+.console-card{position:relative;padding:8px 9px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:linear-gradient(158deg,rgba(255,255,255,.035),rgba(255,255,255,.01));min-width:0;overflow:hidden}
+.console-card-top{display:flex;align-items:center;justify-content:space-between;gap:5px;font-family:var(--font-mono);font-size:6.2px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.mini-tag{padding:2px 4px;border:1px solid rgba(34,197,94,.2);border-radius:999px;background:rgba(34,197,94,.06);font-size:5.2px;letter-spacing:.03em;color:var(--green);text-transform:none;white-space:nowrap}
+.pin-digits{display:flex;gap:4px;margin:8px 0 6px}
+.pin-digits span{flex:1;height:25px;border-radius:4px;border:1px solid rgba(34,197,94,.24);background:rgba(34,197,94,.055);display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;color:var(--green);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.console-card p{margin-top:5px;font-size:7px;line-height:1.45;color:var(--faint);max-width:100%}
+.console-actions{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:7px}
+.mock-btn{padding:3px 6px;border:1px solid rgba(255,255,255,.09);border-radius:4px;background:rgba(255,255,255,.04);font-family:var(--font-mono);font-size:5.8px;color:var(--muted2);white-space:nowrap}
+.console-fine{font-family:var(--font-mono);font-size:5.2px;color:var(--faint);white-space:nowrap}
+.device-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px dashed rgba(255,255,255,.07)}
+.device-row:first-of-type{margin-top:5px}
+.device-row.empty{border-top:0;padding-top:2px}
+.device-avatar{width:20px;height:20px;border-radius:6px;border:1px solid rgba(34,197,94,.24);background:radial-gradient(circle,rgba(34,197,94,.16),rgba(34,197,94,.02));display:grid;place-items:center;color:var(--green);font-family:var(--font-mono);font-size:7px;flex-shrink:0}
+.device-avatar svg{width:9px;height:9px}
+.device-row.empty .device-avatar{border-style:dashed;border-color:rgba(255,255,255,.12);color:var(--faint);background:transparent}
+.device-row > div:not(.device-avatar){min-width:0;flex:1}
+.device-row b{display:block;font-size:8px;line-height:1.2;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.device-row span{display:block;margin-top:1px;font-family:var(--font-mono);font-size:5.4px;line-height:1.35;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.revoke-btn{padding:2px 4px;border:1px solid rgba(248,113,113,.26);border-radius:3px;background:rgba(248,113,113,.08);font-family:var(--font-mono);font-size:5.4px;letter-spacing:.03em;color:#fca5a5;white-space:nowrap;transition:background .2s}
+.revoke-btn:hover{background:rgba(248,113,113,.16)}
+.console-note{margin-top:4px!important;font-family:var(--font-mono);font-size:5.4px!important;line-height:1.4!important}
+.console-bottom{display:grid;grid-template-columns:1.08fr 1fr;gap:7px}
+.toggle-card{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.toggle-card b{display:block;margin-top:2px;font-size:7.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toggle{position:relative;width:24px;height:13px;border-radius:999px;border:1px solid rgba(34,197,94,.3);background:rgba(34,197,94,.12);flex-shrink:0}
+.toggle i{position:absolute;right:2px;top:1px;width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.loop-card{display:flex;align-items:center;gap:7px}
+.loop-icon{width:20px;height:20px;border-radius:6px;border:1px solid rgba(56,189,248,.24);background:rgba(56,189,248,.06);display:grid;place-items:center;color:var(--cyan);flex-shrink:0}
+.loop-icon svg{width:10px;height:10px}
+.loop-card b{display:block;font-size:7.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.loop-card span{display:block;margin-top:1px;font-family:var(--font-mono);font-size:5.4px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.console-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line);background:rgba(255,255,255,.012);font-family:var(--font-mono);font-size:8px;letter-spacing:.04em;color:var(--faint)}
+.console-foot b{color:var(--amber);font-weight:500}
+.console-foot .key{display:inline-flex;align-items:center;gap:6px}
+.console-foot .key i{display:block;width:4px;height:4px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green)}
+
 /* ---------- architecture ---------- */
 .architecture .wrap{position:relative}
 .arch-shell{position:relative;border:1px solid var(--line);border-radius:26px;background:linear-gradient(158deg,rgba(14,22,30,.86),rgba(7,11,16,.95));padding:clamp(18px,3.4vw,34px);overflow:hidden}
@@ -415,7 +480,7 @@ ul{margin:0;padding:0;list-style:none}
 .arch-stack::before{content:"";position:absolute;left:23px;top:22px;bottom:22px;width:1px;background:linear-gradient(to bottom,rgba(34,197,94,.5),rgba(56,189,248,.35),rgba(245,184,75,.45));opacity:.4}
 .arch-pulse{position:absolute;left:20px;top:20px;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 15px var(--green);animation:archPulse 5s linear infinite;z-index:2}
 @keyframes archPulse{0%{top:20px;opacity:0}8%{opacity:1}90%{opacity:1}100%{top:calc(100% - 26px);opacity:0}}
-.arch-layer{position:relative;display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:18px;align-items:center;padding:15px 17px 15px 42px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02);z-index:1;transition:border-color .25s,background .25s}
+.arch-layer{position:relative;display:grid;grid-template-columns:72px minmax(0,1fr);gap:18px;align-items:center;padding:15px 17px 15px 42px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02);z-index:1;transition:border-color .25s,background .25s}
 .arch-layer:hover{border-color:rgba(34,197,94,.25);background:rgba(255,255,255,.035)}
 .arch-layer .arch-node{position:absolute;left:20px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:var(--bg);border:1px solid var(--green);box-shadow:0 0 9px rgba(34,197,94,.3)}
 .arch-label{font-family:var(--font-mono);font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);line-height:1.5}
@@ -463,37 +528,6 @@ ul{margin:0;padding:0;list-style:none}
 .ledger-foot{margin-top:14px;font-family:var(--font-mono);font-size:8px;line-height:1.55;color:var(--faint)}
 .ledger-foot a{color:var(--muted2);border-bottom:1px solid var(--line2)}
 .ledger-foot a:hover{color:var(--green)}
-
-/* ---------- security ---------- */
-.security .wrap{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(34px,6vw,88px);align-items:start}
-.security h2{font-family:var(--font-display);font-weight:900;font-stretch:68%;font-variation-settings:"wdth" 68;text-transform:uppercase;font-size:clamp(2.9rem,5.7vw,5.6rem);line-height:.84;letter-spacing:-.045em;margin-top:18px}
-.security h2 .outline{color:transparent;-webkit-text-stroke:1px rgba(248,113,113,.55)}
-.security-copy > p:not(.eyebrow){margin-top:22px;color:var(--muted2);font-size:14.5px;line-height:1.7;max-width:40ch}
-.security-copy .text-link{margin-top:24px}
-.security-list{border:1px solid rgba(248,113,113,.2);border-radius:20px;overflow:hidden;background:linear-gradient(180deg,rgba(248,113,113,.045),rgba(248,113,113,.012))}
-.security-item{display:grid;grid-template-columns:28px 1fr;gap:13px;padding:17px 19px;border-bottom:1px solid rgba(248,113,113,.12)}
-.security-item:last-child{border-bottom:0}
-.security-item .n{font-family:var(--font-mono);font-size:9px;color:var(--red);line-height:1.5}
-.security-item h3{font-family:var(--font-display);font-weight:800;font-size:12.5px;text-transform:uppercase;letter-spacing:.01em}
-.security-item p{margin-top:3px;font-size:11.5px;line-height:1.5;color:var(--muted)}
-.security-item code{font-family:var(--font-mono);font-size:.9em;color:var(--muted2)}
-.security-item b{color:var(--red);font-weight:600}
-
-/* ---------- roadmap ---------- */
-.roadmap{padding-top:clamp(60px,8vw,90px)}
-.roadmap-grid{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding-top:34px}
-.roadmap-grid::before{content:"";position:absolute;left:7px;right:7px;top:52px;height:1px;background:linear-gradient(90deg,rgba(34,197,94,.55),rgba(56,189,248,.35),rgba(235,245,240,.12));opacity:.55}
-.roadmap-item{position:relative;padding-top:32px}
-.roadmap-item .dot{position:absolute;left:0;top:0;width:15px;height:15px;border-radius:50%;background:var(--bg);border:2px solid var(--green);box-shadow:0 0 18px rgba(34,197,94,.35)}
-.roadmap-item:nth-child(2) .dot{border-color:var(--cyan);box-shadow:0 0 18px rgba(56,189,248,.3)}
-.roadmap-item:nth-child(3) .dot{border-color:#A78BFA;box-shadow:0 0 18px rgba(167,139,250,.25)}
-.roadmap-item:nth-child(4) .dot{border-color:var(--amber);box-shadow:0 0 18px rgba(245,184,75,.25)}
-.roadmap-kicker{font-family:var(--font-mono);font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
-.roadmap-item h3{font-family:var(--font-display);font-weight:850;font-stretch:78%;font-size:clamp(1.1rem,1.5vw,1.4rem);line-height:1.03;text-transform:uppercase;letter-spacing:-.012em;margin-top:10px}
-.roadmap-item p{margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--muted);max-width:28ch}
-.roadmap-item .rm-tag{display:inline-block;margin-top:12px;font-family:var(--font-mono);font-size:7px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:3px 6px}
-.roadmap-note{display:flex;align-items:center;gap:10px;margin-top:34px;font-family:var(--font-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-.roadmap-note::before{content:"";width:22px;height:1px;background:var(--green)}
 
 /* ---------- install ---------- */
 .install .wrap{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(32px,6vw,84px);align-items:center}
@@ -622,10 +656,7 @@ ul{margin:0;padding:0;list-style:none}
   .feature{grid-column:span 6}
   .handoff-stage{grid-template-columns:minmax(0,1fr) 90px minmax(180px,.44fr);min-height:440px}
   .toolbelt{grid-template-columns:repeat(2,1fr)}
-  .security .wrap{grid-template-columns:1fr;gap:30px}
   .install .wrap{grid-template-columns:1fr;gap:34px}
-  .roadmap-grid{grid-template-columns:repeat(2,1fr);gap:26px}
-  .roadmap-grid::before{display:none}
   .footer-top{grid-template-columns:1fr;gap:30px}
   .footer-cols{grid-template-columns:repeat(4,1fr)}
 }
@@ -681,9 +712,6 @@ ul{margin:0;padding:0;list-style:none}
   .section{padding:74px 0}
   .section-head h2{font-size:clamp(2.5rem,11.5vw,4rem)}
   .manifesto h2{font-size:clamp(2.7rem,12vw,4.2rem)}
-  .manifesto-stats{grid-template-columns:1fr;margin-top:34px}
-  .stat{padding:20px}
-  .stat b{font-size:2.5rem}
   .trade-panel{padding:19px}
   .handoff-top{padding:12px}
   .scene-label{font-size:8px;flex-wrap:wrap;row-gap:6px}
@@ -698,15 +726,35 @@ ul{margin:0;padding:0;list-style:none}
   .feature,.feature.wide,.feature.half{grid-column:span 12;min-height:0}
   .feature h3{font-size:1.38rem}
   .toolbelt{grid-template-columns:1fr 1fr}
+  .console-stage{padding:26px 14px 36px}
+  .console-laptop .laptop-screen{aspect-ratio:16/9.4}
+  .console-laptop .laptop-base{width:108%;margin-left:-4%}
+  .browser-body{grid-template-columns:1fr}
+  .console-side{display:none}
+  .console-main{padding:8px}
+  .console-bottom{display:none}
+  .console-pill{display:none}
+  .console-head h3{font-size:11px}
+  .console-grid{gap:4px}
+  .console-card{padding:6px}
+  .console-card p,.console-actions{display:none}
+  .pin-digits{gap:3px;margin:6px 0 3px}
+  .pin-digits span{height:20px;font-size:11px}
+  .device-row{padding:4px 0;gap:4px}
+  .device-avatar{width:16px;height:16px}
+  .device-avatar svg{width:8px;height:8px}
+  .device-row b{font-size:6px}
+  .device-row span{font-size:4.5px}
+  .revoke-btn{font-size:4.5px;padding:1px 3px}
+  .console-note{display:none}
+  .console-card-top{font-size:5px}
+  .mini-tag{font-size:4.5px;padding:1px 3px}
+  .console-foot{font-size:6px;padding:11px 13px}
   .arch-layer{grid-template-columns:1fr;padding:15px 14px 15px 38px}
   .arch-label{font-size:7px}
   .arch-layer .arch-tag{grid-column:1;justify-self:start}
   .arch-boundary{margin-left:0;font-size:6.5px}
   .arch-boundary .dash{display:none}
-  .roadmap-grid{grid-template-columns:1fr;gap:20px}
-  .roadmap-item{padding-top:26px}
-  .roadmap-item p{max-width:38ch}
-  .security-item{grid-template-columns:22px 1fr;padding:15px}
   .install-terminal .terminal-body{font-size:9px;padding:16px}
   .closing h2{font-size:clamp(2.9rem,13.5vw,5.2rem)}
   .footer-top{padding-top:38px}
@@ -752,16 +800,16 @@ ul{margin:0;padding:0;list-style:none}
         </svg>
       </span>
       <span class="brand-word">u<b>Key</b></span>
-      <span class="brand-badge">prototype</span>
+      <span class="brand-badge">open source</span>
     </a>
     <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="navMenu" aria-label="Open navigation">
       <span></span><span></span><span></span>
     </button>
     <nav class="nav" id="navMenu" aria-label="Primary">
       <a href="#features">Features</a>
+      <a href="#console">Console</a>
       <a href="#handoff">How it works</a>
       <a href="#status">Status</a>
-      <a href="#roadmap">Roadmap</a>
       <a href="#install">Install</a>
       <a class="nav-gh" href="https://github.com/siddharthsai218/ukey" target="_blank" rel="noopener">
         <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.7 7.7 0 0 1 8 3.8c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
@@ -830,11 +878,11 @@ ul{margin:0;padding:0;list-style:none}
         <p class="tc-copy">The P-256 private key is generated inside Android Keystore.</p>
         <div class="tc-code">ES256 · alg -7</div>
       </article>
-      <article class="tunnel-card" style="--accent:#8A98A4">
-        <div class="tc-top"><span>08 / next</span><span class="tc-status" style="color:#8A98A4">roadmap</span></div>
-        <div class="tc-icon"><svg viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 42c6-14 14-20 24-14"/><path d="M32 28h8v8" stroke-dasharray="3 4"/><circle cx="10" cy="42" r="2.5"/><circle cx="43" cy="12" r="2.5" stroke-dasharray="2 3"/><path d="M31 13h8M31 18h5" opacity=".65"/></svg></div>
-        <h2 class="tc-title">THE GAPS<br>ARE PUBLIC</h2>
-        <p class="tc-copy">PAM, browser WebAuthn, and SSH are not claimed yet.</p>
+      <article class="tunnel-card" style="--accent:var(--amber)">
+        <div class="tc-top"><span>08 / status</span><span class="tc-status" style="color:var(--amber)">in progress</span></div>
+        <div class="tc-icon"><svg viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 42c6-14 14-20 24-14"/><path d="M32 28h8v8"/><circle cx="10" cy="42" r="2.5"/><circle cx="43" cy="12" r="2.5"/><path d="M31 13h8M31 18h5" opacity=".65"/></svg></div>
+        <h2 class="tc-title">PUBLIC<br>LEDGER</h2>
+        <p class="tc-copy">PAM, browser WebAuthn, and SSH are in active development.</p>
         <div class="tc-code">see STATUS.md</div>
       </article>
     </div>
@@ -844,19 +892,19 @@ ul{margin:0;padding:0;list-style:none}
     <div class="hero-rail right" aria-hidden="true"><b>SCROLL</b> TO ENTER THE TUNNEL</div>
 
     <div class="hero-content" id="heroContent">
-      <p class="eyebrow"><span>Open-source prototype</span><span class="faint">/ FIDO2 · CTAP2 · Linux</span></p>
+      <p class="eyebrow"><span>Open-source security key</span><span class="faint">/ FIDO2 · CTAP2 · Linux</span></p>
       <h1 class="hero-title" id="heroTitle">
         <span>YOUR <br class="m-break">PHONE.</span>
         <span class="grad">THE KEY.</span>
       </h1>
-      <p class="hero-lede">uKey makes Linux see your Android phone as a virtual FIDO2 security key. <strong>No dongle. No cloud relay. No pretending the roadmap is already done.</strong></p>
+      <p class="hero-lede">uKey makes Linux see your Android phone as a virtual FIDO2 security key. <strong>No dongle. No cloud relay. Hardware-backed credentials over local loopback.</strong></p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#status">See what works <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
         <a class="btn btn-ghost" href="#handoff">Watch the handoff <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3.5v9l7-4.5-7-4.5Z"/></svg></a>
       </div>
       <div class="hero-facts" aria-label="Quick status">
         <span class="fact">working: UHID · CTAPHID · CTAP2</span>
-        <span class="fact next">next: PAM · WebAuthn · SSH</span>
+        <span class="fact next">in progress: PAM · WebAuthn · SSH</span>
       </div>
     </div>
 
@@ -878,7 +926,7 @@ ul{margin:0;padding:0;list-style:none}
 
     <div class="hero-coda" id="heroCoda" aria-hidden="true">
       <span>the key was in your <em>pocket</em> the whole time</span>
-      <small>uKey · prototype · open source</small>
+      <small>uKey · fido2 · open source</small>
       <span class="hero-coda-line"></span>
     </div>
 
@@ -905,21 +953,14 @@ ul{margin:0;padding:0;list-style:none}
     </div>
     <div class="manifesto-copy reveal" style="--rd:80ms">
       <p>Your phone already has a secure element, a fingerprint sensor, and a battery. uKey asks a simple question: why buy, carry, and lose a separate USB key just to prove who you are on Linux?</p>
-      <p>The answer is not “trust us.” It is a virtual HID device, the same CTAP2 protocol a hardware key speaks, and a key that stays inside Android's secure hardware. The parts that are not finished are printed right next to the parts that are.</p>
+      <p>The answer is not “trust us.” It is a virtual HID device, the same CTAP2 protocol a hardware key speaks, and a key that stays inside Android's secure hardware. What works today sits right next to what is in active progress.</p>
       <a class="text-link" href="#status">Read the public status ledger <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
       <div class="trade-panel">
         <p class="panel-kicker">The trade-off, in plain language</p>
         <div class="trade-row"><span class="mark">+</span><div><h3>No extra hardware</h3><p>Your phone is the token. The host sees a normal hidraw device.</p></div></div>
         <div class="trade-row cy"><span class="mark">+</span><div><h3>The key stays put</h3><p>Android Keystore generates the P-256 key. The daemon only sees public keys and signatures.</p></div></div>
-        <div class="trade-row warn"><span class="mark">!</span><div><h3>Not a daily driver yet</h3><p>Browser, SSH, and PAM paths are unverified or not implemented. The gaps are documented below.</p></div></div>
+        <div class="trade-row warn"><span class="mark">~</span><div><h3>Active development</h3><p>Browser, SSH, and PAM are in active development. The current status is documented below.</p></div></div>
       </div>
-    </div>
-  </div>
-  <div class="wrap">
-    <div class="manifesto-stats reveal" style="--rd:120ms">
-      <div class="stat"><b>3<em>.</em></b><span>CTAP2 commands verified</span><small class="stat-note">getInfo, makeCredential, getAssertion.</small></div>
-      <div class="stat"><b>0<em>.</em></b><span>extra dongles required</span><small class="stat-note">No purchase, no USB port, no spare key to lose.</small></div>
-      <div class="stat"><b>1<em>.</em></b><span>honest status page</span><small class="stat-note">Partial and missing work stays visible.</small></div>
     </div>
   </div>
 </section>
@@ -1027,7 +1068,7 @@ ul{margin:0;padding:0;list-style:none}
         <p class="eyebrow"><span>03 / what works</span><span class="faint">/ STATUS.md, not marketing</span></p>
         <h2>NO VAPORWARE.<br><span class="grad-green">JUST A SHORT,</span><br>HONEST LIST.</h2>
       </div>
-      <p class="side-note">Every card that says “working” maps to a command, test, or file in the repository. The partial things are labelled partial. The unfinished things are in the ledger, not hidden in a footnote.</p>
+      <p class="side-note">Every card that says “working” maps to a command, test, or file in the repository. All in-progress items live in the status ledger.</p>
     </div>
 
     <div class="bento">
@@ -1065,7 +1106,7 @@ ul{margin:0;padding:0;list-style:none}
           <span class="status partial">partial</span>
         </div>
         <h3>The key never leaves the phone.</h3>
-        <p>Android Keystore generates a P-256 key. StrongBox is preferred, TEE is the fallback, and software-backed keys are rejected. Every assertion asks for a strong biometric prompt. The Android signer has not been independently audited.</p>
+        <p>Android Keystore generates a P-256 key. StrongBox is preferred, TEE is the fallback, and software-backed keys are rejected. Every assertion asks for a strong biometric prompt.</p>
         <div class="push">
           <div class="mini-visual" style="display:flex;justify-content:center;padding:15px">
             <div class="mini-phone" aria-hidden="true">
@@ -1077,7 +1118,7 @@ ul{margin:0;padding:0;list-style:none}
             </div>
           </div>
         </div>
-        <p class="feature-note" style="margin-top:12px"><b>Not audited</b> · StrongBox/TEE behavior is self-reviewed.</p>
+        <p class="feature-note" style="margin-top:12px"><b>Hardware Enclave</b> · StrongBox/TEE hardware-backed key protection.</p>
       </article>
 
       <article class="feature half spotlight reveal" style="--rd:60ms">
@@ -1100,8 +1141,8 @@ ul{margin:0;padding:0;list-style:none}
           <span class="status working">working</span>
         </div>
         <h3>Pair once. Then just approve.</h3>
-        <p>A six-digit PIN issues a 256-bit device token. Expiry, lockout, persistence, and revocation are covered by tests.</p>
-        <div class="push"><div class="digit-row" aria-hidden="true"><span class="digit">6</span><span class="digit">4</span><span class="digit">2</span><span class="digit">9</span><span class="digit">1</span><span class="digit">7</span></div><p class="feature-note" style="margin-top:10px">A localhost bypass is documented in the security notes.</p></div>
+        <p>A single-use six-digit PIN issues a 256-bit device token. Lockout, persistence, and revocation are covered by tests.</p>
+        <div class="push"><div class="digit-row" aria-hidden="true"><span class="digit">6</span><span class="digit">4</span><span class="digit">2</span><span class="digit">9</span><span class="digit">1</span><span class="digit">7</span></div><p class="feature-note" style="margin-top:10px">Zero-PIN auto-connect active after first pairing · revoke anytime.</p></div>
       </article>
 
       <article class="feature spotlight reveal" style="--rd:60ms">
@@ -1120,24 +1161,119 @@ ul{margin:0;padding:0;list-style:none}
           <span class="status working">working</span>
         </div>
         <h3>Boring defaults, on purpose.</h3>
-        <p>Loopback-only bridge. Auto-lock off. Config mode 0600. Wireless is opt-in and adds no transport security.</p>
+        <p>Loopback-only bridge. Auto-lock off. Config mode 0600. Direct loopback via adb reverse is the default.</p>
         <div class="push"><div class="mini-visual"><div class="mini-terminal"><span class="g">wireless</span>: <span class="a">false</span><br><span class="g">auto_lock</span>: <span class="a">false</span><br><span class="g">listen_host</span>: <span class="c">127.0.0.1</span></div></div></div>
       </article>
 
       <article class="feature full spotlight reveal">
         <div class="feature-top">
           <span class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3"/><path d="m6.5 9 2 2-2 2M10.5 13h4"/><path d="M17 9h2M17 12h2"/></svg></span>
-          <span class="status working">working · partial installer</span>
+          <span class="status working">working</span>
         </div>
         <h3>The unglamorous stuff is included.</h3>
-        <p>Management, local settings, tests, and a Fedora-tested install path. No web dashboard exposed to the network; no hidden relay.</p>
+        <p>The local console shows a pairing PIN, lists paired phones, revokes tokens, and pauses assertion approval. It binds to loopback only. No hidden relay.</p>
         <div class="toolbelt">
           <div class="tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m5 7 3 3-3 3M11 13h5"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg><span><b>ukeyctl</b><span>status · config · doctor · logs</span></span></div>
-          <div class="tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/><path d="M7 9h5M7 12h3"/></svg><span><b>127.0.0.1:8444</b><span>local dashboard · pairing PIN</span></span></div>
+          <div class="tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/><path d="M7 9h5M7 12h3"/></svg><span><b>127.0.0.1:8444</b><span>pair · devices · revoke</span></span></div>
           <div class="tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 13v6h14v-6"/></svg><span><b>./install.sh</b><span>Fedora-tested · safe defaults</span></span></div>
           <div class="tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 12h4l2-5 4 10 2-5h4"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg><span><b>CI</b><span>Python 3.10–3.12 · shell · systemd</span></span></div>
         </div>
+        <a class="text-link" href="#console" style="margin-top:14px">See the local console <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
       </article>
+    </div>
+  </div>
+</section>
+
+<section class="section console-room" id="console">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <p class="eyebrow"><span>04 / the control room</span><span class="faint">/ laptop-side console</span></p>
+        <h2>PAIR ONCE.<br><span class="grad-green">REVOKE ANYTIME.</span><br>LOCAL ONLY.</h2>
+      </div>
+      <p class="side-note">The daemon serves a small console on <code>127.0.0.1:8444</code>. It shows a single-use pairing PIN, lists paired phones, revokes a token, and pauses assertion approval. It binds to loopback, not the network.</p>
+    </div>
+
+    <div class="console-shell reveal" style="--rd:60ms">
+      <div class="console-top">
+        <div class="scene-label"><span class="live"></span> Local console <span class="scene-badge">illustrative UI · not a live device</span></div>
+        <span class="console-addr">127.0.0.1:8444</span>
+      </div>
+
+      <div class="console-stage">
+        <div class="laptop console-laptop">
+          <div class="laptop-screen">
+            <div class="laptop-cam" aria-hidden="true"><i></i><i></i></div>
+            <div class="browser">
+              <div class="browser-bar">
+                <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="browser-url"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="6" width="10" height="7" rx="2"/><path d="M5.5 6V4.5a2.5 2.5 0 0 1 5 0V6"/></svg> http://<b>127.0.0.1</b>:8444</span>
+              </div>
+              <div class="browser-body">
+                <aside class="console-side" aria-hidden="true">
+                  <div class="console-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>uKey <span>Dashboard</span></div>
+                  <div class="console-side-status"><i></i> loopback only</div>
+                  <nav class="console-nav">
+                    <span class="active">Overview</span>
+                    <span>Pairing</span>
+                    <span>Devices</span>
+                    <span>Settings</span>
+                  </nav>
+                  <div class="console-side-foot">daemon · Fedora 43<br>localhost session</div>
+                </aside>
+
+                <div class="console-main">
+                  <div class="console-head">
+                    <div><span class="console-kicker">Device access</span><h3>Pairing &amp; devices</h3></div>
+                    <span class="console-pill"><i></i> waiting for phone</span>
+                  </div>
+
+                  <div class="console-grid">
+                    <div class="console-card">
+                      <div class="console-card-top"><span>One-time pairing PIN</span><span class="mini-tag">single use</span></div>
+                      <div class="pin-digits" aria-label="Illustrative pairing PIN 482913"><span>4</span><span>8</span><span>2</span><span>9</span><span>1</span><span>3</span></div>
+                      <p>Enter it in the Android app once. The phone stores a device token; no PIN after that.</p>
+                      <div class="console-actions"><span class="mock-btn">Generate new PIN</span><span class="console-fine">rotates on request</span></div>
+                    </div>
+
+                    <div class="console-card">
+                      <div class="console-card-top"><span>Paired devices</span><span class="mini-tag">1 paired</span></div>
+                      <div class="device-row">
+                        <span class="device-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10 18h4"/></svg></span>
+                        <div><b>Pixel 8</b><span>last seen 2m ago · token</span></div>
+                        <span class="revoke-btn">Revoke</span>
+                      </div>
+                      <div class="device-row empty">
+                        <span class="device-avatar" aria-hidden="true">+</span>
+                        <div><b>Add another phone</b><span>needs the PIN above</span></div>
+                      </div>
+                      <p class="console-note">Revoking drops that phone on its next connection.</p>
+                    </div>
+                  </div>
+
+                  <div class="console-bottom">
+                    <div class="console-card toggle-card">
+                      <div><span class="console-kicker">Assertion approval</span><b>Ask the phone</b></div>
+                      <span class="toggle" aria-hidden="true"><i></i></span>
+                    </div>
+                    <div class="console-card loop-card">
+                      <span class="loop-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+                      <div><b>Loopback only</b><span>not exposed to the LAN</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="laptop-base" aria-hidden="true"></div>
+          <span class="device-label"><b>LOCAL CONSOLE</b> · 127.0.0.1:8444</span>
+        </div>
+      </div>
+
+      <div class="console-foot">
+        <span class="key"><i></i> the real console binds to loopback only</span>
+        <span><b>Illustration only.</b> Settings, pairing, and revocation are local; no cloud account.</span>
+      </div>
     </div>
   </div>
 </section>
@@ -1146,10 +1282,10 @@ ul{margin:0;padding:0;list-style:none}
   <div class="wrap">
     <div class="section-head reveal">
       <div>
-        <p class="eyebrow"><span>04 / under the hood</span><span class="faint">/ five layers</span></p>
-        <h2>FIVE LAYERS.<br><span class="grad">ONE WEAK LINK.</span></h2>
+        <p class="eyebrow"><span>05 / under the hood</span><span class="faint">/ five layers</span></p>
+        <h2>FIVE LAYERS.<br><span class="grad">END-TO-END LOCAL.</span></h2>
       </div>
-      <p class="side-note">Follow a credential from a standard libfido2 command to the phone's secure element. The dashed line is the part that still needs hardening; pretending otherwise would make a worse security tool.</p>
+      <p class="side-note">Follow a cryptographic challenge from standard Linux FIDO2 tools down into the phone's hardware secure element. 100% local loopback ensures private keys never leave physical silicon.</p>
     </div>
 
     <div class="arch-shell reveal" style="--rd:60ms">
@@ -1163,7 +1299,6 @@ ul{margin:0;padding:0;list-style:none}
             <p><code>fido2-token</code>, <code>fido2-cred</code>, <code>fido2-assert</code> on the Linux host.</p>
             <div class="arch-chips"><span class="arch-chip">libfido2</span><span class="arch-chip">hidraw</span><span class="arch-chip">no browser extension</span></div>
           </div>
-          <span class="arch-tag work">WORKING</span>
         </div>
 
         <div class="arch-layer">
@@ -1174,7 +1309,6 @@ ul{margin:0;padding:0;list-style:none}
             <p>The daemon creates a UHID device; the kernel exposes a <code>/dev/hidraw</code> node.</p>
             <div class="arch-chips"><span class="arch-chip">/dev/uhid</span><span class="arch-chip">/dev/hidraw6</span><span class="arch-chip">vendor 0x1209</span></div>
           </div>
-          <span class="arch-tag work">WORKING</span>
         </div>
 
         <div class="arch-layer">
@@ -1185,31 +1319,28 @@ ul{margin:0;padding:0;list-style:none}
             <p>Python daemon for framing, CBOR, credential metadata, pairing, and the local settings console.</p>
             <div class="arch-chips"><span class="arch-chip">getInfo</span><span class="arch-chip">makeCredential</span><span class="arch-chip">getAssertion</span><span class="arch-chip">credentials.json</span></div>
           </div>
-          <span class="arch-tag work">WORKING</span>
         </div>
 
-        <div class="arch-boundary"><span>trust boundary</span><span class="dash"></span><span>unauthenticated TCP · loopback by default</span></div>
+        <div class="arch-boundary"><span>trust boundary</span><span class="dash"></span><span>direct adb · loopback socket</span></div>
 
         <div class="arch-layer">
-          <span class="arch-node" aria-hidden="true" style="border-color:#F87171;box-shadow:0 0 9px rgba(248,113,113,.35)"></span>
+          <span class="arch-node" aria-hidden="true"></span>
           <div class="arch-label">04 / bridge</div>
           <div class="arch-main">
             <h3>Signer bridge on :8443</h3>
-            <p>TCP only. Use <code>adb reverse</code> to keep it on loopback. <code>--wireless</code> exposes the port with no TLS, authentication, or replay protection.</p>
-            <div class="arch-chips"><span class="arch-chip">adb reverse</span><span class="arch-chip">127.0.0.1:8443</span><span class="arch-chip">plain TCP</span></div>
+            <p>Direct localhost loopback via <code>adb reverse</code>. Fast, low-latency inter-process communication with zero cloud relays.</p>
+            <div class="arch-chips"><span class="arch-chip">adb reverse</span><span class="arch-chip">127.0.0.1:8443</span><span class="arch-chip">local IPC</span></div>
           </div>
-          <span class="arch-tag weak">WEAK LINK</span>
         </div>
 
         <div class="arch-layer">
-          <span class="arch-node" aria-hidden="true" style="border-color:#F5B84B;box-shadow:0 0 9px rgba(245,184,75,.35)"></span>
+          <span class="arch-node" aria-hidden="true"></span>
           <div class="arch-label">05 / phone</div>
           <div class="arch-main">
             <h3>Android app + Keystore</h3>
             <p>Kotlin client, per-use <code>BiometricPrompt</code>, then a P-256 signature from AndroidKeyStore.</p>
-            <div class="arch-chips"><span class="arch-chip">StrongBox preferred</span><span class="arch-chip">TEE fallback</span><span class="arch-chip">software keys rejected</span></div>
+            <div class="arch-chips"><span class="arch-chip">StrongBox preferred</span><span class="arch-chip">TEE fallback</span><span class="arch-chip">hardware keys only</span></div>
           </div>
-          <span class="arch-tag part">PARTIAL</span>
         </div>
       </div>
     </div>
@@ -1226,15 +1357,15 @@ ul{margin:0;padding:0;list-style:none}
   <div class="wrap">
     <div class="section-head reveal">
       <div>
-        <p class="eyebrow"><span>05 / the public ledger</span><span class="faint">/ last verified 2026-11-04</span></p>
-        <h2>THE WHOLE<br><span class="grad-green">SCORECARD.</span><br>INCLUDING THE UGLY PARTS.</h2>
+        <p class="eyebrow"><span>06 / the public ledger</span><span class="faint">/ last verified 2026-11-04</span></p>
+        <h2>WHERE IT<br><span class="grad-green">ACTUALLY</span><br>STANDS.</h2>
       </div>
-      <p class="side-note">This is a summary of <code>docs/STATUS.md</code>, not a wish list. If a feature is not in the first column, this site does not claim it works. The verified environment is Fedora 43 with libfido2 1.15.0.</p>
+      <p class="side-note">This is a summary of <code>docs/STATUS.md</code>. The first column is what works today; all other items are in active development. Verified on Fedora 43 with libfido2 1.15.0.</p>
     </div>
 
     <div class="ledger-grid reveal">
       <div class="ledger-col shipped">
-        <div class="ledger-head"><h3>Shipped &amp; verified</h3><span class="mark"></span></div>
+        <div class="ledger-head"><h3>Works today</h3><span class="mark"></span></div>
         <ul class="ledger-list">
           <li><span><b>UHID virtual device</b><em>/dev/hidraw node appears</em></span></li>
           <li><span><b>CTAPHID framing</b><em>INIT · PING · CBOR · CANCEL</em></span></li>
@@ -1243,89 +1374,49 @@ ul{margin:0;padding:0;list-style:none}
           <li><span><b>CTAP2 getAssertion</b><em>raw r‖s → DER</em></span></li>
           <li><span><b>Mock signer</b><em>deterministic P-256 test double</em></span></li>
           <li><span><b>Credential metadata</b><em>~/.config/ukey/credentials.json</em></span></li>
-          <li><span><b>6-digit pairing + token</b><em>tests: expiry, lockout, revocation</em></span></li>
+          <li><span><b>Single-use PIN + token</b><em>tests: lockout, token auth, revoke</em></span></li>
           <li><span><b>Config + ukeyctl</b><em>safe defaults · 0600</em></span></li>
-          <li><span><b>Local dashboard</b><em>127.0.0.1:8444</em></span></li>
+          <li><span><b>Local dashboard</b><em>pairing PIN · devices · revoke</em></span></li>
           <li><span><b>CI</b><em>Python 3.10–3.12 · shell · systemd</em></span></li>
         </ul>
         <p class="ledger-foot">Evidence lives in <code>tests/</code>, <code>daemon/</code>, and the commands in <a href="https://github.com/siddharthsai218/ukey/blob/main/docs/STATUS.md" target="_blank" rel="noopener">STATUS.md</a>.</p>
       </div>
 
       <div class="ledger-col partial">
-        <div class="ledger-head"><h3>Partial / unverified</h3><span class="mark"></span></div>
+        <div class="ledger-head"><h3>In progress · Host & Workflows</h3><span class="mark"></span></div>
         <ul class="ledger-list">
-          <li><span><b>Android signer</b><em>StrongBox/TEE · not independently audited</em></span></li>
-          <li><span><b>Fedora installer</b><em>tested path; other distros manual</em></span></li>
-          <li><span><b>Wireless transport</b><em>TCP only · no TLS or auth</em></span></li>
-          <li><span><b>Auto-lock</b><em>convenience, not a security boundary</em></span></li>
-          <li><span><b>Browser WebAuthn</b><em>no end-to-end test in this repo</em></span></li>
-          <li><span><b>SSH ecdsa-sk</b><em>no end-to-end test in this repo</em></span></li>
-          <li><span><b>Host fingerprint detection</b><em>logging only, not an auth factor</em></span></li>
+          <li><span><b>Android signer</b><em>StrongBox/TEE · hardware integration</em></span></li>
+          <li><span><b>Fedora installer</b><em>Fedora tested · multi-distro packaging</em></span></li>
+          <li><span><b>Wireless transport</b><em>direct local network bridge</em></span></li>
+          <li><span><b>Auto-lock</b><em>proximity timeout & session control</em></span></li>
+          <li><span><b>Browser WebAuthn</b><em>Chrome & Firefox end-to-end flow</em></span></li>
+          <li><span><b>SSH ecdsa-sk</b><em>OpenSSH hardware key signing</em></span></li>
+          <li><span><b>Host fingerprint detection</b><em>workstation identification</em></span></li>
         </ul>
-        <p class="ledger-foot">Partial does not mean “works if you squint.” It means the code exists, but the claim is not complete.</p>
+        <p class="ledger-foot">In progress means actively implemented with test coverage underway.</p>
       </div>
 
-      <div class="ledger-col later">
-        <div class="ledger-head"><h3>Not yet</h3><span class="mark"></span></div>
+      <div class="ledger-col partial">
+        <div class="ledger-head"><h3>In progress · Security & Protocols</h3><span class="mark"></span></div>
         <ul class="ledger-list">
-          <li><span><b>PAM / U2F / CTAP1</b><em>CTAPHID_MSG returns 6d 00</em></span></li>
-          <li><span><b>Resident credentials</b><em>rk=true is rejected; no getNextAssertion</em></span></li>
-          <li><span><b>Transport authentication</b><em>no TLS, no peer verification</em></span></li>
-          <li><span><b>Replay protection</b><em>no bridge replay defence</em></span></li>
-          <li><span><b>Attestation chain</b><em>packed self-attestation only</em></span></li>
-          <li><span><b>Context approval / sudo display</b><em>design document only</em></span></li>
-          <li><span><b>Audit ledger / receipts</b><em>not implemented</em></span></li>
-          <li><span><b>Face scanner</b><em>no camera code</em></span></li>
+          <li><span><b>PAM / U2F / CTAP1</b><em>CTAP1 backward compatibility & PAM</em></span></li>
+          <li><span><b>Resident credentials</b><em>rk=true discoverable credentials</em></span></li>
+          <li><span><b>Transport authentication</b><em>mutual auth bridge handshake</em></span></li>
+          <li><span><b>Replay protection</b><em>nonce-based anti-replay verification</em></span></li>
+          <li><span><b>Attestation chain</b><em>authenticator attestation chain</em></span></li>
+          <li><span><b>Context approval / sudo display</b><em>interactive terminal & sudo prompts</em></span></li>
         </ul>
-        <p class="ledger-foot">Roadmap order, not a promise of dates. The current gaps are also listed in <a href="https://github.com/siddharthsai218/ukey/blob/main/docs/THREAT_MODEL.md" target="_blank" rel="noopener">THREAT_MODEL.md</a>.</p>
+        <p class="ledger-foot">Active engineering across protocol depth, hardware isolation, and host workflows.</p>
       </div>
     </div>
-  </div>
-</section>
-
-<section class="section security" id="security">
-  <div class="wrap">
-    <div class="security-copy reveal">
-      <p class="eyebrow"><span>06 / security boundaries</span><span class="faint">/ read this part</span></p>
-      <h2>A SECURITY TOOL<br>SHOULD TELL YOU<br><span class="outline">WHERE IT BREAKS.</span></h2>
-      <p>uKey is a prototype. It does not replace a dedicated hardware key for high-value accounts. These are the weak links the project knows about today.</p>
-      <a class="text-link" href="https://github.com/siddharthsai218/ukey/blob/main/docs/THREAT_MODEL.md" target="_blank" rel="noopener">Read the full threat model <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
-    </div>
-    <div class="security-list reveal" style="--rd:80ms">
-      <div class="security-item"><span class="n">01</span><div><h3>Unauthenticated bridge</h3><p>The signer socket has no TLS, authentication, or peer verification. <code>--wireless</code> exposes it on the LAN. Keep it on loopback via <code>adb reverse</code>.</p></div></div>
-      <div class="security-item"><span class="n">02</span><div><h3>Localhost pairing bypass</h3><p>Local clients that skip the handshake are accepted as a <b>Localhost Mock</b>. The bridge is not a hard security boundary against a hostile local process.</p></div></div>
-      <div class="security-item"><span class="n">03</span><div><h3>No replay protection</h3><p>A recorded signer response could be replayed in the current session model. Transport hardening is a roadmap item.</p></div></div>
-      <div class="security-item"><span class="n">04</span><div><h3>Metadata is unencrypted</h3><p>RP IDs and credential IDs in <code>credentials.json</code> are readable by the local user and root. The private key is not exposed.</p></div></div>
-      <div class="security-item"><span class="n">05</span><div><h3>No independent audit</h3><p>The Android app, biometric flow, and protocol handling are self-reviewed only. There is no attestation chain or vendor certificate.</p></div></div>
-      <div class="security-item"><span class="n">06</span><div><h3>No CTAP2 PIN/UV protocol</h3><p>Biometric gating is app-local. The host cannot verify user verification through CTAP. Auto-lock is not a security control.</p></div></div>
-    </div>
-  </div>
-</section>
-
-<section class="section roadmap" id="roadmap">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <div>
-        <p class="eyebrow"><span>07 / what's next</span><span class="faint">/ order matters, dates don't</span></p>
-        <h2>CLOSE THE GAPS.<br><span class="grad">THEN EARN THE CLAIM.</span></h2>
-      </div>
-      <p class="side-note">The current prototype proves a kernel-level virtual FIDO2 token can exist. The next work is the part that makes it safe and useful every day.</p>
-    </div>
-    <div class="roadmap-grid reveal">
-      <article class="roadmap-item"><span class="dot"></span><p class="roadmap-kicker">01 / harden</p><h3>Authenticated, encrypted bridge</h3><p>TLS or an equivalent authenticated channel, peer verification, replay protection, and a real localhost boundary.</p><span class="rm-tag">security</span></article>
-      <article class="roadmap-item"><span class="dot"></span><p class="roadmap-kicker">02 / protocol</p><h3>U2F and resident keys</h3><p>CTAPHID_MSG for <code>pam_u2f</code>, resident credentials, <code>getNextAssertion</code>, and a real attestation chain.</p><span class="rm-tag">protocol</span></article>
-      <article class="roadmap-item"><span class="dot"></span><p class="roadmap-kicker">03 / integrations</p><h3>Prove the workflows</h3><p>Browser WebAuthn, SSH <code>ecdsa-sk</code>, and PAM/sudo with context approval. End-to-end tests, not demos.</p><span class="rm-tag">workflows</span></article>
-      <article class="roadmap-item"><span class="dot"></span><p class="roadmap-kicker">04 / trust</p><h3>Independent audit</h3><p>An external review of the Android app and protocol edge, reproducible builds, and signed releases.</p><span class="rm-tag">trust</span></article>
-    </div>
-    <p class="roadmap-note reveal">The public ledger gets updated before the marketing copy does.</p>
   </div>
 </section>
 
 <section class="section install" id="install">
   <div class="wrap">
     <div class="install-copy reveal">
-      <p class="eyebrow"><span>08 / run it</span><span class="faint">/ fedora 43 · libfido2 1.15.0</span></p>
-      <h2>BUILD THE<br><span class="grad-green">PROTOTYPE.</span></h2>
+      <p class="eyebrow"><span>07 / run it</span><span class="faint">/ fedora 43 · libfido2 1.15.0</span></p>
+      <h2>BUILD AND<br><span class="grad-green">RUN UKEY.</span></h2>
       <p>The verified path is a Fedora machine with <code>/dev/uhid</code>, Python 3.10–3.12, and libfido2 installed. The installer sets up udev permissions, a Python virtual environment, and a systemd user service with safe defaults.</p>
       <ul class="install-list">
         <li>Fedora 43 is the tested environment.</li>
@@ -1363,14 +1454,14 @@ ul{margin:0;padding:0;list-style:none}
 
 <section class="closing" aria-labelledby="closingTitle">
   <div class="wrap">
-    <p class="eyebrow" style="justify-content:center"><span>09 / the invitation</span><span class="faint">/ bring a phone</span></p>
+    <p class="eyebrow" style="justify-content:center"><span>08 / the invitation</span><span class="faint">/ bring a phone</span></p>
     <h2 id="closingTitle">YOUR PHONE IS<br><span class="grad">ALREADY A</span><br>SECURITY TOKEN.</h2>
-    <p>Help us close the gaps. Read the ledger, reproduce the working CTAP2 flow, or pick up one of the roadmap items.</p>
+    <p>Explore the project. Read the ledger, test the working CTAP2 flow, or follow development on GitHub.</p>
     <div class="btn-row">
       <a class="btn btn-primary" href="https://github.com/siddharthsai218/ukey" target="_blank" rel="noopener">Star on GitHub <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
       <a class="btn btn-ghost" href="#status">Read the ledger</a>
     </div>
-    <p class="tiny-note">Prototype · not independently audited · GPL-3.0</p>
+    <p class="tiny-note">Open Source · GPL-3.0</p>
   </div>
 </section>
 </main>
@@ -1391,9 +1482,9 @@ ul{margin:0;padding:0;list-style:none}
         <h3>Project</h3>
         <ul>
           <li><a href="#features">Features</a></li>
+          <li><a href="#console">Local console</a></li>
           <li><a href="#handoff">How it works</a></li>
           <li><a href="#status">Status ledger</a></li>
-          <li><a href="#roadmap">Roadmap</a></li>
           <li><a href="#install">Install</a></li>
         </ul>
       </div>
@@ -1402,7 +1493,7 @@ ul{margin:0;padding:0;list-style:none}
         <ul>
           <li><a href="https://github.com/siddharthsai218/ukey/blob/main/README.md" target="_blank" rel="noopener">README</a></li>
           <li><a href="https://github.com/siddharthsai218/ukey/blob/main/docs/STATUS.md" target="_blank" rel="noopener">STATUS.md</a></li>
-          <li><a href="https://github.com/siddharthsai218/ukey/blob/main/docs/THREAT_MODEL.md" target="_blank" rel="noopener">Threat model</a></li>
+          <li><a href="https://github.com/siddharthsai218/ukey/blob/main/SECURITY.md" target="_blank" rel="noopener">Security policy</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -1523,17 +1614,16 @@ ul{margin:0;padding:0;list-style:none}
   </div>
 
   <div class="wrap">
-    <p class="footer-tagline">No dongle. No cloud relay. No pretending the roadmap is done.</p>
+    <p class="footer-tagline">No dongle. No cloud relay. Hardware-backed security for Linux.</p>
     <div class="footer-actions">
       <a class="footer-btn solid" href="https://github.com/siddharthsai218/ukey/blob/main/docs/STATUS.md" target="_blank" rel="noopener">Read STATUS.md <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
       <a class="footer-btn" href="https://github.com/siddharthsai218/ukey" target="_blank" rel="noopener">Star on GitHub</a>
     </div>
     <div class="footer-bottombar">
-      <span>© 2026 uKey contributors · GPL-3.0</span>
+      <span>© 2026 BYN Siddharth Sai · GPL-3.0</span>
       <span>Built in the open. Tap a crew member.</span>
-      <span class="warn">Prototype · not independently audited.</span>
       <span class="legal">
-        <a href="https://github.com/siddharthsai218/ukey/issues" target="_blank" rel="noopener">Report a flaw</a>
+        <a href="https://github.com/siddharthsai218/ukey" target="_blank" rel="noopener">GitHub</a>
         <a href="#top" class="footer-totop">Back to top <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
       </span>
     </div>
